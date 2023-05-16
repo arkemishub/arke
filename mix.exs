@@ -5,7 +5,7 @@ defmodule Arke.MixProject do
     [
       app: :arke,
       name: "Arke",
-      version: "0.1.2",
+      version: "0.1.3",
       build_path: "./_build",
       deps_path: "./deps",
       lockfile: "./mix.lock",
@@ -36,8 +36,8 @@ defmodule Arke.MixProject do
       {:typed_struct, "~> 0.2.1"},
       {:uuid, "~> 1.1"},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
-      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.10", only: :test},
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:timex, "~> 3.7.11"},
       {:google_api_storage, "~> 0.34.0"},
       {:goth, "~> 1.3.0"},
@@ -51,14 +51,9 @@ defmodule Arke.MixProject do
   defp aliases do
     [
       test: [
-        "ecto.drop",
-        "ecto.create --quiet",
-        "ecto.migrate --migrations-path apps/arke_postgres/test/support/migrations",
         "test"
       ],
       "test.ci": [
-        "ecto.create --quiet",
-        "ecto.migrate --migrations-path apps/arke_postgres/test/support/migrations",
         "test"
       ]
     ]
@@ -68,7 +63,7 @@ defmodule Arke.MixProject do
   defp elixirc_paths(_), do: ["lib"]
 
   defp description() do
-    "Arke"
+    "Arke low code framework Core"
   end
 
   defp package() do
@@ -77,7 +72,10 @@ defmodule Arke.MixProject do
       name: "arke",
       # These are the default files included in the package
       licenses: ["Apache-2.0"],
-      links: %{}
+      links: %{
+        "Website" => "https://arkehub.com",
+        "Github" => "https://github.com/arkemishub/arke"
+      }
     ]
   end
 end
