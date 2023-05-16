@@ -36,7 +36,12 @@ defmodule Arke.MixProject do
       {:typed_struct, "~> 0.2.1"},
       {:uuid, "~> 1.1"},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
-      {:excoveralls, "~> 0.10", only: :test}
+      {:excoveralls, "~> 0.10", only: :test},
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
+      {:timex, "~> 3.7.11"},
+      {:google_api_storage, "~> 0.34.0"},
+      {:goth, "~> 1.3.0"},
+      {:httpoison, "~> 2.0"}
       # {:dep_from_hexpm, "~> 0.3.0"},
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"},
       # {:sibling_app_in_umbrella, in_umbrella: true}
