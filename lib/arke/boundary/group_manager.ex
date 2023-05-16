@@ -1,0 +1,142 @@
+# Copyright 2023 Arkemis S.r.l.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+defmodule Arke.Boundary.GroupManager do
+  @moduledoc false
+  use Arke.UnitManager
+
+  set_registry_name(:group_registry)
+  set_supervisor_name(:group_supervisor)
+
+  # def before_create(%{id: id, data: data, metadata: unit_metadata} = unit, project) do
+  #   # arke_list =
+  #   #   Enum.reduce(data.arke_list, [], fn %{id: arke_id, metadata: arke_metadata} = _, arke_list ->
+  #   #     case init_arke(project, arke_id, arke_metadata) do
+  #   #       {:error, msg} -> %{id: arke_id, metadata: arke_metadata}
+  #   #       arke -> [arke | arke_list]
+  #   #     end
+  #   #   end)
+
+  #   # {Unit.update(unit, arke_list: arke_list), project}
+  # end
+
+  def get_arke_list(%{data: data, metadata: %{project: project}} = unit) do
+    Enum.reduce(data.arke_list, [], fn %{id: arke_id, metadata: arke_metadata} = _,
+                                       new_arke_list ->
+      case init_arke(project, arke_id, arke_metadata) do
+        {:error, msg} -> new_arke_list
+        arke -> [arke | new_arke_list]
+      end
+    end)
+  end
+
+  def get_arke(%{id: id} = unit, project, arke_id),
+    do: get_arke(id, project, arke_id)
+
+  def get_arke(%{id: id, metadata: %{project: project}} = unit, arke_id),
+    do: get_arke(id, project, arke_id)
+
+  def get_arke(unit_id, project, arke_id) when is_binary(arke_id),
+    do: get_arke(unit_id, project, String.to_existing_atom(arke_id))
+
+  def get_arke(unit_id, project, arke_id) when is_atom(arke_id) do
+    case get(unit_id, project) do
+      {:error, _msg} ->
+        nil
+
+      %{id: id, metadata: %{project: project}} ->
+        GenServer.call(via({id, project}), {:get_arke, arke_id})
+    end
+  end
+
+  def get_arke(unit_id, project, %Unit{} = parameter), do: parameter
+
+  def get_groups_by_arke(%{id: id, metadata: %{project: project}} = arke),
+    do: get_groups_by_arke(id, project)
+
+  def get_groups_by_arke(arke_id, project) do
+    group_keys = get_all(project)
+
+    Enum.reduce(group_keys, [], fn {g, _}, groups ->
+      group = get(g, project)
+      arke_id in Enum.map(group.data.arke_list, fn a -> a.id end)
+      [group | groups]
+    end)
+  end
+
+  def get_parameters(%{id: id, metadata: %{project: project}} = group),
+    do: get_parameters(id, project)
+
+  def get_parameters(group_id, project) do
+    GenServer.call(via({group_id, project}), :get_parameters)
+  end
+
+  # Get arke call handler
+  def handle_call({:get_arke, arke_id}, _from, {%{data: data} = unit, project})
+      when is_atom(arke_id) do
+    with %Unit{} = arke <-
+           Enum.find(get_arke_list(unit), {:error, "arke id not found"}, fn f ->
+             f.id == arke_id
+           end),
+         do: {:reply, arke, {unit, project}},
+         else: ({:error, msg} -> {:reply, nil})
+  end
+
+  # Get parameters call handler
+  def handle_call(:get_parameters, _from, {unit, project}) do
+    parameters =
+      get_arke_list(unit)
+      |> get_group_parameters(project)
+      |> init_parameters_by_ids(project)
+
+    {:reply, parameters, {unit, project}}
+  end
+
+  defp get_group_parameters(arke_list, _project) do
+    Enum.reduce(arke_list, [], fn arke, group_parameters ->
+      check_group_parameters(group_parameters, Arke.Boundary.ArkeManager.get_parameters(arke))
+    end)
+  end
+
+  defp init_parameters_by_ids(ids, project) do
+    Enum.reduce(ids, [], fn id, parameters ->
+      [Arke.Boundary.ParameterManager.get(id, project) | parameters]
+    end)
+  end
+
+  defp check_group_parameters([], arke_parameters),
+    do: Enum.map(arke_parameters, fn p -> p.id end)
+
+  defp check_group_parameters(group_parameters, arke_parameters) do
+    arke_ids = Enum.map(arke_parameters, fn p -> p.id end)
+    group_parameters -- group_parameters -- arke_ids
+  end
+
+  defp link_init(project, :arke_list, child_id, metadata) do
+    case init_arke(project, child_id, metadata) do
+      {:error, msg} -> %{id: child_id, metadata: metadata}
+      p -> p
+    end
+  end
+
+  defp init_arke(project, id, metadata) do
+    case Arke.Boundary.ArkeManager.get(id, project) do
+      {:error, msg} ->
+        {:error, msg}
+
+      arke ->
+        Unit.update(arke, metadata)
+    end
+  end
+end
