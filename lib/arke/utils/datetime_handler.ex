@@ -21,31 +21,45 @@ defmodule Arke.DatetimeHandler do
 
   @time_msg "must be must be %Time{} |~T[HH:MM:SS] | iso8601 (HH:MM:SS) format"
 
-  defp check_datetime(v) do
+  defp check_datetime(v, only_value) do
     case Timex.is_valid?(v) do
       true ->
-        {:ok, Timex.to_datetime(v, "Etc/UTC")}
+        datetime = Timex.to_datetime(v, "Etc/UTC")
+
+        case only_value do
+          true -> datetime
+          false -> {:ok, datetime}
+        end
 
       false ->
         {:error, @datetime_msg}
     end
   end
 
-  defp check_date(v) do
+  defp check_date(v, only_value) do
     case Timex.is_valid?(v) do
       true ->
-        {:ok, Timex.to_date(v)}
+        date = Timex.to_date(v)
+
+        case only_value do
+          true -> date
+          false -> {:ok, date}
+        end
 
       false ->
         {:error, @date_msg}
     end
   end
 
-  defp check_time(v) do
+  defp check_time(v, only_value) do
     try do
       # it will crash if the time is not valid the return the %Time{}
       Time.to_iso8601(v)
-      {:ok, v}
+
+      case only_value do
+        true -> v
+        false -> {:ok, v}
+      end
     rescue
       e ->
         {:error, @time_msg}
@@ -55,28 +69,32 @@ defmodule Arke.DatetimeHandler do
   # ----- DATETIME -----
 
   def now(:datetime), do: Timex.set(Timex.now(), microsecond: 0)
-  def parse_datetime(value) when is_nil(value), do: {:ok, value}
+  def parse_datetime(value, only_value \\ false)
+  def parse_datetime(value, true) when is_nil(value), do: value
+  def parse_datetime(value, _only_value) when is_nil(value), do: {:ok, value}
 
-  def parse_datetime(%DateTime{} = value), do: check_datetime(value)
+  def parse_datetime(%DateTime{} = value, only_value), do: check_datetime(value, only_value)
 
-  def parse_datetime(%NaiveDateTime{} = value), do: check_datetime(value)
+  def parse_datetime(%NaiveDateTime{} = value, only_value), do: check_datetime(value, only_value)
 
-  def parse_datetime(value) do
+  def parse_datetime(value, only_value) do
     case Timex.parse(value, "{ISO:Extended:Z}") do
-      {:ok, datetime} -> check_datetime(datetime)
+      {:ok, datetime} -> check_datetime(datetime, only_value)
       {:error, _} -> {:error, @datetime_msg}
     end
   end
 
   # ----- DATE -----
   def now(:date), do: Timex.now() |> Timex.to_date()
-  def parse_date(value) when is_nil(value), do: {:ok, value}
+  def parse_date(value, only_value \\ false)
+  def parse_date(value, true) when is_nil(value), do: nil
+  def parse_date(value, _only_value) when is_nil(value), do: {:ok, nil}
 
-  def parse_date(%Date{} = value), do: check_date(value)
+  def parse_date(%Date{} = value, only_value), do: check_date(value, only_value)
 
-  def parse_date(value) do
+  def parse_date(value, only_value) do
     case Timex.parse(value, "{ISOdate}") do
-      {:ok, parsed} -> check_date(parsed)
+      {:ok, parsed} -> check_date(parsed, only_value)
       {:error, _} -> {:error, @date_msg}
     end
   end
@@ -84,15 +102,25 @@ defmodule Arke.DatetimeHandler do
   # ----- TIME -----
 
   def now(:time), do: Time.utc_now() |> Time.truncate(:second)
+  def parse_time(value, only_value \\ false)
+  def parse_time(value, true) when is_nil(value), do: nil
+  def parse_time(value, _only_value) when is_nil(value), do: {:ok, nil}
 
-  def parse_time(value) when is_nil(value), do: {:ok, value}
+  def parse_time(%Time{} = value, only_value), do: check_time(value, only_value)
 
-  def parse_time(%Time{} = value), do: check_time(value)
-
-  def parse_time(value) do
+  def parse_time(value, only_value) do
     case Time.from_iso8601(value) do
-      {:ok, time} -> {:ok, time}
-      {:error, _} -> {:error, @time_msg}
+      {:ok, time} ->
+        case only_value do
+          true ->
+            time
+
+          false ->
+            {:ok, time}
+        end
+
+      {:error, _} ->
+        {:error, @time_msg}
     end
   end
 end
