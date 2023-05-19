@@ -2,13 +2,15 @@ name: Publish package to Hex 📦
 on:
   push:
     tags:
-      - “v[0-9]+.[0-9]+.[0-9]+”
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
         with:
