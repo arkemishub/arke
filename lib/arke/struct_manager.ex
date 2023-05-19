@@ -21,6 +21,7 @@ defmodule Arke.StructManager do
   alias Arke.Boundary.GroupManager
   alias Arke.Boundary.ArkeManager
   alias Arke.QueryManager
+  alias Arke.DatetimeHandler, as: DatetimeHandler
   alias Arke.Core.{Unit, Arke}
 
   @type parameter :: %{
@@ -59,10 +60,12 @@ defmodule Arke.StructManager do
   defp handle_encode(u, type, load_links, opts \\ [])
 
   defp handle_encode([], _, _, _), do: []
+  defp handle_encode(nil, _, _, _), do: nil
 
   defp handle_encode(units, type, load_links, opts) when is_list(units) do
     # TODO handle multiple project encode
     %{metadata: %{project: project}} = List.first(units, nil)
+
     link_units = handle_load_link(units, project, load_links, opts)
     opts = Keyword.put(opts, :link_units, link_units)
 
@@ -85,14 +88,16 @@ defmodule Arke.StructManager do
         else: link_units
 
     opts = Keyword.put(opts, :link_units, link_units)
+
     arke = ArkeManager.get(arke_id, project)
+
     parsed_data = get_parsed_data(unit.data, arke, opts)
 
     base_data = %{
       id: Atom.to_string(id),
       arke_id: Atom.to_string(arke_id),
-      inserted_at: NaiveDateTime.to_iso8601(unit.inserted_at),
-      updated_at: NaiveDateTime.to_iso8601(unit.updated_at),
+      inserted_at: DatetimeHandler.parse_datetime(unit.inserted_at, true),
+      updated_at: DatetimeHandler.parse_datetime(unit.updated_at, true),
       # to remove project Map.delete(unit.metadata, :project)
       metadata: unit.metadata
     }
@@ -156,9 +161,11 @@ defmodule Arke.StructManager do
   end
 
   def encode(_unit, _format), do: raise("Must pass a valid unit")
+  def validate_data(id, value, arke, opts \\ [])
 
-  def validate_data(id, value, arke, opts \\ []) do
+  def validate_data(id, value, arke, opts) do
     param = ArkeManager.get_parameter(arke, id)
+
     new_value = parse_value(value, param.arke_id, opts)
     %{id => new_value}
   end
@@ -455,6 +462,8 @@ defmodule Arke.StructManager do
       # connection_type: data.connection_type
     })
   end
+
+  defp get_arke_or_group_id(nil, project), do: nil
 
   defp get_arke_or_group_id(arke_or_group_id, project) do
     case ArkeManager.get(arke_or_group_id, project) do

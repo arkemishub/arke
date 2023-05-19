@@ -76,7 +76,9 @@ defmodule Arke.Boundary.ArkeManager do
            end),
          %Unit{} = parameter <- init_parameter(project, id, metadata),
          do: {:reply, parameter, {unit, project}},
-         else: ({:error, msg} -> {:reply, nil})
+         else:
+           ({:error, msg} ->
+              {:reply, nil})
   end
 
   defp check_module(%{__module__: nil} = unit),

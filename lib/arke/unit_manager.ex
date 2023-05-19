@@ -92,7 +92,8 @@ defmodule Arke.UnitManager do
       def remove(unit_id, project) do
         case get_pid(unit_id, project) do
           {:error, msg} ->
-            {:errors, msg}
+
+            {:error, msg}
 
           pid ->
             DynamicSupervisor.terminate_child(
@@ -314,6 +315,10 @@ defmodule Arke.UnitManager do
 
         unit = Unit.update(unit, opts)
         {:reply, unit, {unit, project}}
+      end
+
+      def handle_info({:EXIT, _from, reason}, state) do
+        Logger.warn("Tracking #{state.name} - Stopped with reason #{inspect(reason)}")
       end
 
       def terminate(reason, _s) do
