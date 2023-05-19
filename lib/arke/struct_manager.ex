@@ -60,6 +60,7 @@ defmodule Arke.StructManager do
   defp handle_encode(u, type, load_links, opts \\ [])
 
   defp handle_encode([], _, _, _), do: []
+  defp handle_encode(nil, _, _, _), do: nil
 
   defp handle_encode(units, type, load_links, opts) when is_list(units) do
     # TODO handle multiple project encode
@@ -462,6 +463,8 @@ defmodule Arke.StructManager do
       # connection_type: data.connection_type
     })
   end
+
+  defp get_arke_or_group_id(nil, project), do: nil
 
   defp get_arke_or_group_id(arke_or_group_id, project) do
     case ArkeManager.get(arke_or_group_id, project) do
