@@ -161,8 +161,7 @@ defmodule Arke.StructManager do
   end
 
   def encode(_unit, _format), do: raise("Must pass a valid unit")
-
-  def validate_data(:project, value, arke, opts \\ []), do: %{project: value}
+  def validate_data(id, value, arke, opts \\ [])
 
   def validate_data(id, value, arke, opts) do
     param = ArkeManager.get_parameter(arke, id)

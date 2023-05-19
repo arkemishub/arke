@@ -136,7 +136,18 @@ defmodule Arke.Boundary.GroupManager do
         {:error, msg}
 
       arke ->
+        metadata = remove_project(metadata)
         Unit.update(arke, metadata)
     end
+  end
+
+  defp remove_project(metadata) when is_map(metadata) do
+    {_, metadata} = Map.pop(metadata, :project, nil)
+    metadata
+  end
+
+  defp remove_project(metadata) do
+    {_, metadata} = Keyword.pop(metadata, :project, nil)
+    metadata
   end
 end
