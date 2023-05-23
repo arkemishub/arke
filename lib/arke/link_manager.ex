@@ -14,7 +14,7 @@
 
 defmodule Arke.LinkManager do
   @moduledoc false
-  @record_fields [:id, :data, :configuration, :inserted_at, :updated_at]
+  @record_fields [:id, :data, :metadata, :inserted_at, :updated_at]
 
   alias Arke.Boundary.ArkeManager
   alias Arke.QueryManager

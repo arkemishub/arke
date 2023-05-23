@@ -24,7 +24,7 @@ defmodule Arke.ValidatorTest do
           type: "arke",
           active: true,
           parameters: [],
-          configuration: %{}
+          metadata: %{}
         })
 
       {:ok, validate} = Arke.Validator.validate(unit, :update, :test_schema)
@@ -40,7 +40,7 @@ defmodule Arke.ValidatorTest do
           type: "arke",
           active: true,
           parameters: [],
-          configuration: %{}
+          metadata: %{}
         })
 
       {:error, [%{context: c, message: msg}]} =

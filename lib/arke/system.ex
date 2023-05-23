@@ -130,7 +130,7 @@ defmodule Arke.System do
         data: %{label: label, active: active, type: type, parameters: @parameters},
         metadata: metadata
       }
-      #      @arke Arke.Core.Arke.new(id: id, label: label, active: active, configuration: configuration, type: type, parameters: @parameters)
+      #      @arke Arke.Core.Arke.new(id: id, label: label, active: active, metadata: metadata, type: type, parameters: @parameters)
     end
   end
 
@@ -146,7 +146,7 @@ defmodule Arke.System do
 
   defp get_base_arke_parameters(_type), do: nil
 
-  #  @spec __arke_info__(caller :: caller(), options :: list()) :: [id: atom() | String.t(), label: String.t(), active: boolean(), configuration: map(), type: atom()]
+  #  @spec __arke_info__(caller :: caller(), options :: list()) :: [id: atom() | String.t(), label: String.t(), active: boolean(), metadata: map(), type: atom()]
   #  defp __arke_info__(caller, options) do
   #
   #    id = Keyword.get(options, :id, caller |> to_string |> String.split(".") |> List.last |> Macro.underscore |> String.to_atom)
@@ -155,7 +155,7 @@ defmodule Arke.System do
   #      id: id,
   #      label: label,
   #      active: Keyword.get(options, :active, true),
-  #      configuration: Keyword.get(options, :configuration, %{}),
+  #      metadata: Keyword.get(options, :metadata, %{}),
   #      type: Keyword.get(options, :type, :arke)
   #    ]
   #  end
@@ -216,7 +216,7 @@ defmodule Arke.System.BaseArke do
 end
 
 defmodule Arke.System.BaseParameter do
-  defstruct [:id, :label, :active, :configuration, :type, :parameters]
+  defstruct [:id, :label, :active, :metadata, :type, :parameters]
 
   @doc """
   Used in the parameter macro to create the map for every parameter which have the `values` option.

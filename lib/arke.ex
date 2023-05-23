@@ -154,21 +154,6 @@ defmodule Arke do
         nil
       )
 
-    configuration =
-      Unit.new(
-        :configuration,
-        Map.merge(
-          base_parameter(label: "Configuration", persistence: "table_column"),
-          %{default_dict: %{}}
-        ),
-        :dict,
-        nil,
-        %{},
-        nil,
-        nil,
-        nil
-      )
-
     inserted_at =
       Unit.new(
         :inserted_at,
@@ -1269,7 +1254,6 @@ defmodule Arke do
       id,
       arke_id,
       metadata,
-      configuration,
       inserted_at,
       updated_at,
       active,

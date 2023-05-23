@@ -43,7 +43,7 @@ defmodule Arke.QueryManager do
   alias Arke.Core.{Arke, Unit, Query, Parameter}
 
   @persistence Application.get_env(:arke, :persistence)
-  @record_fields [:id, :data, :configuration, :inserted_at, :updated_at]
+  @record_fields [:id, :data, :metadata, :inserted_at, :updated_at]
 
   @type func_return() :: {:ok, Unit.t()} | Error.t()
   @type operator() ::

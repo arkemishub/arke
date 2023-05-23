@@ -75,7 +75,7 @@ defmodule Arke.Core.Unit do
 
   def load_parameter_value(%{id: :id} = _, data, opts), do: data
   def load_parameter_value(%{id: :metadata} = _, data, opts), do: data
-  def load_parameter_value(%{id: :configuration} = _, data, opts), do: data
+  def load_parameter_value(%{id: :metadata} = _, data, opts), do: data
   def load_parameter_value(%{id: :arke_id} = _, data, opts), do: data
   def load_parameter_value(%{id: :inserted_at} = _, data, opts), do: data
   def load_parameter_value(%{id: :updated_at} = _, data, opts), do: data
@@ -126,8 +126,8 @@ defmodule Arke.Core.Unit do
 
   defp handle_default_value(_), do: nil
 
-  defp get_link(%{depth: depth, link_configuration: link_configuration} = args),
-    do: {%{depth: depth, configuration: link_configuration}, args}
+  defp get_link(%{depth: depth, link_metadata: link_metadata} = args),
+    do: {%{depth: depth, metadata: link_metadata}, args}
 
   defp get_link(args), do: {nil, args}
 

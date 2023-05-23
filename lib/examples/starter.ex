@@ -75,7 +75,7 @@ defmodule Arke.Examples.Starter do
     Enum.map(arke_parameters, fn %{data: data} ->
       parent_id = String.to_existing_atom(data.parent_id)
       child_id = String.to_existing_atom(data.child_id)
-      ArkeManager.add_parameter(parent_id, :arke_system, child_id, data.configuration)
+      ArkeManager.add_parameter(parent_id, :arke_system, child_id, data.metadata)
     end)
   end
 
@@ -85,13 +85,13 @@ defmodule Arke.Examples.Starter do
   #       :default,
   #       [id: :arke_schema, label: "Arke Schema", type: :table],
   #       [
-  #         [id: :id, label: "ID", type: :string, is_primary: true, configuration: %{required: true}],
-  #         [id: :label, label: "Label", type: :string, configuration: %{required: true}],
-  #         [id: :active, label: "Active", type: :boolean, configuration: %{default: true}],
-  #         [id: :configuration, label: "Configuration", type: :map, configuration: %{default: %{}}],
-  #         [id: :type, label: "Type", type: :string, configuration: %{default: :string}],
-  #         [id: :inserted_at, label: "Inserted at", type: :datetime, configuration: %{default: DatetimeHandler.now(:datetime)}],
-  #         [id: :updated_at, label: "Updated at", type: :datetime, configuration: %{default: DatetimeHandler.now(:datetime)}],
+  #         [id: :id, label: "ID", type: :string, is_primary: true, metadata: %{required: true}],
+  #         [id: :label, label: "Label", type: :string, metadata: %{required: true}],
+  #         [id: :active, label: "Active", type: :boolean, metadata: %{default: true}],
+  #         [id: :metadata, label: "Metadata", type: :map, metadata: %{default: %{}}],
+  #         [id: :type, label: "Type", type: :string, metadata: %{default: :string}],
+  #         [id: :inserted_at, label: "Inserted at", type: :datetime, metadata: %{default: DatetimeHandler.now(:datetime)}],
+  #         [id: :updated_at, label: "Updated at", type: :datetime, metadata: %{default: DatetimeHandler.now(:datetime)}],
   #       ]
   #     },
   #     {
@@ -101,7 +101,7 @@ defmodule Arke.Examples.Starter do
   #         [id: :id, label: "ID", type: :string, is_primary: true],
   #         [id: :label, label: "Label", type: :string],
   #         [id: :type, label: "Type", type: :string],
-  #         [id: :configuration, label: "Configuration", type: :map],
+  #         [id: :metadata, label: "Metadata", type: :map],
   #         [id: :format, label: "Format", type: :string],
   #         [id: :is_primary, label: "Is Primary", type: :boolean],
   #         [id: :inserted_at, label: "Inserted at", type: :datetime],
@@ -114,7 +114,7 @@ defmodule Arke.Examples.Starter do
   #       [
   #         [id: :arke_schema_id, label: "Arke schema id", type: :string, is_primary: true],
   #         [id: :arke_field_id, label: "Arke field id", type: :string, is_primary: true],
-  #         [id: :configuration, label: "Configuration", type: :map],
+  #         [id: :metadata, label: "Metadata", type: :map],
   #       ]
   #     },
   #     {
@@ -124,7 +124,7 @@ defmodule Arke.Examples.Starter do
   #         [id: :id, label: "ID", type: :string, is_primary: true],
   #         [id: :arke_schema_id, label: "Arke schema id", type: :string],
   #         [id: :data, label: "Data", type: :map],
-  #         [id: :configuration, label: "Configuration", type: :map],
+  #         [id: :metadata, label: "Metadata", type: :map],
   #         [id: :inserted_at, label: "Inserted at", type: :datetime],
   #         [id: :updated_at, label: "Updated at", type: :datetime],
   #       ]
@@ -136,7 +136,7 @@ defmodule Arke.Examples.Starter do
   #         [id: :id, label: "ID", type: :string, is_primary: true],
   #         [id: :label, label: "Label", type: :string],
   #         [id: :active, label: "Active", type: :boolean],
-  #         [id: :configuration, label: "Configuration", type: :map],
+  #         [id: :metadata, label: "Metadata", type: :map],
   #         [id: :type, label: "Type", type: :string],
   #         [id: :inserted_at, label: "Inserted at", type: :datetime],
   #         [id: :updated_at, label: "Updated at", type: :datetime],
