@@ -19,26 +19,35 @@ defmodule Arke.Core.Unit do
   """
   alias Arke.DatetimeHandler, as: DatetimeHandler
   alias Arke.Boundary.ArkeManager
+  alias Arke.Utils.ErrorGenerator, as: Error
 
   defstruct ~w[id data arke_id link metadata inserted_at updated_at __module__]a
 
   def new(id, data, arke_id, link, metadata, inserted_at, updated_at, __module__) do
-    id = check_id(id)
+    case check_id(id) do
+      {:error, msg} ->
+        {:error, msg}
 
-    __struct__(
-      id: id,
-      data: data,
-      arke_id: arke_id,
-      link: link,
-      metadata: metadata,
-      inserted_at: inserted_at,
-      updated_at: updated_at,
-      __module__: __module__
-    )
+      id ->
+        __struct__(
+          id: id,
+          data: data,
+          arke_id: arke_id,
+          link: link,
+          metadata: metadata,
+          inserted_at: inserted_at,
+          updated_at: updated_at,
+          __module__: __module__
+        )
+    end
   end
 
   defp check_id(id) when is_binary(id), do: String.to_atom(id)
   defp check_id(id) when is_atom(id), do: id
+
+  defp check_id(id) when is_number(id),
+    do: Error.create(:parameter_validation, "id cannot be a number")
+
   defp check_id(_), do: nil
 
   def load(arke, opts, persistence_fn \\ :get)
