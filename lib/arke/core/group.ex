@@ -21,6 +21,8 @@ defmodule Arke.Core.Group do
   alias Arke.Boundary.GroupManager
 
   arke do
+    group(:arke_or_group)
+
     parameter(:label, :string, required: false)
     parameter(:description, :string, required: false)
 
