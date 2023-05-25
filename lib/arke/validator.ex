@@ -50,10 +50,10 @@ defmodule Arke.Validator do
       {%{data: data} = unit, errors} = before_validate(unit, project)
       %{data: arke_data} = arke = ArkeManager.get(arke_id, project)
 
-    unit_parameters =
-      Enum.filter(ArkeManager.get_parameters(arke), fn %{data: %{persistence: persistence}} ->
-        persistence == "arke_parameter"
-      end)
+      unit_parameters =
+        Enum.filter(ArkeManager.get_parameters(arke), fn %{data: %{persistence: persistence}} ->
+          persistence == "arke_parameter"
+        end)
 
       res =
         Enum.reduce(unit_parameters, {unit, errors}, fn p, {new_unit, errors} = _res ->
@@ -150,6 +150,7 @@ defmodule Arke.Validator do
   defp check_parameter(parameter, value, project) do
     value = get_default_value(parameter, value)
     value = parse_value(parameter, value)
+    value = check_no_whitespace(parameter, value)
 
     errors =
       []
@@ -293,6 +294,13 @@ defmodule Arke.Validator do
 
     Enum.all?(value, &condition.(&1))
   end
+
+  defp check_no_whitespace(%{data: %{no_whitespace: true}} = parameter, value) do
+    value |> String.trim() |> String.replace(~r/\s+/, "-")
+  end
+
+  defp check_no_whitespace(_, value),
+    do: value
 
   defp check_max_length(errors, %{data: %{max_length: max_length}} = parameter, _)
        when is_nil(max_length),

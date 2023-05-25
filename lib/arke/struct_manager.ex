@@ -386,6 +386,7 @@ defmodule Arke.StructManager do
     Map.merge(base_data, %{
       max_length: data.max_length,
       min_length: data.min_length,
+      no_whitespace: data.no_whitespace,
       default: data.default_string,
       values: data.values,
       multiple: data.multiple
