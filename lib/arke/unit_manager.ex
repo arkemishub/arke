@@ -92,7 +92,6 @@ defmodule Arke.UnitManager do
       def remove(unit_id, project) do
         case get_pid(unit_id, project) do
           {:error, msg} ->
-
             {:error, msg}
 
           pid ->
@@ -243,8 +242,14 @@ defmodule Arke.UnitManager do
       end
 
       # Get specific unit
-      def handle_call(:get, _from, {unit, project}) do
-        {:reply, unit, {unit, project}}
+      def handle_call(:get, _from, {%{__module__: module} = unit, project}) do
+        case handle_call_func(module, :on_get_data, [unit, nil], nil) do
+          {:ok, new_unit} ->
+            {:reply, new_unit, {new_unit, project}}
+
+          _ ->
+            {:reply, unit, {unit, project}}
+        end
       end
 
       # Get remove unit
