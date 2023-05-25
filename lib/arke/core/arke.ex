@@ -23,6 +23,8 @@ defmodule Arke.Core.Arke do
   alias Arke.Boundary.ArkeManager
 
   arke id: :arke do
+    group(:arke_or_group)
+
     parameter(:label, :string, required: true)
     parameter(:active, :boolean, required: false, default_boolean: true)
     parameter(:type, :string, required: true, default_string: "arke")

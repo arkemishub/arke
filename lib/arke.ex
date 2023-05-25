@@ -35,6 +35,20 @@ defmodule Arke do
       :arke_system
     )
 
+    GroupManager.create(
+      Unit.new(
+        :arke_or_group,
+        %{label: "Arke or Group", description: "Arke or Group", arke_list: []},
+        :group,
+        nil,
+        %{},
+        nil,
+        nil,
+        nil
+      ),
+      :arke_system
+    )
+
     arke_modules = get_arke_modules()
   end
 
@@ -1119,10 +1133,10 @@ defmodule Arke do
         Map.merge(base_parameter(label: "Arke or Group id", required: true), %{
           default_link: nil,
           multiple: false,
-          arke_or_group_id: nil,
+          arke_or_group_id: "arke_or_group",
           depth: 0,
           connection_type: "link",
-          filter_keys: ["arke_id", "id"]
+          filter_keys: ["id", "label"]
         }),
         :link,
         nil,
