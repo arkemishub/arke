@@ -242,14 +242,8 @@ defmodule Arke.UnitManager do
       end
 
       # Get specific unit
-      def handle_call(:get, _from, {%{__module__: module} = unit, project}) do
-        case handle_call_func(module, :on_get_data, [unit, nil], nil) do
-          {:ok, new_unit} ->
-            {:reply, new_unit, {new_unit, project}}
-
-          _ ->
-            {:reply, unit, {unit, project}}
-        end
+      def handle_call(:get, _from, {unit, project}) do
+        {:reply, unit, {unit, project}}
       end
 
       # Get remove unit

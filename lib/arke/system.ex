@@ -43,7 +43,7 @@ defmodule Arke.System do
       def before_validate(arke, unit), do: {:ok, unit}
       def on_create(arke, unit), do: {:ok, unit}
       def before_create(arke, unit), do: {:ok, unit}
-      def on_get_data(unit, _), do: {:ok, unit}
+      def on_struct_encode(unit, _), do: {:ok, unit}
       def on_update(arke, unit), do: {:ok, unit}
       def before_update(arke, unit), do: {:ok, unit}
       def on_delete(arke, unit), do: {:ok, unit}
@@ -55,7 +55,7 @@ defmodule Arke.System do
                      before_validate: 2,
                      on_create: 2,
                      before_create: 2,
-                     on_get_data: 2,
+                     on_struct_encode: 2,
                      on_update: 2,
                      before_update: 2,
                      on_delete: 2,
