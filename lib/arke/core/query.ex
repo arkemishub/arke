@@ -90,19 +90,21 @@ defmodule Arke.Core.Query do
       }
     end
 
-    defp cast_value(parameter, value) do
-      case parameter.arke_id do
+    defp cast_value(%Arke.Core.Unit{arke_id: arke_id} = parameter, value) do
+      case arke_id do
         :datetime ->
           Arke.DatetimeHandler.parse_datetime(value)
           |> case do
             {:ok, value} -> value
-            _ -> {:error, "Invalid datetime format"}
+            _ -> raise ArgumentError, message: "Invalid datetime format"
           end
 
         _ ->
           value
       end
     end
+
+    defp cast_value(parameter, value), do: value
   end
 
   defmodule Order do
