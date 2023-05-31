@@ -5,7 +5,7 @@ defmodule Arke.MixProject do
     [
       app: :arke,
       name: "Arke",
-      version: "0.1.4",
+      version: "0.1.5",
       build_path: "./_build",
       deps_path: "./deps",
       lockfile: "./mix.lock",
