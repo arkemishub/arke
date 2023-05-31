@@ -358,7 +358,7 @@ defmodule Arke.QueryManagerTest do
       raw = QueryManager.raw(query)
 
       assert raw ==
-               {"SELECT a0.\"id\", a0.\"arke_id\", a0.\"data\", a0.\"configuration\", a0.\"inserted_at\", a0.\"updated_at\" FROM \"arke_unit\" AS a0 WHERE (a0.\"arke_id\" LIKE $1)",
+               {"SELECT a0.\"id\", a0.\"arke_id\", a0.\"data\", a0.\"metadata\", a0.\"inserted_at\", a0.\"updated_at\" FROM \"arke_unit\" AS a0 WHERE (a0.\"arke_id\" LIKE $1)",
                 ["%project%"]}
     end
 
