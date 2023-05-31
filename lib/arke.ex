@@ -1094,7 +1094,7 @@ defmodule Arke do
       Unit.new(
         :connection_type,
         Map.merge(
-          base_parameter(label: "Connection tyoe"),
+          base_parameter(label: "Connection type"),
           %{
             min_length: 1,
             max_length: nil,
