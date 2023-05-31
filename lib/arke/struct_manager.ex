@@ -91,8 +91,6 @@ defmodule Arke.StructManager do
 
     arke = ArkeManager.get(arke_id, project)
 
-    parsed_data = get_parsed_data(unit.data, arke, opts)
-
     base_data = %{
       id: Atom.to_string(id),
       arke_id: Atom.to_string(arke_id),
@@ -102,7 +100,9 @@ defmodule Arke.StructManager do
       metadata: unit.metadata
     }
 
-    data = Map.merge(parsed_data, base_data)
+    {:ok, new_unit} = ArkeManager.call_func(arke, :on_struct_encode, [unit, nil])
+
+    data = get_parsed_data(new_unit.data, arke, opts) |> Map.merge(base_data)
     # TODO figure out why in link units project key in metadata is a string
     Map.put(data, :metadata, Map.drop(data.metadata, [:project, "project"]))
   end
