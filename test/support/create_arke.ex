@@ -40,7 +40,6 @@ defmodule Arke.Support.CreateArke do
   defp base_parameter(opts \\ []) do
     %{
       label: Keyword.get(opts, :label),
-      #      type: Keyword.get!(opts, :type),
       format: Keyword.get(opts, :format, :attribute),
       is_primary: Keyword.get(opts, :is_primary, false),
       nullable: Keyword.get(opts, :nullable, true),
