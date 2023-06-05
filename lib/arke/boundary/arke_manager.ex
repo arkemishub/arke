@@ -78,7 +78,7 @@ defmodule Arke.Boundary.ArkeManager do
          do: {:reply, parameter, {unit, project}},
          else:
            ({:error, msg} ->
-              {:reply, nil})
+              {:reply, nil, {unit, project}})
   end
 
   defp check_module(%{__module__: nil} = unit),

@@ -1,7 +1,7 @@
 defmodule Arke.Core.QueryTest do
   use Arke.RepoCase
 
-  defp get_query(context), do: %{query: Query.new(nil, :test_schema)}
+  defp get_query(_context), do: %{query: Query.new(nil, :test_schema)}
 
   describe "Query" do
     setup [:get_query]
@@ -12,7 +12,7 @@ defmodule Arke.Core.QueryTest do
       assert query.project == :test_schema
     end
 
-    test "add_link_filter", %{query: query} = context do
+    test "add_link_filter", %{query: query} = _context do
       arke_model = ArkeManager.get(:arke, :arke_system)
       unit = Unit.load(arke_model, id: :unit_query_test, label: "Unit query test")
       link_filter = Query.add_link_filter(query, unit, 10, :child, "parameter")
@@ -23,59 +23,78 @@ defmodule Arke.Core.QueryTest do
       assert link_filter.link.type == "parameter"
     end
 
-    test "add_filter", %{query: query} = context do
+    test "add_filter", %{query: query} = _context do
       # Filter struct
-      parameter = ParameterManager.get(:name, :arke_system)
+      parameter = ParameterManager.get(:default_string, :arke_system)
       filter = Query.new_filter(parameter, :eq, "name", false)
 
       struct_filter = Query.add_filter(query, filter)
 
       assert is_list(struct_filter.filters) == true
-      assert List.first(List.first(struct_filter.filters).base_filters).parameter.id == :name
 
-      # add_filter/4 SHOULD BE SAME AS ABOVE
+      assert List.first(List.first(struct_filter.filters).base_filters).parameter.id ==
+               :default_string
+    end
+
+    # SHOULD BE THE SAME AS add_filter/2
+    test "add_filter/4", %{query: query} = _context do
+      # Filter struct
+      parameter = ParameterManager.get(:default_string, :arke_system)
 
       base_filter = Query.new_base_filter(parameter, :contains, "test", false)
 
       filter = Query.add_filter(query, :or, false, [base_filter])
+      struct_filter = Query.add_filter(query, filter)
+
+      query_filter = List.first(struct_filter.filters).filters
 
       assert is_list(struct_filter.filters) == true
-      assert List.first(List.first(struct_filter.filters).base_filters).parameter.id == :name
+      assert List.first(List.first(query_filter).base_filters).parameter.id == :default_string
+    end
 
-      # add_filter/5 SHOULD BE SAME AS ABOVE
+    # SHOULD BE THE SAME AS add_filter/2
+    test "add_filter/5", %{query: query} = _context do
+      # Filter struct
 
       filter = Query.add_filter(query, :min_length, :contains, "test", true)
 
       assert is_list(filter.filters) == true
-      assert List.first(List.first(filter.filters).base_filters).parameter.id == :min_length
+      assert List.first(List.first(filter.filters).base_filters).parameter == :min_length
     end
 
-    test "new_filter" do
-      # new_filter/3
-      filter = Query.new_filter(:or, true, Query.new_base_filter(:name, :contains, "test", false))
+    # TODO: new_base_filter should accept only parameter struct and raise an error if an atom is given
+    test "new_filter/3" do
+      filter =
+        Query.new_filter(
+          :or,
+          true,
+          Query.new_base_filter(:default_string, :contains, "test", false)
+        )
+
       assert filter.__struct__ == Arke.Core.Query.Filter
       assert filter.logic == :or
-      assert List.first(filter.base_filters).parameter.id == :name
+      assert List.first(filter.base_filters).parameter == :default_string
+    end
 
-      # new_filter/4
-      filter = Query.new_filter(:name, :gte, 12, false)
+    test "new_filter/4" do
+      filter = Query.new_filter(:default_integer, :gte, 12, false)
       assert filter.__struct__ == Arke.Core.Query.Filter
       assert filter.logic == :and
       assert List.first(filter.base_filters).operator == :gte
     end
 
-    test "add_order", %{query: query} = context do
+    test "add_order", %{query: query} = _context do
       # SHOULD WORK ALSO WITH ATOMS
 
-      parameter = ParameterManager.get(:name, :arke_system)
+      parameter = ParameterManager.get(:default_string, :arke_system)
       order = Query.add_order(query, parameter, :parent)
 
       assert List.first(order.orders).__struct__ == Arke.Core.Query.Order
       assert List.first(order.orders).direction == :parent
-      assert List.first(order.orders).parameter.id == :name
+      assert List.first(order.orders).parameter.id == :default_string
     end
 
-    test "set_offset", %{query: query} = context do
+    test "set_offset", %{query: query} = _context do
       # set_offset/2 when is_nil(nil)
       query_offset = Query.set_offset(query, nil)
 
@@ -99,7 +118,7 @@ defmodule Arke.Core.QueryTest do
       assert query_offset == nil
     end
 
-    test "set_limit", %{query: query} = context do
+    test "set_limit", %{query: query} = __context do
       # set_limit/2 when is_nil(nil)
       query_limit = Query.set_limit(query, nil)
 

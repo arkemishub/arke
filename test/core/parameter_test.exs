@@ -1,55 +1,40 @@
 defmodule Arke.Core.ParameterTest do
   use Arke.RepoCase
 
-  # make differents describe for each parameter type and for all of them make also some errors test
-  defp get_query_node(child_id) do
-    arke_link = ArkeManager.get(:arke_link, :arke_system)
-
-    Arke.QueryManager.query(project: :test_schema, arke: arke_link, type: :parameter)
-    |> Arke.QueryManager.filter(:type, :eq, :parameter, false)
-    |> Arke.QueryManager.filter(:child_id, :eq, child_id, false)
-    |> Arke.QueryManager.filter(:parent_id, :eq, :test_arke_parameter, false)
-  end
-
   defp check_arke(context) do
-    with nil <- QueryManager.get_by(id: :test_arke_parameter, project: :test_schema) do
-      arke_model = ArkeManager.get(:arke, :arke_system)
-      arke_opts = [id: "test_arke_parameter", label: "test_arke_parameter", active: true]
-      QueryManager.create(:test_schema, arke_model, arke_opts)
-      :ok
-    else
-      _ ->
-        ArkeManager.remove(:test_arke_parameter, :test_schema)
-        check_arke(context)
-    end
+    arke_model = ArkeManager.get(:arke, :arke_system)
+    arke_opts = [id: "test_arke_parameter", label: "test_arke_parameter", active: true]
+    unit = Unit.load(arke_model, arke_opts)
+    ArkeManager.create(unit, :test_schema)
+    :ok
   end
 
-  defp create_param(%{describe: type, opts: values} = context) do
-    parameter_model = ArkeManager.get(String.to_atom(String.downcase(type)), :arke_system)
-    QueryManager.create(:test_schema, parameter_model, values)
-    :ok
+  defp create_param(%{describe: type, opts: values} = _context) do
+    id = String.to_atom(String.downcase(type))
+    create_param(id, values)
   end
 
   defp create_param(id, values) do
     parameter_model = ArkeManager.get(id, :arke_system)
-    QueryManager.create(:test_schema, parameter_model, values)
+    unit = Unit.load(parameter_model, values)
+    ParameterManager.create(unit, :test_schema)
+    :ok
   end
 
-  defp check_parameter_node(%{describe: type, opts: values} = context) do
+  defp check_parameter_node(%{describe: _type, opts: values} = _context) do
     param_id = values[:id]
     arke = ArkeManager.get(:test_arke_parameter, :test_schema)
-    query = get_query_node(param_id)
+    param = ParameterManager.get(param_id, :test_schema)
 
     with true <-
-           length(Enum.filter(ArkeManager.get_parameters(arke), fn p -> p.id == param_id end)) > 0,
-         length(QueryManager.all(query)) > 0 do
+           length(Enum.filter(ArkeManager.get_parameters(arke), fn p -> p.id == param_id end)) > 0 do
       %{link_status: "found"}
     else
       _ ->
         LinkManager.add_node(
           :test_schema,
-          "test_arke_parameter",
-          to_string(param_id),
+          arke,
+          param,
           "parameter",
           %{}
         )
@@ -69,7 +54,7 @@ defmodule Arke.Core.ParameterTest do
   end
 
   describe "String" do
-    defp get_string_opts(context),
+    defp get_string_opts(_context),
       do: %{opts: [id: :string_test, label: "Test String", min_length: 3, max_length: 5]}
 
     setup [:get_string_opts, :create_param, :check_arke, :check_parameter_node]
@@ -88,34 +73,25 @@ defmodule Arke.Core.ParameterTest do
         label: "Test Association String"
       )
 
+      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
+      param = ParameterManager.get(:test_association_string, :test_schema)
+
       LinkManager.add_node(
         :test_schema,
-        "test_arke_parameter",
-        "test_association_string",
+        arke,
+        param,
         "parameter",
         %{}
       )
 
-      nodes = get_query_node(:test_association_string) |> QueryManager.all()
-      unit = List.first(nodes)
-      assert unit.data.parent_id == "test_arke_parameter"
-      assert unit.data.child_id == "test_association_string"
+      arke_with_param = ArkeManager.get(:test_arke_parameter, :test_schema)
 
-      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
+      assert Enum.find(arke.data.parameters, fn p -> p.id == :test_association_string end) == nil
 
-      LinkManager.delete_node(
-        :test_schema,
-        "test_arke_parameter",
-        "test_association_string",
-        "parameter",
-        %{}
-      )
-
-      assert length(
-               Enum.filter(ArkeManager.get_parameters(arke), fn p ->
-                 p.id == :test_association_string
-               end)
-             ) > 0
+      assert Enum.find(arke_with_param.data.parameters, fn p ->
+               p.id == :test_association_string
+             end) !=
+               nil
     end
 
     test "create unit" do
@@ -154,11 +130,12 @@ defmodule Arke.Core.ParameterTest do
       opts = [id: :string_test_values, label: "Test String", values: ["first", "second"]]
       parameter_model = ArkeManager.get(:string, :arke_system)
       {:ok, parameter_unit} = QueryManager.create(:test_schema, parameter_model, opts)
+      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
 
       LinkManager.add_node(
         :test_schema,
-        "test_arke_parameter",
-        to_string(parameter_unit.id),
+        arke,
+        parameter_unit,
         "parameter",
         %{}
       )
@@ -177,15 +154,7 @@ defmodule Arke.Core.ParameterTest do
           label: "First string unit values"
         )
 
-      LinkManager.delete_node(
-        :test_schema,
-        "test_arke_parameter",
-        to_string(:string_test_values),
-        "parameter",
-        %{}
-      )
-
-      QueryManager.delete(:test_schema, QueryManager.get_by(id: unit.id, project: :test_schema))
+      QueryManager.delete(:test_schema, unit)
 
       assert parameter_unit.data.values == [
                %{label: "First", value: "first"},
@@ -210,19 +179,20 @@ defmodule Arke.Core.ParameterTest do
         max_length: 5
       ]
 
-      {:ok, unit} = create_param(:string, values)
+      create_param(:string, values)
+      unit = ParameterManager.get(:string_test_delete, :test_schema)
 
       param = ParameterManager.get(values[:id], :test_schema)
       assert param.id == values[:id]
 
-      QueryManager.delete(:test_schema, QueryManager.get_by(id: unit.id, project: :test_schema))
+      QueryManager.delete(:test_schema, unit)
 
       assert ParameterManager.get(values[:id], :test_schema) == get_msg(values[:id])
     end
   end
 
   describe "Integer" do
-    defp get_integer_opts(context),
+    defp get_integer_opts(_context),
       do: %{opts: [id: :integer_test, label: "Test Integer", min: 3, max: 5]}
 
     setup [:get_integer_opts, :create_param, :check_arke, :check_parameter_node]
@@ -241,34 +211,25 @@ defmodule Arke.Core.ParameterTest do
         label: "Test Association integer"
       )
 
+      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
+      param = ParameterManager.get(:test_association_integer, :test_schema)
+
       LinkManager.add_node(
         :test_schema,
-        "test_arke_parameter",
-        "test_association_integer",
+        arke,
+        param,
         "parameter",
         %{}
       )
 
-      nodes = get_query_node(:test_association_integer) |> QueryManager.all()
-      unit = List.first(nodes)
-      assert unit.data.parent_id == "test_arke_parameter"
-      assert unit.data.child_id == "test_association_integer"
+      arke_with_param = ArkeManager.get(:test_arke_parameter, :test_schema)
 
-      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
+      assert Enum.find(arke.data.parameters, fn p -> p.id == :test_association_integer end) == nil
 
-      LinkManager.delete_node(
-        :test_schema,
-        "test_arke_parameter",
-        "test_association_integer",
-        "parameter",
-        %{}
-      )
-
-      assert length(
-               Enum.filter(ArkeManager.get_parameters(arke), fn p ->
-                 p.id == :test_association_integer
-               end)
-             ) > 0
+      assert Enum.find(arke_with_param.data.parameters, fn p ->
+               p.id == :test_association_integer
+             end) !=
+               nil
     end
 
     test "create unit" do
@@ -313,17 +274,18 @@ defmodule Arke.Core.ParameterTest do
 
       parameter_model = ArkeManager.get(:integer, :arke_system)
       {:ok, parameter_unit} = QueryManager.create(:test_schema, parameter_model, opts)
+      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
 
       LinkManager.add_node(
         :test_schema,
-        "test_arke_parameter",
-        to_string(parameter_unit.id),
+        arke,
+        parameter_unit,
         "parameter",
         %{}
       )
 
       arke_model = ArkeManager.get(:test_arke_parameter, :test_schema)
-
+      # TODO: fix parsing if list of values is passed
       {:ok, unit} =
         QueryManager.create(:test_schema, arke_model,
           integer_test_values: [1, 2],
@@ -336,15 +298,7 @@ defmodule Arke.Core.ParameterTest do
           label: "First integer unit values"
         )
 
-      LinkManager.delete_node(
-        :test_schema,
-        "test_arke_parameter",
-        to_string(:integer_test_values),
-        "parameter",
-        %{}
-      )
-
-      QueryManager.delete(:test_schema, QueryManager.get_by(id: unit.id, project: :test_schema))
+      QueryManager.delete(:test_schema, unit)
 
       assert parameter_unit.data.values == [
                %{label: "1", value: "1"},
@@ -353,7 +307,6 @@ defmodule Arke.Core.ParameterTest do
                %{label: "4", value: "4"}
              ]
 
-      # TODO: fix parsing if list of values is passed
       assert unit.data.integer_test_values == [1, 2]
 
       assert msg == [
@@ -366,19 +319,20 @@ defmodule Arke.Core.ParameterTest do
 
     test "delete" do
       values = [id: :integer_test_delete, label: "Test integer delete"]
-      {:ok, unit} = create_param(:integer, values)
+      create_param(:integer, values)
+      unit = ParameterManager.get(:integer_test_delete, :test_schema)
 
       param = ParameterManager.get(values[:id], :test_schema)
       assert param.id == values[:id]
 
-      QueryManager.delete(:test_schema, QueryManager.get_by(id: unit.id, project: :test_schema))
+      QueryManager.delete(:test_schema, unit)
 
       assert ParameterManager.get(values[:id], :test_schema) == get_msg(values[:id])
     end
   end
 
   describe "Float" do
-    defp get_float_opts(context),
+    defp get_float_opts(_context),
       do: %{opts: [id: :float_test, label: "Test float", min: 3, max: 5]}
 
     setup [:get_float_opts, :create_param, :check_arke, :check_parameter_node]
@@ -397,34 +351,25 @@ defmodule Arke.Core.ParameterTest do
         label: "Test Association float"
       )
 
+      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
+      param = ParameterManager.get(:test_association_float, :test_schema)
+
       LinkManager.add_node(
         :test_schema,
-        "test_arke_parameter",
-        "test_association_float",
+        arke,
+        param,
         "parameter",
         %{}
       )
 
-      nodes = get_query_node(:test_association_float) |> QueryManager.all()
-      unit = List.first(nodes)
-      assert unit.data.parent_id == "test_arke_parameter"
-      assert unit.data.child_id == "test_association_float"
+      arke_with_param = ArkeManager.get(:test_arke_parameter, :test_schema)
 
-      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
+      assert Enum.find(arke.data.parameters, fn p -> p.id == :test_association_float end) == nil
 
-      LinkManager.delete_node(
-        :test_schema,
-        "test_arke_parameter",
-        "test_association_float",
-        "parameter",
-        %{}
-      )
-
-      assert length(
-               Enum.filter(ArkeManager.get_parameters(arke), fn p ->
-                 p.id == :test_association_float
-               end)
-             ) > 0
+      assert Enum.find(arke_with_param.data.parameters, fn p ->
+               p.id == :test_association_float
+             end) !=
+               nil
     end
 
     test "create unit" do
@@ -454,11 +399,12 @@ defmodule Arke.Core.ParameterTest do
       opts = [id: :float_test_values, label: "Test float", values: [1, 2, 3, 4], multiple: true]
       parameter_model = ArkeManager.get(:float, :arke_system)
       {:ok, parameter_unit} = QueryManager.create(:test_schema, parameter_model, opts)
+      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
 
       LinkManager.add_node(
         :test_schema,
-        "test_arke_parameter",
-        to_string(parameter_unit.id),
+        arke,
+        parameter_unit,
         "parameter",
         %{}
       )
@@ -477,15 +423,7 @@ defmodule Arke.Core.ParameterTest do
           label: "First float unit values"
         )
 
-      LinkManager.delete_node(
-        :test_schema,
-        "test_arke_parameter",
-        to_string(:float_test_values),
-        "parameter",
-        %{}
-      )
-
-      QueryManager.delete(:test_schema, QueryManager.get_by(id: unit.id, project: :test_schema))
+      QueryManager.delete(:test_schema, unit)
 
       # TODO: fix parsing if list of values is passed
       assert parameter_unit.data.values == [
@@ -507,19 +445,20 @@ defmodule Arke.Core.ParameterTest do
 
     test "delete" do
       values = [id: :float_test_delete, label: "Test float delete"]
-      {:ok, unit} = create_param(:float, values)
+      create_param(:float, values)
+      unit = ParameterManager.get(:float_test_delete, :test_schema)
 
       param = ParameterManager.get(values[:id], :test_schema)
       assert param.id == values[:id]
 
-      QueryManager.delete(:test_schema, QueryManager.get_by(id: unit.id, project: :test_schema))
+      QueryManager.delete(:test_schema, unit)
 
       assert ParameterManager.get(values[:id], :test_schema) == get_msg(values[:id])
     end
   end
 
   describe "Boolean" do
-    defp get_bool_opts(context),
+    defp get_bool_opts(_context),
       do: %{opts: [id: :boolean_test, label: "Test boolean", default_boolean: true]}
 
     setup [:get_bool_opts, :create_param, :check_arke, :check_parameter_node]
@@ -538,34 +477,25 @@ defmodule Arke.Core.ParameterTest do
         label: "Test Association boolean"
       )
 
+      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
+      param = ParameterManager.get(:test_association_boolean, :test_schema)
+
       LinkManager.add_node(
         :test_schema,
-        "test_arke_parameter",
-        "test_association_boolean",
+        arke,
+        param,
         "parameter",
         %{}
       )
 
-      nodes = get_query_node(:test_association_boolean) |> QueryManager.all()
-      unit = List.first(nodes)
-      assert unit.data.parent_id == "test_arke_parameter"
-      assert unit.data.child_id == "test_association_boolean"
+      arke_with_param = ArkeManager.get(:test_arke_parameter, :test_schema)
 
-      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
+      assert Enum.find(arke.data.parameters, fn p -> p.id == :test_association_boolean end) == nil
 
-      LinkManager.delete_node(
-        :test_schema,
-        "test_arke_parameter",
-        "test_association_boolean",
-        "parameter",
-        %{}
-      )
-
-      assert length(
-               Enum.filter(ArkeManager.get_parameters(arke), fn p ->
-                 p.id == :test_association_boolean
-               end)
-             ) > 0
+      assert Enum.find(arke_with_param.data.parameters, fn p ->
+               p.id == :test_association_boolean
+             end) !=
+               nil
     end
 
     test "create unit" do
@@ -589,19 +519,20 @@ defmodule Arke.Core.ParameterTest do
 
     test "delete" do
       values = [id: :bool_test_delete, label: "Test boolean delete"]
-      {:ok, unit} = create_param(:boolean, values)
+      create_param(:boolean, values)
+      unit = ParameterManager.get(:bool_test_delete, :test_schema)
 
       param = ParameterManager.get(values[:id], :test_schema)
       assert param.id == values[:id]
 
-      QueryManager.delete(:test_schema, QueryManager.get_by(id: unit.id, project: :test_schema))
+      QueryManager.delete(:test_schema, unit)
 
       assert ParameterManager.get(values[:id], :test_schema) == get_msg(values[:id])
     end
   end
 
   describe "Dict" do
-    defp get_dict_opts(context), do: %{opts: [id: :dict_test, label: "Test dict"]}
+    defp get_dict_opts(_context), do: %{opts: [id: :dict_test, label: "Test dict"]}
     setup [:get_dict_opts, :create_param, :check_arke, :check_parameter_node]
 
     test "create" do
@@ -618,35 +549,23 @@ defmodule Arke.Core.ParameterTest do
         label: "Test Association dict"
       )
 
+      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
+      param = ParameterManager.get(:test_association_dict, :test_schema)
+
       LinkManager.add_node(
         :test_schema,
-        "test_arke_parameter",
-        "test_association_dict",
+        arke,
+        param,
         "parameter",
         %{}
       )
 
-      nodes = get_query_node(:test_association_dict) |> QueryManager.all()
-      unit = List.first(nodes)
-      assert unit.data.parent_id == "test_arke_parameter"
-      assert unit.data.child_id == "test_association_dict"
+      arke_with_param = ArkeManager.get(:test_arke_parameter, :test_schema)
 
-      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
+      assert Enum.find(arke.data.parameters, fn p -> p.id == :test_association_dict end) == nil
 
-      LinkManager.delete_node(
-        :test_schema,
-        "test_arke_parameter",
-        "test_association_dict",
-        "parameter",
-        %{}
-      )
-
-      assert length(
-               Enum.filter(ArkeManager.get_parameters(arke), fn p ->
-                 p.id == :test_association_dict
-               end)
-             ) >
-               0
+      assert Enum.find(arke_with_param.data.parameters, fn p -> p.id == :test_association_dict end) !=
+               nil
     end
 
     test "create unit" do
@@ -675,19 +594,20 @@ defmodule Arke.Core.ParameterTest do
 
     test "delete" do
       values = [id: :dict_test_delete, label: "Test dict delete"]
-      {:ok, unit} = create_param(:dict, values)
+      create_param(:dict, values)
+      unit = ParameterManager.get(:dict_test_delete, :test_schema)
 
       param = ParameterManager.get(values[:id], :test_schema)
       assert param.id == values[:id]
 
-      QueryManager.delete(:test_schema, QueryManager.get_by(id: unit.id, project: :test_schema))
+      QueryManager.delete(:test_schema, unit)
 
       assert ParameterManager.get(values[:id], :test_schema) == get_msg(values[:id])
     end
   end
 
   describe "List" do
-    defp get_list_opts(context), do: %{opts: [id: :list_test, label: "Test list"]}
+    defp get_list_opts(_context), do: %{opts: [id: :list_test, label: "Test list"]}
     setup [:get_list_opts, :create_param, :check_arke, :check_parameter_node]
 
     test "create" do
@@ -704,35 +624,25 @@ defmodule Arke.Core.ParameterTest do
         label: "Test Association list"
       )
 
+      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
+      param = ParameterManager.get(:test_association_list, :test_schema)
+
       LinkManager.add_node(
         :test_schema,
-        "test_arke_parameter",
-        "test_association_list",
+        arke,
+        param,
         "parameter",
         %{}
       )
 
-      nodes = get_query_node(:test_association_list) |> QueryManager.all()
-      unit = List.first(nodes)
-      assert unit.data.parent_id == "test_arke_parameter"
-      assert unit.data.child_id == "test_association_list"
+      arke_with_param = ArkeManager.get(:test_arke_parameter, :test_schema)
 
-      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
+      assert Enum.find(arke.data.parameters, fn p -> p.id == :test_association_list end) == nil
 
-      LinkManager.delete_node(
-        :test_schema,
-        "test_arke_parameter",
-        "test_association_list",
-        "parameter",
-        %{}
-      )
-
-      assert length(
-               Enum.filter(ArkeManager.get_parameters(arke), fn p ->
-                 p.id == :test_association_list
-               end)
-             ) >
-               0
+      assert Enum.find(arke_with_param.data.parameters, fn p ->
+               p.id == :test_association_list
+             end) !=
+               nil
     end
 
     test "create unit" do
@@ -761,19 +671,20 @@ defmodule Arke.Core.ParameterTest do
 
     test "delete" do
       values = [id: :list_test_delete, label: "Test list delete"]
-      {:ok, unit} = create_param(:list, values)
+      create_param(:list, values)
+      unit = ParameterManager.get(:list_test_delete, :test_schema)
 
       param = ParameterManager.get(values[:id], :test_schema)
       assert param.id == values[:id]
 
-      QueryManager.delete(:test_schema, QueryManager.get_by(id: unit.id, project: :test_schema))
+      QueryManager.delete(:test_schema, unit)
 
       assert ParameterManager.get(values[:id], :test_schema) == get_msg(values[:id])
     end
   end
 
   describe "Date" do
-    defp get_date_opts(context), do: %{opts: [id: :date_test, label: "Test date"]}
+    defp get_date_opts(_context), do: %{opts: [id: :date_test, label: "Test date"]}
     setup [:get_date_opts, :create_param, :check_arke, :check_parameter_node]
 
     test "create" do
@@ -790,35 +701,25 @@ defmodule Arke.Core.ParameterTest do
         label: "Test Association date"
       )
 
+      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
+      param = ParameterManager.get(:test_association_date, :test_schema)
+
       LinkManager.add_node(
         :test_schema,
-        "test_arke_parameter",
-        "test_association_date",
+        arke,
+        param,
         "parameter",
         %{}
       )
 
-      nodes = get_query_node(:test_association_date) |> QueryManager.all()
-      unit = List.first(nodes)
-      assert unit.data.parent_id == "test_arke_parameter"
-      assert unit.data.child_id == "test_association_date"
+      arke_with_param = ArkeManager.get(:test_arke_parameter, :test_schema)
 
-      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
+      assert Enum.find(arke.data.parameters, fn p -> p.id == :test_association_date end) == nil
 
-      LinkManager.delete_node(
-        :test_schema,
-        "test_arke_parameter",
-        "test_association_date",
-        "parameter",
-        %{}
-      )
-
-      assert length(
-               Enum.filter(ArkeManager.get_parameters(arke), fn p ->
-                 p.id == :test_association_date
-               end)
-             ) >
-               0
+      assert Enum.find(arke_with_param.data.parameters, fn p ->
+               p.id == :test_association_date
+             end) !=
+               nil
     end
 
     test "create unit" do
@@ -868,26 +769,28 @@ defmodule Arke.Core.ParameterTest do
       assert unit == [
                %{
                  context: "parameter_validation",
-                 message: "Test date: must be iso8601 (YYYY-MM-DD) format"
+                 message:
+                   "Test date: must be %Date{} | ~D[YYYY-MM-DD] | iso8601 (YYYY-MM-DD) format"
                }
              ]
     end
 
     test "delete" do
       values = [id: :date_test_delete, label: "Test date delete"]
-      {:ok, unit} = create_param(:date, values)
+      create_param(:date, values)
+      unit = ParameterManager.get(:date_test_delete, :test_schema)
 
       param = ParameterManager.get(values[:id], :test_schema)
       assert param.id == values[:id]
 
-      QueryManager.delete(:test_schema, QueryManager.get_by(id: unit.id, project: :test_schema))
+      QueryManager.delete(:test_schema, unit)
 
       assert ParameterManager.get(values[:id], :test_schema) == get_msg(values[:id])
     end
   end
 
   describe "Time" do
-    defp get_time_opts(context), do: %{opts: [id: :time_test, label: "Test time"]}
+    defp get_time_opts(_context), do: %{opts: [id: :time_test, label: "Test time"]}
     setup [:get_time_opts, :create_param, :check_arke, :check_parameter_node]
 
     test "create" do
@@ -904,35 +807,25 @@ defmodule Arke.Core.ParameterTest do
         label: "Test Association time"
       )
 
+      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
+      param = ParameterManager.get(:test_association_time, :test_schema)
+
       LinkManager.add_node(
         :test_schema,
-        "test_arke_parameter",
-        "test_association_time",
+        arke,
+        param,
         "parameter",
         %{}
       )
 
-      nodes = get_query_node(:test_association_time) |> QueryManager.all()
-      unit = List.first(nodes)
-      assert unit.data.parent_id == "test_arke_parameter"
-      assert unit.data.child_id == "test_association_time"
+      arke_with_param = ArkeManager.get(:test_arke_parameter, :test_schema)
 
-      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
+      assert Enum.find(arke.data.parameters, fn p -> p.id == :test_association_time end) == nil
 
-      LinkManager.delete_node(
-        :test_schema,
-        "test_arke_parameter",
-        "test_association_time",
-        "parameter",
-        %{}
-      )
-
-      assert length(
-               Enum.filter(ArkeManager.get_parameters(arke), fn p ->
-                 p.id == :test_association_time
-               end)
-             ) >
-               0
+      assert Enum.find(arke_with_param.data.parameters, fn p ->
+               p.id == :test_association_time
+             end) !=
+               nil
     end
 
     test "create unit" do
@@ -982,26 +875,28 @@ defmodule Arke.Core.ParameterTest do
       assert unit == [
                %{
                  context: "parameter_validation",
-                 message: "Test time: must be iso8601 (HH:MM:SS) format"
+                 message:
+                   "Test time: must be must be %Time{} |~T[HH:MM:SS] | iso8601 (HH:MM:SS) format"
                }
              ]
     end
 
     test "delete" do
       values = [id: :time_test_delete, label: "Test time delete"]
-      {:ok, unit} = create_param(:time, values)
+      create_param(:time, values)
+      unit = ParameterManager.get(:time_test_delete, :test_schema)
 
       param = ParameterManager.get(values[:id], :test_schema)
       assert param.id == values[:id]
 
-      QueryManager.delete(:test_schema, QueryManager.get_by(id: unit.id, project: :test_schema))
+      QueryManager.delete(:test_schema, unit)
 
       assert ParameterManager.get(values[:id], :test_schema) == get_msg(values[:id])
     end
   end
 
   describe "DateTime" do
-    defp get_datetime_opts(context), do: %{opts: [id: :datetime_test, label: "Test datetime"]}
+    defp get_datetime_opts(_context), do: %{opts: [id: :datetime_test, label: "Test datetime"]}
     setup [:get_datetime_opts, :create_param, :check_arke, :check_parameter_node]
 
     test "create" do
@@ -1018,34 +913,26 @@ defmodule Arke.Core.ParameterTest do
         label: "Test Association datetime"
       )
 
+      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
+      param = ParameterManager.get(:test_association_datetime, :test_schema)
+
       LinkManager.add_node(
         :test_schema,
-        "test_arke_parameter",
-        "test_association_datetime",
+        arke,
+        param,
         "parameter",
         %{}
       )
 
-      nodes = get_query_node(:test_association_datetime) |> QueryManager.all()
-      unit = List.first(nodes)
-      assert unit.data.parent_id == "test_arke_parameter"
-      assert unit.data.child_id == "test_association_datetime"
+      arke_with_param = ArkeManager.get(:test_arke_parameter, :test_schema)
 
-      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
+      assert Enum.find(arke.data.parameters, fn p -> p.id == :test_association_datetime end) ==
+               nil
 
-      LinkManager.delete_node(
-        :test_schema,
-        "test_arke_parameter",
-        "test_association_datetime",
-        "parameter",
-        %{}
-      )
-
-      assert length(
-               Enum.filter(ArkeManager.get_parameters(arke), fn p ->
-                 p.id == :test_association_datetime
-               end)
-             ) > 0
+      assert Enum.find(arke_with_param.data.parameters, fn p ->
+               p.id == :test_association_datetime
+             end) !=
+               nil
     end
 
     test "create unit" do
@@ -1101,26 +988,27 @@ defmodule Arke.Core.ParameterTest do
                %{
                  context: "parameter_validation",
                  message:
-                   "Test datetime: must be iso8601 (YYYY-MM-DDTHH:MM:SS or YYYY-MM-DD HH:MM:SS) format"
+                   "Test datetime: must be %DateTime | %NaiveDatetime{} | ~N[YYYY-MM-DDTHH:MM:SS] | ~N[YYYY-MM-DD HH:MM:SS] | ~U[YYYY-MM-DD HH:MM:SS]  format"
                }
              ]
     end
 
     test "delete" do
       values = [id: :datetime_test_delete, label: "Test datetime delete"]
-      {:ok, unit} = create_param(:datetime, values)
+      create_param(:datetime, values)
+      unit = ParameterManager.get(:datetime_test_delete, :test_schema)
 
       param = ParameterManager.get(values[:id], :test_schema)
       assert param.id == values[:id]
 
-      QueryManager.delete(:test_schema, QueryManager.get_by(id: unit.id, project: :test_schema))
+      QueryManager.delete(:test_schema, unit)
 
       assert ParameterManager.get(values[:id], :test_schema) == get_msg(values[:id])
     end
   end
 
   describe "Link" do
-    defp get_link_opts(context), do: %{opts: [id: :link_test, label: "Test link"]}
+    defp get_link_opts(_context), do: %{opts: [id: :link_test, label: "Test link"]}
     setup [:get_link_opts, :create_param, :check_arke, :check_parameter_node]
 
     test "create" do
@@ -1137,35 +1025,25 @@ defmodule Arke.Core.ParameterTest do
         label: "Test Association link"
       )
 
+      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
+      param = ParameterManager.get(:test_association_link, :test_schema)
+
       LinkManager.add_node(
         :test_schema,
-        "test_arke_parameter",
-        "test_association_link",
+        arke,
+        param,
         "parameter",
         %{}
       )
 
-      nodes = get_query_node(:test_association_link) |> QueryManager.all()
-      unit = List.first(nodes)
-      assert unit.data.parent_id == "test_arke_parameter"
-      assert unit.data.child_id == "test_association_link"
+      arke_with_param = ArkeManager.get(:test_arke_parameter, :test_schema)
 
-      arke = ArkeManager.get(:test_arke_parameter, :test_schema)
+      assert Enum.find(arke.data.parameters, fn p -> p.id == :test_association_link end) == nil
 
-      LinkManager.delete_node(
-        :test_schema,
-        "test_arke_parameter",
-        "test_association_link",
-        "parameter",
-        %{}
-      )
-
-      assert length(
-               Enum.filter(ArkeManager.get_parameters(arke), fn p ->
-                 p.id == :test_association_link
-               end)
-             ) >
-               0
+      assert Enum.find(arke_with_param.data.parameters, fn p ->
+               p.id == :test_association_link
+             end) !=
+               nil
     end
 
     test "create unit" do
@@ -1196,12 +1074,13 @@ defmodule Arke.Core.ParameterTest do
 
     test "delete" do
       values = [id: :link_test_delete, label: "Test link delete"]
-      {:ok, unit} = create_param(:link, values)
+      create_param(:link, values)
+      unit = ParameterManager.get(:link_test_delete, :test_schema)
 
       param = ParameterManager.get(values[:id], :test_schema)
       assert param.id == values[:id]
 
-      QueryManager.delete(:test_schema, QueryManager.get_by(id: unit.id, project: :test_schema))
+      QueryManager.delete(:test_schema, unit)
 
       assert ParameterManager.get(values[:id], :test_schema) == get_msg(values[:id])
     end

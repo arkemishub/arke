@@ -6,7 +6,11 @@ defmodule Arke.Support.CreateArke do
   alias Arke.Core.Parameter
 
   arke id: :arke_test_support do
-    parameter(:string_support, :string, required: false, default_string: "test_default")
+    parameter(:string_support, :string,
+      required: false,
+      default_string: "test_default",
+      unique: true
+    )
 
     parameter(:enum_string_support, :string, required: false, values: ["first", "second", "third"])
 

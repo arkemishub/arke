@@ -16,6 +16,5 @@ defmodule Arke.RepoCase do
     end
   end
 
-    :ok
-  end
+  :ok
 end
