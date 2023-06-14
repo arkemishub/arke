@@ -139,7 +139,7 @@ defmodule Arke.System do
   defp get_base_arke_parameters("arke") do
     quote do
       parameter(:id, :string, required: true, persistence: "table_column")
-      parameter(:arke_id, :atom, required: false, persistence: "table_column")
+      parameter(:arke_id, :string, required: false, persistence: "table_column")
       parameter(:metadata, :dict, required: false, persistence: "table_column")
       parameter(:inserted_at, :datetime, required: false, persistence: "table_column")
       parameter(:updated_at, :datetime, required: false, persistence: "table_column")

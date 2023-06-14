@@ -111,7 +111,7 @@ defmodule Arke.Boundary.GroupManager do
 
   defp init_parameters_by_ids(ids, project) do
     Enum.reduce(ids, [], fn id, parameters ->
-      [Arke.Boundary.ParameterManager.get(id, project) | parameters]
+      [Arke.Boundary.ParamsManager.get(id, project) | parameters]
     end)
   end
 

@@ -42,6 +42,7 @@ defmodule Arke.Examples.Starter do
     parameters =
       Enum.reduce(struct.get_parameters(), [], fn [p], parameters ->
         parameter = Arke.Core.Parameter.new(p)
+        Arke.Boundary.ParamsManager.create(parameter, :arke_system)
         Arke.Boundary.ParameterManager.create(parameter, :arke_system)
         [parameter | parameters]
       end)

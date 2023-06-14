@@ -50,10 +50,10 @@ defmodule Arke.Validator do
       {%{data: data} = unit, errors} = before_validate(unit, project)
       %{data: arke_data} = arke = ArkeManager.get(arke_id, project)
 
-    unit_parameters =
-      Enum.filter(ArkeManager.get_parameters(arke), fn %{data: %{persistence: persistence}} ->
-        persistence == "arke_parameter"
-      end)
+      unit_parameters =
+        Enum.filter(ArkeManager.get_parameters(arke), fn %{data: %{persistence: persistence}} ->
+          persistence == "arke_parameter"
+        end)
 
       res =
         Enum.reduce(unit_parameters, {unit, errors}, fn p, {new_unit, errors} = _res ->
@@ -138,7 +138,8 @@ defmodule Arke.Validator do
     check_parameter(parameter, value, project)
   end
 
-  defp get_parameter(nil, parameter_id, project), do: ParameterManager.get(parameter_id, project)
+  defp get_parameter(nil, parameter_id, project),
+    do: Arke.Boundary.ParamsManager.get(parameter_id, project)
 
   defp get_parameter(arke, parameter_id, project),
     do: ArkeManager.get_parameter(arke, parameter_id)

@@ -22,6 +22,7 @@ defmodule Arke.Application do
   @impl true
   def start(_type, _args) do
     children = [
+      {Arke.Boundary.ParamsManager, [name: Arke.Boundary.ParamsManager]},
       {Registry, [name: :parameter_registry, keys: :unique]},
       {DynamicSupervisor, [name: :parameter_supervisor, strategy: :one_for_one]},
       {Registry, [name: :arke_registry, keys: :unique]},
