@@ -2,7 +2,7 @@ defmodule Arke.Support.CreateArke do
   use Arke.System
   alias Arke.Validator
   alias Arke.Core.Unit
-  alias Arke.Boundary.{ArkeManager, GroupManager, ParameterManager}
+  alias Arke.Boundary.{ArkeManager, GroupManager, ParameterManager, ParamsManager}
   alias Arke.Core.Parameter
 
   arke id: :arke_test_support do
@@ -274,6 +274,7 @@ defmodule Arke.Support.CreateArke do
     ]
 
     Enum.map(parameters, fn parameter ->
+      ParamsManager.create(parameter, :arke_system)
       ParameterManager.create(parameter, :arke_system)
     end)
   end
