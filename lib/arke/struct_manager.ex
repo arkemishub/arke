@@ -453,6 +453,7 @@ defmodule Arke.StructManager do
   defp add_type_fields(
          {%{arke_id: :link, data: data, metadata: %{project: project}} = _parameter, base_data}
        ) do
+
     Map.merge(base_data, %{
       default: data.default_link,
       multiple: data.multiple,

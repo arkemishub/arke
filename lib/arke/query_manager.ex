@@ -37,7 +37,7 @@ defmodule Arke.QueryManager do
     - in =>  value is in a collection => `IN`
 
   """
-  alias Arke.Boundary.{ArkeManager, ParameterManager, GroupManager}
+  alias Arke.Boundary.{ArkeManager, ParameterManager, GroupManager, ParamsManager}
   alias Arke.Validator
   alias Arke.LinkManager
   alias Arke.Core.{Arke, Unit, Query, Parameter}
@@ -580,10 +580,10 @@ defmodule Arke.QueryManager do
   defp get_parameter_operator(_, _), do: nil
 
   defp get_parameter(%{arke: nil, project: project} = query, %{id: id} = _parameter),
-    do: ParameterManager.get(id, project)
+    do: ParamsManager.get(id, project)
 
   defp get_parameter(%{arke: nil, project: project} = query, key),
-    do: ParameterManager.get(key, project)
+    do: ParamsManager.get(key, project)
 
   defp get_parameter(%{arke: arke, project: project} = query, key),
     do: ArkeManager.get_parameter(arke, project, key)

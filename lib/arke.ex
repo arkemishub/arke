@@ -1331,6 +1331,7 @@ defmodule Arke do
     ]
 
     Enum.map(parameters, fn parameter ->
+      Arke.Boundary.ParamsManager.create(parameter, :arke_system)
       ParameterManager.create(parameter, :arke_system)
     end)
   end
