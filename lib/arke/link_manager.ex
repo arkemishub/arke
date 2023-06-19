@@ -17,6 +17,7 @@ defmodule Arke.LinkManager do
   @record_fields [:id, :data, :metadata, :inserted_at, :updated_at]
 
   alias Arke.Boundary.ArkeManager
+  alias Arke.Utils.ErrorGenerator, as: Error
   alias Arke.QueryManager
   alias Arke.Core.Unit
 
@@ -30,6 +31,21 @@ defmodule Arke.LinkManager do
       metadata: metadata
     )
   end
+
+  def add_node(project, parent, child, type, metadata)
+      when is_binary(parent) and is_binary(child) do
+    unit_parent = QueryManager.get_by(id: parent, project: project)
+    unit_child = QueryManager.get_by(id: parent, project: project)
+
+    if is_nil(unit_parent) or is_nil(unit_parent) do
+      Error.create(:link, "unit not found")
+    else
+      add_node(project, unit_parent, unit_child, type, metadata)
+    end
+  end
+
+  def add_node(_project, _parent, _child, _type, _metadata),
+    do: Error.create(:link, "invalid parameter")
 
   def delete_node(project, parent, child, type, metadata \\ %{}) do
     arke_link = ArkeManager.get(:arke_link, :arke_system)
