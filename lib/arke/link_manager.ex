@@ -35,19 +35,15 @@ defmodule Arke.LinkManager do
   def add_node(project, parent, child, type, metadata)
       when is_binary(parent) and is_binary(child) do
     unit_parent = QueryManager.get_by(id: parent, project: project)
-    unit_child = QueryManager.get_by(id: parent, project: project)
+    unit_child = QueryManager.get_by(id: child, project: project)
 
-    if is_nil(unit_parent) or is_nil(unit_parent) do
-      Error.create(:link, "unit not found")
-    else
-      add_node(project, unit_parent, unit_child, type, metadata)
-    end
+    add_node(project, unit_parent, unit_child, type, metadata)
   end
 
   def add_node(_project, _parent, _child, _type, _metadata),
-    do: Error.create(:link, "invalid parameter")
+    do: Error.create(:link, "invalid parameters")
 
-  def delete_node(project, parent, child, type, metadata \\ %{}) do
+  def delete_node(project, %Unit{} = parent, %Unit{} = child, type, metadata \\ %{}) do
     arke_link = ArkeManager.get(:arke_link, :arke_system)
 
     # TODO: handle custom exception
@@ -66,4 +62,15 @@ defmodule Arke.LinkManager do
       _ -> raise "link not found"
     end
   end
+
+  def delete_node(project, parent, child, type, metadata)
+      when is_binary(parent) and is_binary(child) do
+    unit_parent = QueryManager.get_by(id: parent, project: project)
+    unit_child = QueryManager.get_by(id: child, project: project)
+
+    delete_node(project, unit_parent, unit_child, type, metadata)
+  end
+
+  def delete_node(_project, _parent, _child, _type, _metadata),
+    do: Error.create(:link, "invalid parameters")
 end
