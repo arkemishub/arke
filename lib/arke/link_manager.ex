@@ -24,12 +24,18 @@ defmodule Arke.LinkManager do
   def add_node(project, %Unit{} = parent, %Unit{} = child, type \\ "link", metadata \\ %{}) do
     arke_link = ArkeManager.get(:arke_link, :arke_system)
 
-    QueryManager.create(project, arke_link,
-      parent_id: Atom.to_string(parent.id),
-      child_id: Atom.to_string(child.id),
-      type: type,
-      metadata: metadata
-    )
+    case check_link(project, parent, child, type, metadata, arke_link) do
+      {_, nil} ->
+        QueryManager.create(project, arke_link,
+          parent_id: Atom.to_string(parent.id),
+          child_id: Atom.to_string(child.id),
+          type: type,
+          metadata: metadata
+        )
+
+      {:ok, _} ->
+        Error.create(:link, "link already exists")
+    end
   end
 
   def add_node(project, parent, child, type, metadata)
@@ -46,21 +52,22 @@ defmodule Arke.LinkManager do
   def delete_node(project, %Unit{} = parent, %Unit{} = child, type, metadata \\ %{}) do
     arke_link = ArkeManager.get(:arke_link, :arke_system)
 
-    # TODO: handle custom exception
+    case check_link(project, parent, child, type, metadata, arke_link) do
+      {:error, _} -> Error.create(:link, "link not found")
+      {:ok, link} -> QueryManager.delete(project, link)
+    end
+  end
+
+  defp check_link(project, parent, child, type, metadata, arke_link) do
     with %Arke.Core.Unit{} = link <-
            Arke.QueryManager.query(project: project, arke: arke_link)
            |> Arke.QueryManager.filter(:parent_id, :eq, Atom.to_string(parent.id), false)
            |> Arke.QueryManager.filter(:child_id, :eq, Atom.to_string(child.id), false)
            |> Arke.QueryManager.filter(:type, :eq, type, false)
            |> Arke.QueryManager.filter(:metadata, :eq, metadata, false)
-           |> Arke.QueryManager.one() do
-      case Arke.QueryManager.delete(project, link) do
-        {:ok, _} -> {:ok, nil}
-        {:error, msg} -> {:error, msg}
-      end
-    else
-      _ -> raise "link not found"
-    end
+           |> Arke.QueryManager.one(),
+         do: {:ok, link},
+         else: (_ -> {:error, nil})
   end
 
   def delete_node(project, parent, child, type, metadata)
