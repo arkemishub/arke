@@ -7,29 +7,47 @@ on:
       - 'main'
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  MIX_ENV: test
-
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
     name: Create Coverage Report
     strategy:
       matrix:
         otp: ['25.0.4']
         elixir: ['1.14.1']
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
       - uses: erlef/setup-beam@v1
         with:
           otp-version: ${{matrix.otp}}
           elixir-version: ${{matrix.elixir}}
-      - uses: actions/checkout@v3
-      - name: Get dependencies
-        run: mix deps.get
-      - name: Generating XML
+
+      - name: Get deps cache
+        uses: actions/cache@v2
+        with:
+          path: deps/
+          key: deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}
+
+      - name: Get build cache
+        uses: actions/cache@v2
+        with:
+          path: _build/test/
+          key: build-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}
+
+      - name: Install Dependencies
+        run: |
+          mix deps.get
+          mix compile
+
+      - name: Run Tests
         run: mix coveralls.json
-        # todo: remove when tests are fixed
         continue-on-error: true
+
       - name: Upload to Codecov
         uses: codecov/codecov-action@v2
         with:
