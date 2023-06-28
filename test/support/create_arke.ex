@@ -2,11 +2,15 @@ defmodule Arke.Support.CreateArke do
   use Arke.System
   alias Arke.Validator
   alias Arke.Core.Unit
-  alias Arke.Boundary.{ArkeManager, GroupManager, ParameterManager}
+  alias Arke.Boundary.{ArkeManager, GroupManager, ParameterManager, ParamsManager}
   alias Arke.Core.Parameter
 
   arke id: :arke_test_support do
-    parameter(:string_support, :string, required: false, default_string: "test_default")
+    parameter(:string_support, :string,
+      required: false,
+      default_string: "test_default",
+      unique: true
+    )
 
     parameter(:enum_string_support, :string, required: false, values: ["first", "second", "third"])
 
@@ -40,7 +44,6 @@ defmodule Arke.Support.CreateArke do
   defp base_parameter(opts \\ []) do
     %{
       label: Keyword.get(opts, :label),
-      #      type: Keyword.get!(opts, :type),
       format: Keyword.get(opts, :format, :attribute),
       is_primary: Keyword.get(opts, :is_primary, false),
       nullable: Keyword.get(opts, :nullable, true),
@@ -271,6 +274,7 @@ defmodule Arke.Support.CreateArke do
     ]
 
     Enum.map(parameters, fn parameter ->
+      ParamsManager.create(parameter, :arke_system)
       ParameterManager.create(parameter, :arke_system)
     end)
   end
