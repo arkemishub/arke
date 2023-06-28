@@ -105,6 +105,7 @@ defmodule Arke.DatetimeHandler do
   def parse_time(value, only_value \\ false)
   def parse_time(value, true) when is_nil(value), do: nil
   def parse_time(value, _only_value) when is_nil(value), do: {:ok, nil}
+  def parse_time(value, _only_value) when is_number(value), do: {:error, @time_msg}
 
   def parse_time(%Time{} = value, only_value), do: check_time(value, only_value)
 
