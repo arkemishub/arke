@@ -16,8 +16,8 @@ jobs:
     name: Create Coverage Report
     strategy:
       matrix:
-        otp: [24.0]
-        elixir: [1.13.2]
+        otp: [25.0]
+        elixir: [1.14.3]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-elixir@v1

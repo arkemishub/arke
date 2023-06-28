@@ -1,8 +1,6 @@
 {
   "skip_files": [
     "lib/arke/exceptions.ex",
-    "lib/arke/link_manager.ex",
-    "lib/arke.ex",
     "lib/examples/starter.ex",
     "lib/arke/application.ex",
     "test/starter/",
