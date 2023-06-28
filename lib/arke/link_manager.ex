@@ -37,11 +37,7 @@ defmodule Arke.LinkManager do
     unit_parent = QueryManager.get_by(id: parent, project: project)
     unit_child = QueryManager.get_by(id: parent, project: project)
 
-    if is_nil(unit_parent) or is_nil(unit_parent) do
-      Error.create(:link, "unit not found")
-    else
-      add_node(project, unit_parent, unit_child, type, metadata)
-    end
+    add_node(project, unit_parent, unit_child, type, metadata)
   end
 
   def add_node(_project, _parent, _child, _type, _metadata),
@@ -72,11 +68,7 @@ defmodule Arke.LinkManager do
     unit_parent = QueryManager.get_by(id: parent, project: project)
     unit_child = QueryManager.get_by(id: parent, project: project)
 
-    if is_nil(unit_parent) or is_nil(unit_parent) do
-      Error.create(:link, "unit not found")
-    else
-      delete_node(project, unit_parent, unit_child, type, metadata)
-    end
+    delete_node(project, unit_parent, unit_child, type, metadata)
   end
 
   def delete_node(_project, _parent, _child, _type, _metadata),
