@@ -164,7 +164,7 @@ defmodule Arke.Validator do
   def get_default_value(parameter, value) when is_nil(value), do: handle_default_value(parameter)
   def get_default_value(parameter, value), do: value
 
-  defp parse_value(%{arke_id: :integer, multiple: false} = _, value)
+  defp parse_value(%{arke_id: :integer, data: %{multiple: false} = data} = _, value)
        when not is_integer(value) and not is_nil(value) do
     case Integer.parse(value) do
       :error -> value
@@ -173,7 +173,7 @@ defmodule Arke.Validator do
     end
   end
 
-  defp parse_value(%{arke_id: :float, multiple: false} = _, value)
+  defp parse_value(%{arke_id: :float, data: %{multiple: false} = data} = _, value)
        when not is_number(value) and not is_nil(value) do
     case Float.parse(value) do
       :error -> value
