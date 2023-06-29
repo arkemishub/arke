@@ -408,6 +408,17 @@ defmodule Arke.Validator do
   end
 
   ######################################################################
+  # BOOLEAN PARAMETER ##################################################
+  ######################################################################
+
+  defp check_by_type(errors, %{arke_id: :boolean} = parameter, value)
+       when is_boolean(value),
+       do: errors
+
+  defp check_by_type(errors, %{arke_id: :boolean} = parameter, _value),
+    do: errors ++ [{parameter.data.label, "must be a boolean"}]
+
+  ######################################################################
   # ARKE LINK PARAMETER ################################################
   ######################################################################
 
