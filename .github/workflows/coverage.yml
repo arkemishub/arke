@@ -45,15 +45,6 @@ jobs:
           mix compile
 
       - name: Run Tests
-        run: mix coveralls.json
+        run: mix coveralls.github
         continue-on-error: true
-
-      - name: Upload to Codecov
-        uses: codecov/codecov-action@v2
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./cover/excoveralls.json
-          directory: cover
-          fail_ci_if_error: true
-          verbose: true
 
