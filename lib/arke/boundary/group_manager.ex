@@ -15,6 +15,7 @@
 defmodule Arke.Boundary.GroupManager do
   @moduledoc false
   use Arke.UnitManager
+  alias Arke.Utils.ErrorGenerator, as: Error
 
   set_registry_name(:group_registry)
   set_supervisor_name(:group_supervisor)
@@ -39,6 +40,10 @@ defmodule Arke.Boundary.GroupManager do
         arke -> [arke | new_arke_list]
       end
     end)
+  end
+
+  def get_arke_list(_unit) do
+    Error.create(:group, "invalid unit")
   end
 
   def get_arke(%{id: id} = unit, project, arke_id),
