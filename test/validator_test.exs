@@ -101,6 +101,22 @@ defmodule Arke.ValidatorTest do
                {"not_valid", [{"Default", "must be a float"}]}
     end
 
+    test "boolean" do
+      arke_boolean = ArkeManager.get(:boolean, :arke_system)
+      parameter = ParameterManager.get(:default_boolean, :arke_system)
+
+      assert Arke.Validator.validate_parameter(arke_boolean, parameter, false, :test_schema) ==
+               {false, []}
+    end
+
+    test "boolean (error)" do
+      arke_boolean = ArkeManager.get(:boolean, :arke_system)
+      parameter = ParameterManager.get(:default_boolean, :arke_system)
+
+      assert Arke.Validator.validate_parameter(arke_boolean, parameter, "not_valid", :test_schema) ==
+               {"not_valid", [{"Default", "must be a boolean"}]}
+    end
+
     test "dict" do
       arke_dict = ArkeManager.get(:dict, :arke_system)
       parameter = ParameterManager.get(:default_dict, :arke_system)
