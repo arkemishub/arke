@@ -59,6 +59,7 @@ defmodule Arke.QueryManager do
           | :gt
           | :gte
           | :in
+          | :isnull
 
   @doc """
   Create a new query
