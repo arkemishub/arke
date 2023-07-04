@@ -78,6 +78,7 @@ defmodule Arke.DatetimeHandler do
   def parse_datetime(%NaiveDateTime{} = value, only_value), do: check_datetime(value, only_value)
 
   def parse_datetime(value, only_value) do
+
     case Timex.parse(value, "{ISO:Extended:Z}") do
       {:ok, datetime} -> check_datetime(datetime, only_value)
       {:error, _} -> {:error, @datetime_msg}

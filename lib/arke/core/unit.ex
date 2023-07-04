@@ -35,8 +35,8 @@ defmodule Arke.Core.Unit do
           arke_id: arke_id,
           link: link,
           metadata: metadata,
-          inserted_at: inserted_at,
-          updated_at: updated_at,
+          inserted_at: DatetimeHandler.parse_datetime(inserted_at, true),
+          updated_at: DatetimeHandler.parse_datetime(updated_at, true),
           __module__: __module__
         )
     end
