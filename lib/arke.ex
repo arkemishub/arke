@@ -389,7 +389,7 @@ defmodule Arke do
       Unit.new(
         :strip,
         Map.merge(
-          base_parameter(label: "No Whitespace"),
+          base_parameter(label: "Remove Whitespace"),
           %{default_boolean: false}
         ),
         :boolean,
