@@ -283,7 +283,7 @@ defmodule Arke.System.BaseParameter do
     |> parameter_option(:type, :string)
     |> parameter_option(:min_length, nil)
     |> parameter_option(:max_length, nil)
-    |> parameter_option(:no_whitespace, nil)
+    |> parameter_option(:strip, nil)
     |> __enum_parameter__(:string)
   end
 

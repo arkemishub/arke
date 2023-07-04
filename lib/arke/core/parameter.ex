@@ -126,7 +126,7 @@ defmodule Arke.Core.Parameter.String do
     Parameter.base_parameters()
     parameter(:min_length, :integer, required: false)
     parameter(:max_length, :integer, required: false)
-    parameter(:no_whitespace, :boolean, default_boolean: false)
+    parameter(:strip, :boolean, default_boolean: false)
     parameter(:values, :list, required: false)
     parameter(:multiple, :boolean, default_boolean: false)
     parameter(:unique, :boolean, required: false)
