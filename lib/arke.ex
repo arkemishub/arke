@@ -35,6 +35,20 @@ defmodule Arke do
       :arke_system
     )
 
+    GroupManager.create(
+      Unit.new(
+        :arke_or_group,
+        %{label: "Arke or Group", description: "Arke or Group", arke_list: []},
+        :group,
+        nil,
+        %{},
+        nil,
+        nil,
+        nil
+      ),
+      :arke_system
+    )
+
     arke_modules = get_arke_modules()
   end
 
@@ -146,21 +160,6 @@ defmodule Arke do
         :metadata,
         Map.merge(
           base_parameter(label: "Metadata", persistence: "table_column"),
-          %{default_dict: %{}}
-        ),
-        :dict,
-        nil,
-        %{},
-        nil,
-        nil,
-        nil
-      )
-
-    configuration =
-      Unit.new(
-        :configuration,
-        Map.merge(
-          base_parameter(label: "Configuration", persistence: "table_column"),
           %{default_dict: %{}}
         ),
         :dict,
@@ -1118,7 +1117,7 @@ defmodule Arke do
       Unit.new(
         :connection_type,
         Map.merge(
-          base_parameter(label: "Connection tyoe"),
+          base_parameter(label: "Connection type"),
           %{
             min_length: 1,
             max_length: nil,
@@ -1158,10 +1157,10 @@ defmodule Arke do
         Map.merge(base_parameter(label: "Arke or Group id", required: true), %{
           default_link: nil,
           multiple: false,
-          arke_or_group_id: nil,
+          arke_or_group_id: "arke_or_group",
           depth: 0,
           connection_type: "link",
-          filter_keys: ["arke_id", "id"]
+          filter_keys: ["id", "label"]
         }),
         :link,
         nil,
@@ -1312,7 +1311,6 @@ defmodule Arke do
       id,
       arke_id,
       metadata,
-      configuration,
       inserted_at,
       updated_at,
       active,
@@ -1377,6 +1375,7 @@ defmodule Arke do
     ]
 
     Enum.map(parameters, fn parameter ->
+      Arke.Boundary.ParamsManager.create(parameter, :arke_system)
       ParameterManager.create(parameter, :arke_system)
     end)
   end

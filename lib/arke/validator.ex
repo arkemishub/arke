@@ -16,7 +16,7 @@ defmodule Arke.Validator do
   @moduledoc """
   This module provide validation before assign a certain value to an `{arke_struct}`
   """
-  alias Arke.Boundary.{ArkeManager, ParameterManager}
+  alias Arke.Boundary.{ArkeManager, ParameterManager, ParamsManager}
   alias Arke.QueryManager, as: QueryManager
   alias Arke.Utils.ErrorGenerator, as: Error
   alias Arke.DatetimeHandler, as: DatetimeHandler
@@ -138,7 +138,8 @@ defmodule Arke.Validator do
     check_parameter(parameter, value, project)
   end
 
-  defp get_parameter(nil, parameter_id, project), do: ParameterManager.get(parameter_id, project)
+  defp get_parameter(nil, parameter_id, project),
+    do: ParamsManager.get(parameter_id, project)
 
   defp get_parameter(arke, parameter_id, project),
     do: ArkeManager.get_parameter(arke, parameter_id)
@@ -164,7 +165,7 @@ defmodule Arke.Validator do
   def get_default_value(parameter, value) when is_nil(value), do: handle_default_value(parameter)
   def get_default_value(parameter, value), do: value
 
-  defp parse_value(%{arke_id: :integer} = _, value)
+  defp parse_value(%{arke_id: :integer, data: %{multiple: false} = data} = _, value)
        when not is_integer(value) and not is_nil(value) do
     case Integer.parse(value) do
       :error -> value
@@ -173,7 +174,7 @@ defmodule Arke.Validator do
     end
   end
 
-  defp parse_value(%{arke_id: :float} = _, value)
+  defp parse_value(%{arke_id: :float, data: %{multiple: false} = data} = _, value)
        when not is_number(value) and not is_nil(value) do
     case Float.parse(value) do
       :error -> value
@@ -266,7 +267,7 @@ defmodule Arke.Validator do
         _ -> __enum_error_common__(errors, parameter)
       end
     else
-      _ -> errors ++ [{value, "#{label} must be a list of #{to_string(type)}}"}]
+      _ -> errors ++ [{value, "#{label} must be a list of #{to_string(type)}"}]
     end
   end
 
@@ -413,6 +414,17 @@ defmodule Arke.Validator do
       {:error, msg} -> errors ++ [{parameter.data.label, msg}]
     end
   end
+
+  ######################################################################
+  # BOOLEAN PARAMETER ##################################################
+  ######################################################################
+
+  defp check_by_type(errors, %{arke_id: :boolean} = parameter, value)
+       when is_boolean(value),
+       do: errors
+
+  defp check_by_type(errors, %{arke_id: :boolean} = parameter, _value),
+    do: errors ++ [{parameter.data.label, "must be a boolean"}]
 
   ######################################################################
   # ARKE LINK PARAMETER ################################################

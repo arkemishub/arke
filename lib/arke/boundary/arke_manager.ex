@@ -37,8 +37,13 @@ defmodule Arke.Boundary.ArkeManager do
   end
 
   def get_parameters(%{data: data, metadata: %{project: project}} = unit) do
-    Enum.reduce(data.parameters, [], fn %{id: parameter_id, metadata: parameter_metadata} = _,
+    Enum.reduce(data.parameters, [], fn %{
+                                          id: parameter_id,
+                                          metadata: parameter_metadata
+                                        },
                                         new_parameters ->
+      # parameter = Enum.filter(parameters, fn %{id: id} -> id == parameter_id end)
+
       case init_parameter(project, parameter_id, parameter_metadata) do
         {:error, msg} -> new_parameters
         parameter -> [parameter | new_parameters]
@@ -78,7 +83,7 @@ defmodule Arke.Boundary.ArkeManager do
          do: {:reply, parameter, {unit, project}},
          else:
            ({:error, msg} ->
-              {:reply, nil})
+              {:reply, nil, {unit, project}})
   end
 
   defp check_module(%{__module__: nil} = unit),
@@ -93,13 +98,41 @@ defmodule Arke.Boundary.ArkeManager do
   #   end
   # end
 
+  defp init_parameter(project, id, metadata, p) do
+    arke_id = Map.get(p, :arke, nil)
+
+    metadata = Enum.into(metadata, %{})
+
+    Unit.new(
+      id,
+      metadata,
+      arke_id,
+      nil,
+      %{},
+      nil,
+      nil,
+      nil
+    )
+
+    # Unit.update(parameter, metadata)
+  end
+
   defp init_parameter(project, id, metadata) do
-    case Arke.Boundary.ParameterManager.get(id, project) do
+    case Arke.Boundary.ParamsManager.get(id, project) do
       {:error, msg} ->
         {:error, msg}
 
       parameter ->
-        parameter = Unit.update(parameter, metadata)
+        parameter = handle_init_p(id, parameter, metadata)
     end
+  end
+
+  defp handle_init_p(id, nil, metadata) do
+    IO.inspect({id, metadata})
+    nil
+  end
+
+  defp handle_init_p(id, parameter, metadata) do
+    Unit.update(parameter, metadata)
   end
 end

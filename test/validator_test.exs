@@ -1,18 +1,6 @@
 defmodule Arke.ValidatorTest do
   use Arke.RepoCase
 
-  defp check_user(username \\ "test") do
-    with nil <- QueryManager.get_by(username: username, project: :arke_system) do
-      :ok
-    else
-      _ ->
-        QueryManager.delete(
-          :arke_system,
-          QueryManager.get_by(username: username, project: :arke_system)
-        )
-    end
-  end
-
   describe "Validator.validate/2" do
     test "update :ok" do
       arke = ArkeManager.get(:arke, :arke_system)
@@ -24,7 +12,7 @@ defmodule Arke.ValidatorTest do
           type: "arke",
           active: true,
           parameters: [],
-          configuration: %{}
+          metadata: %{}
         })
 
       {:ok, validate} = Arke.Validator.validate(unit, :update, :test_schema)
@@ -40,7 +28,7 @@ defmodule Arke.ValidatorTest do
           type: "arke",
           active: true,
           parameters: [],
-          configuration: %{}
+          metadata: %{}
         })
 
       {:error, [%{context: c, message: msg}]} =
@@ -111,6 +99,22 @@ defmodule Arke.ValidatorTest do
 
       assert Arke.Validator.validate_parameter(arke_float, parameter, "not_valid", :test_schema) ==
                {"not_valid", [{"Default", "must be a float"}]}
+    end
+
+    test "boolean" do
+      arke_boolean = ArkeManager.get(:boolean, :arke_system)
+      parameter = ParameterManager.get(:default_boolean, :arke_system)
+
+      assert Arke.Validator.validate_parameter(arke_boolean, parameter, false, :test_schema) ==
+               {false, []}
+    end
+
+    test "boolean (error)" do
+      arke_boolean = ArkeManager.get(:boolean, :arke_system)
+      parameter = ParameterManager.get(:default_boolean, :arke_system)
+
+      assert Arke.Validator.validate_parameter(arke_boolean, parameter, "not_valid", :test_schema) ==
+               {"not_valid", [{"Default", "must be a boolean"}]}
     end
 
     test "dict" do
@@ -335,7 +339,8 @@ defmodule Arke.ValidatorTest do
       parameter = ParameterManager.get(:default_date, :arke_system)
 
       assert Arke.Validator.validate_parameter(arke_date, parameter, "01/01/2020", :test_schema) ==
-               {"01/01/2020", [{"Default", "must be iso8601 (YYYY-MM-DD) format"}]}
+               {"01/01/2020",
+                [{"Default", "must be %Date{} | ~D[YYYY-MM-DD] | iso8601 (YYYY-MM-DD) format"}]}
     end
 
     test "date (sigil ~D)" do
@@ -366,9 +371,10 @@ defmodule Arke.ValidatorTest do
     test "time (error)" do
       arke_time = ArkeManager.get(:arke, :arke_system)
       parameter = ParameterManager.get(:default_time, :arke_system)
-
+      # TODO: must return message
       assert Arke.Validator.validate_parameter(arke_time, parameter, 9, :test_schema) ==
-               {9, [{"Default", "must be iso8601 (HH:MM:SS) format"}]}
+               {9,
+                [{"Default", "must be must be %Time{} |~T[HH:MM:SS] | iso8601 (HH:MM:SS) format"}]}
     end
 
     test "time (sigil ~T)" do
@@ -420,7 +426,7 @@ defmodule Arke.ValidatorTest do
                {"01/01/2020",
                 [
                   {"Default",
-                   "must be iso8601 (YYYY-MM-DDTHH:MM:SS or YYYY-MM-DD HH:MM:SS) format"}
+                   "must be %DateTime | %NaiveDatetime{} | ~N[YYYY-MM-DDTHH:MM:SS] | ~N[YYYY-MM-DD HH:MM:SS] | ~U[YYYY-MM-DD HH:MM:SS]  format"}
                 ]}
     end
 
@@ -466,9 +472,8 @@ defmodule Arke.ValidatorTest do
                {datetime, []}
     end
 
+    # TODO: fix
     test "unique" do
-      # ArkeAuth.User has username set to unique: true
-      check_user("unique_username")
       arke_user = ArkeManager.get(:user, :arke_system)
       opts = %{label: "Nome", username: "unique_username", type: "customer", password: "test"}
       QueryManager.create(:arke_system, arke_user, opts)
@@ -544,7 +549,7 @@ defmodule Arke.ValidatorTest do
 
       # Get arke and the parameter just linked
       arke = ArkeManager.get(:test_arke_default, :test_schema)
-      param = Arke.Core.Arke.get_parameter(arke, :string_test_default)
+      param = ArkeManager.get_parameter(arke, :string_test_default)
 
       assert param.id == parameter_string.id
       assert param.data.default_string == defaults[:default_string]
@@ -585,7 +590,8 @@ defmodule Arke.ValidatorTest do
       integer_unit =
         Unit.load(arke_integer, opts, :create) |> Map.put(:metadata, %{project: :test_schema})
 
-      ArkeManager.call_func(arke_integer, :on_create, [arke_integer, integer_unit])
+      {:ok, _unit} = ArkeManager.call_func(arke_integer, :on_create, [arke_integer, integer_unit])
+
       parameter_integer = ParameterManager.get(:integer, :test_schema)
 
       # Create Arke
@@ -595,7 +601,7 @@ defmodule Arke.ValidatorTest do
       arke_unit =
         Unit.load(arke_model, arke_data, :create) |> Map.put(:metadata, %{project: :test_schema})
 
-      ArkeManager.call_func(arke_model, :on_create, [arke_unit])
+      {:ok, _unit} = ArkeManager.call_func(arke_model, :on_create, [arke_model, arke_unit])
 
       # Create association
       arke_link = ArkeManager.get(:arke_link, :arke_system)
@@ -626,7 +632,7 @@ defmodule Arke.ValidatorTest do
 
       # Get arke and the parameter just linked
       arke = ArkeManager.get(:test_arke_default, :test_schema)
-      param = Arke.Core.Arke.get_parameter(arke, :integer)
+      param = ArkeManager.get_parameter(arke, :integer)
 
       assert param.id == parameter_integer.id
       assert param.data.default_integer == defaults[:default_integer]
@@ -659,8 +665,7 @@ defmodule Arke.ValidatorTest do
 
       arke_float = ArkeManager.get(:float, :arke_system)
 
-      float_unit =
-        Unit.load(arke_float, opts, :create) |> Map.put(:metadata, %{project: :test_schema})
+      float_unit = Unit.load(arke_float, opts) |> Map.put(:metadata, %{project: :test_schema})
 
       ArkeManager.call_func(arke_float, :on_create, [arke_float, float_unit])
       parameter_float = ParameterManager.get(:float, :test_schema)
@@ -669,14 +674,13 @@ defmodule Arke.ValidatorTest do
       arke_model = ArkeManager.get(:arke, :arke_system)
       arke_data = [id: :test_arke_default, label: "Test Arke Default"]
 
-      arke_unit =
-        Unit.load(arke_model, arke_data, :create) |> Map.put(:metadata, %{project: :test_schema})
+      arke_unit = Unit.load(arke_model, arke_data) |> Map.put(:metadata, %{project: :test_schema})
 
       ArkeManager.call_func(arke_model, :on_create, [arke_model, arke_unit])
 
       # Create association
       arke_link = ArkeManager.get(:arke_link, :arke_system)
-      # TODO: accept values in this format [3.67, 4.5, 9.08]
+
       defaults = %{
         min: nil,
         max: nil,
@@ -707,7 +711,7 @@ defmodule Arke.ValidatorTest do
 
       # Get arke and the parameter just linked
       arke = ArkeManager.get(:test_arke_default, :test_schema)
-      param = Arke.Core.Arke.get_parameter(arke, :float)
+      param = ArkeManager.get_parameter(arke, :float)
 
       assert param.id == parameter_float.id
       assert param.data.default_float == defaults[:default_float]

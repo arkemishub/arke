@@ -43,6 +43,7 @@ defmodule Arke.System do
       def before_validate(arke, unit), do: {:ok, unit}
       def on_create(arke, unit), do: {:ok, unit}
       def before_create(arke, unit), do: {:ok, unit}
+      def on_struct_encode(unit, _), do: {:ok, unit}
       def on_update(arke, unit), do: {:ok, unit}
       def before_update(arke, unit), do: {:ok, unit}
       def on_delete(arke, unit), do: {:ok, unit}
@@ -54,6 +55,7 @@ defmodule Arke.System do
                      before_validate: 2,
                      on_create: 2,
                      before_create: 2,
+                     on_struct_encode: 2,
                      on_update: 2,
                      before_update: 2,
                      on_delete: 2,
@@ -130,14 +132,14 @@ defmodule Arke.System do
         data: %{label: label, active: active, type: type, parameters: @parameters},
         metadata: metadata
       }
-      #      @arke Arke.Core.Arke.new(id: id, label: label, active: active, configuration: configuration, type: type, parameters: @parameters)
+      #      @arke Arke.Core.Arke.new(id: id, label: label, active: active, metadata: metadata, type: type, parameters: @parameters)
     end
   end
 
   defp get_base_arke_parameters("arke") do
     quote do
       parameter(:id, :string, required: true, persistence: "table_column")
-      parameter(:arke_id, :atom, required: false, persistence: "table_column")
+      parameter(:arke_id, :string, required: false, persistence: "table_column")
       parameter(:metadata, :dict, required: false, persistence: "table_column")
       parameter(:inserted_at, :datetime, required: false, persistence: "table_column")
       parameter(:updated_at, :datetime, required: false, persistence: "table_column")
@@ -146,7 +148,7 @@ defmodule Arke.System do
 
   defp get_base_arke_parameters(_type), do: nil
 
-  #  @spec __arke_info__(caller :: caller(), options :: list()) :: [id: atom() | String.t(), label: String.t(), active: boolean(), configuration: map(), type: atom()]
+  #  @spec __arke_info__(caller :: caller(), options :: list()) :: [id: atom() | String.t(), label: String.t(), active: boolean(), metadata: map(), type: atom()]
   #  defp __arke_info__(caller, options) do
   #
   #    id = Keyword.get(options, :id, caller |> to_string |> String.split(".") |> List.last |> Macro.underscore |> String.to_atom)
@@ -155,7 +157,7 @@ defmodule Arke.System do
   #      id: id,
   #      label: label,
   #      active: Keyword.get(options, :active, true),
-  #      configuration: Keyword.get(options, :configuration, %{}),
+  #      metadata: Keyword.get(options, :metadata, %{}),
   #      type: Keyword.get(options, :type, :arke)
   #    ]
   #  end
@@ -216,7 +218,7 @@ defmodule Arke.System.BaseArke do
 end
 
 defmodule Arke.System.BaseParameter do
-  defstruct [:id, :label, :active, :configuration, :type, :parameters]
+  defstruct [:id, :label, :active, :metadata, :type, :parameters]
 
   @doc """
   Used in the parameter macro to create the map for every parameter which have the `values` option.
@@ -319,6 +321,8 @@ defmodule Arke.System.BaseParameter do
       false -> opts
     end
   end
+
+  defp __validate_values__(opts, nil, _), do: Keyword.delete(opts, :values)
 
   defp __validate_values__(opts, %{"value" => value, "datetime" => _} = values, type)
        when not is_nil(value),

@@ -16,6 +16,7 @@ defmodule Arke.Core.Query do
   @moduledoc """
     Struct which defines a Query
   """
+
   defstruct ~w[project arke persistence filters link orders offset limit]a
   @type t() :: %Arke.Core.Query{}
 
@@ -53,8 +54,57 @@ defmodule Arke.Core.Query do
       - negate => boolean => used to figure out whether the condition is to be denied \n
       It is used to keep the same logic structure across all the Filter
     """
+
     defstruct ~w[parameter operator value negate]a
     @type t() :: %Arke.Core.Query.BaseFilter{}
+
+    @doc """
+    Create a new BaseParameter
+
+    ## Parameters
+      - parameter => %Arke.Core.Parameter.`ParameterType` => refer to `Arke.Core.Parameter`
+      - operator => refer to [operators](#module-operators)
+      - value => any => the value that the query will search for
+      - negate => boolean => used to figure out whether the condition is to be denied \n
+
+    ## Example
+        iex> filter = Arke.Core.Query.BaseFilter.new(parameter: "name", operator: "eq", value: "John", negate: false)
+        ...> Arke.Core.Query.BaseFilter.new(person, :default)
+
+    ## Return
+        %Arke.Core.Query.BaseFilter{}
+
+    """
+    @spec new(
+            parameter :: Arke.Core.Parameter.ParameterType,
+            operator :: atom(),
+            value :: any,
+            negate :: boolean
+          ) :: Arke.Core.Query.BaseFilter.t()
+    def new(parameter, operator, value, negate) do
+      %__MODULE__{
+        parameter: parameter,
+        operator: operator,
+        value: cast_value(parameter, value),
+        negate: negate
+      }
+    end
+
+    defp cast_value(%Arke.Core.Unit{arke_id: arke_id} = parameter, value) do
+      case arke_id do
+        :datetime ->
+          Arke.DatetimeHandler.parse_datetime(value)
+          |> case do
+            {:ok, value} -> value
+            _ -> raise ArgumentError, message: "Invalid datetime format"
+          end
+
+        _ ->
+          value
+      end
+    end
+
+    defp cast_value(parameter, value), do: value
   end
 
   defmodule Order do
@@ -253,7 +303,7 @@ defmodule Arke.Core.Query do
   #  if it is a string convert it to existing atom and get it from paramater manager
   #  if it is an atom get it from paramater manaager
   def new_base_filter(parameter, operator, value, negate) do
-    %BaseFilter{parameter: parameter, operator: operator, value: value, negate: negate}
+    BaseFilter.new(parameter, operator, value, negate)
   end
 
   defp parse_base_filters(base_filters) when is_list(base_filters), do: base_filters

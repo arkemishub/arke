@@ -19,26 +19,35 @@ defmodule Arke.Core.Unit do
   """
   alias Arke.DatetimeHandler, as: DatetimeHandler
   alias Arke.Boundary.ArkeManager
+  alias Arke.Utils.ErrorGenerator, as: Error
 
   defstruct ~w[id data arke_id link metadata inserted_at updated_at __module__]a
 
   def new(id, data, arke_id, link, metadata, inserted_at, updated_at, __module__) do
-    id = check_id(id)
+    case check_id(id) do
+      {:error, msg} ->
+        {:error, msg}
 
-    __struct__(
-      id: id,
-      data: data,
-      arke_id: arke_id,
-      link: link,
-      metadata: metadata,
-      inserted_at: inserted_at,
-      updated_at: updated_at,
-      __module__: __module__
-    )
+      id ->
+        __struct__(
+          id: id,
+          data: data,
+          arke_id: arke_id,
+          link: link,
+          metadata: metadata,
+          inserted_at: DatetimeHandler.parse_datetime(inserted_at, true),
+          updated_at: DatetimeHandler.parse_datetime(updated_at, true),
+          __module__: __module__
+        )
+    end
   end
 
   defp check_id(id) when is_binary(id), do: String.to_atom(id)
   defp check_id(id) when is_atom(id), do: id
+
+  defp check_id(id) when is_number(id),
+    do: Error.create(:parameter_validation, "id cannot be a number")
+
   defp check_id(_), do: nil
 
   def load(arke, opts, persistence_fn \\ :get)
@@ -75,7 +84,7 @@ defmodule Arke.Core.Unit do
 
   def load_parameter_value(%{id: :id} = _, data, opts), do: data
   def load_parameter_value(%{id: :metadata} = _, data, opts), do: data
-  def load_parameter_value(%{id: :configuration} = _, data, opts), do: data
+  def load_parameter_value(%{id: :metadata} = _, data, opts), do: data
   def load_parameter_value(%{id: :arke_id} = _, data, opts), do: data
   def load_parameter_value(%{id: :inserted_at} = _, data, opts), do: data
   def load_parameter_value(%{id: :updated_at} = _, data, opts), do: data
@@ -126,8 +135,8 @@ defmodule Arke.Core.Unit do
 
   defp handle_default_value(_), do: nil
 
-  defp get_link(%{depth: depth, link_configuration: link_configuration} = args),
-    do: {%{depth: depth, configuration: link_configuration}, args}
+  defp get_link(%{depth: depth, link_metadata: link_metadata} = args),
+    do: {%{depth: depth, metadata: link_metadata}, args}
 
   defp get_link(args), do: {nil, args}
 

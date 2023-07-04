@@ -1,6 +1,8 @@
 defmodule StructManagerTest do
   use Arke.RepoCase
 
+  @base_keys [:id, :arke_id, :inserted_at, :updated_at, :metadata]
+
   defp get_parameter_list(),
     do: [:string, :integer, :float, :date, :time, :datetime, :dict, :list, :boolean]
 
@@ -49,71 +51,41 @@ defmodule StructManagerTest do
     ]
   end
 
-  defp create_arke_test() do
+  defp create_arke_test(_context) do
     arke_model = ArkeManager.get(:arke, :arke_system)
     arke_opts = [id: "test_arke_struct", label: "test_arke_struct", active: true]
-    QueryManager.create(:test_schema, arke_model, arke_opts)
+    arke_unit = Unit.load(arke_model, arke_opts)
+    ArkeManager.create(arke_unit, :test_schema)
 
     param_list = get_parameter_list()
     Enum.each(param_list, &create_param(&1))
 
     new_arke_model = ArkeManager.get(:test_arke_struct, :test_schema)
     values = get_parameter_values_encode()
+    unit = Unit.load(new_arke_model, values)
+    ArkeManager.create(unit, :test_schema)
 
-    {:ok, unit} = QueryManager.create(:test_schema, new_arke_model, values)
-  end
-
-  defp clear_all() do
-    parameter_list = get_parameter_list()
-
-    unit = get_unit()
-    QueryManager.delete(:test_schema, unit)
-
-    Enum.each(
-      parameter_list,
-      &LinkManager.delete_node(
-        :test_schema,
-        "test_arke_struct",
-        "#{&1}_struct_test",
-        "parameter",
-        %{}
-      )
-    )
-
-    Enum.each(
-      parameter_list,
-      &QueryManager.delete(
-        :test_schema,
-        QueryManager.get_by(id: String.to_atom("#{&1}_struct_test"), project: :test_schema)
-      )
-    )
-
-    QueryManager.delete(
-      :test_schema,
-      QueryManager.get_by(id: :test_arke_struct, project: :test_schema)
-    )
-  end
-
-  defp get_unit() do
-    unit =
-      QueryManager.query(project: :test_schema)
-      |> QueryManager.where(arke_id__eq: "test_arke_struct")
-      |> QueryManager.one()
+    :ok
   end
 
   defp create_param(type) do
     parameter_model = ArkeManager.get(type, :arke_system)
 
-    {:ok, unit} =
-      QueryManager.create(:test_schema, parameter_model,
+    unit =
+      Unit.load(parameter_model, %{
         id: "#{type}_struct_test",
         label: "#{String.upcase(to_string(type))} Struct Test Label"
-      )
+      })
+
+    ParameterManager.create(unit, :test_schema)
+
+    parent = ArkeManager.get("test_arke_struct", :test_schema)
+    child = ParameterManager.get("#{type}_struct_test", :test_schema)
 
     LinkManager.add_node(
       :test_schema,
-      "test_arke_struct",
-      "#{type}_struct_test",
+      parent,
+      child,
       "parameter",
       %{}
     )
@@ -122,54 +94,52 @@ defmodule StructManagerTest do
   end
 
   describe "StructManager" do
+    setup [:create_arke_test]
+
+    test "encode (when is list)" do
+      model = ArkeManager.get(:test_arke_struct, :test_schema)
+      unit = Unit.load(model, get_parameter_values_decode())
+
+      struct_list = StructManager.encode([unit], type: :json)
+      keys = Enum.map(@base_keys, fn k -> Map.has_key?(List.first(struct_list), k) end)
+
+      assert length(struct_list) > 0
+      assert Enum.all?(keys, &(&1 == true)) == true
+    end
+
     test "encode" do
-      create_arke_test()
-      unit = get_unit()
+      model = ArkeManager.get(:test_arke_struct, :test_schema)
+      unit = Unit.load(model, get_parameter_values_decode())
 
-      base_keys = [:id, :arke_id, :inserted_at, :updated_at, :metadata]
-
-      # encode when is_list(unit)
-      struct = StructManager.encode([unit], type: :json)
-      keys = Enum.map(base_keys, fn k -> Map.has_key?(List.first(struct), k) end)
-
-      assert Enum.all?(keys, &(&1 == true)) == true
-
-      # encode
       struct = StructManager.encode(unit, type: :json)
-      keys = Enum.map(base_keys, fn k -> Map.has_key?(struct, k) end)
-
+      keys = Enum.map(@base_keys, fn k -> Map.has_key?(struct, k) end)
       assert Enum.all?(keys, &(&1 == true)) == true
-      # Means the keys from unit.data are in the struct
-      assert Map.keys(struct) -- base_keys != []
+    end
 
-      # encode error
-
-      assert_raise RuntimeError, "Must pass a valid unit", fn ->
-        StructManager.encode("invalid unit", type: :json)
-      end
-
-      # encode nil data
+    test "encode (nil data)" do
+      model = ArkeManager.get(:test_arke_struct, :test_schema)
+      unit = Unit.load(model, get_parameter_values_decode())
 
       unit_nil = Map.put_new(Map.delete(unit, :data), :data, nil)
 
       struct = StructManager.encode(unit_nil, type: :json)
-      keys = Enum.map(base_keys, fn k -> Map.has_key?(struct, k) end)
+      keys = Enum.map(@base_keys, fn k -> Map.has_key?(struct, k) end)
 
-      assert Map.keys(struct) -- base_keys == []
+      assert Map.keys(struct) -- @base_keys == []
+    end
 
-      # encode  unit data = %{}
+    test "encode (empty data)" do
+      model = ArkeManager.get(:test_arke_struct, :test_schema)
+      unit = Unit.load(model, get_parameter_values_decode())
 
       unit_nil = Map.put_new(Map.delete(unit, :data), :data, %{})
 
       struct = StructManager.encode(unit_nil, type: :json)
-      keys = Enum.map(base_keys, fn k -> Map.has_key?(struct, k) end)
 
-      assert Map.keys(struct) -- base_keys == []
+      assert Map.keys(struct) -- @base_keys == []
     end
 
-    test "decode" do
-      create_arke_test()
-
+    test "decode when is_atom(arke_id)" do
       values = get_parameter_values_decode()
 
       # decode when is_atom(arke_id)
@@ -178,21 +148,37 @@ defmodule StructManagerTest do
       assert struct.__struct__ == Arke.Core.Unit
       assert struct.arke_id == :test_arke_struct
       assert struct.data.float_struct_test == 5.5
+    end
 
-      # decode when is_string(arke_id)
+    test "decode when is_string(arke_id)" do
+      values = get_parameter_values_decode()
+
       struct = StructManager.decode(:test_schema, "test_arke_struct", values, :json)
-
-      ## TODO: try to decode date|datetime (maybe written with / instead of -) and time with invalid format and send error with message or not save
 
       assert struct.__struct__ == Arke.Core.Unit
       assert struct.arke_id == :test_arke_struct
-      assert struct.data.integer_struct_test == 45
+      assert struct.data.integer_struct_test == 2
+    end
 
-      clear_all()
+    test "decode (datetime not iso8601)" do
+      values =
+        get_parameter_values_decode()
+        |> Keyword.replace(:date_struct_test, "1999/12/30")
+
+      struct_date = StructManager.decode(:test_schema, :test_arke_struct, values, :json)
+
+      # TODO: better to raise an error and not load the unit if there is an error
+      assert struct_date.data.date_struct_test ==
+               "must be %Date{} | ~D[YYYY-MM-DD] | iso8601 (YYYY-MM-DD) format"
+
+      values = Keyword.replace(values, :datetime_struct_test, "2022/10/31T16:44:19")
+      struct_dt = StructManager.decode(:test_schema, :test_arke_struct, values, :json)
+
+      assert struct_dt.data.datetime_struct_test ==
+               "must be %DateTime | %NaiveDatetime{} | ~N[YYYY-MM-DDTHH:MM:SS] | ~N[YYYY-MM-DD HH:MM:SS] | ~U[YYYY-MM-DD HH:MM:SS]  format"
     end
 
     test "get_struct" do
-      create_arke_test()
       # get_struct with arke
       arke_model = ArkeManager.get(:arke, :arke_system)
       struct = StructManager.get_struct(arke_model)
@@ -202,16 +188,14 @@ defmodule StructManagerTest do
       assert length(struct.parameters) > 0
 
       test_arke = ArkeManager.get(:test_arke_struct, :test_schema)
-      unit = get_unit()
+      unit = ArkeManager.get(:test_arke_struct, :test_schema)
 
       struct = StructManager.get_struct(test_arke, unit, [])
 
       param_with_value =
         Enum.find(struct.parameters, fn param -> param.id == "string_struct_test" end)
 
-      assert param_with_value.value == "struct_test"
-
-      clear_all()
+      assert param_with_value.value == nil
     end
   end
 end

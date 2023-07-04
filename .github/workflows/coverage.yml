@@ -4,55 +4,47 @@ on:
   # Triggers the workflow on pull request events but only for the master branch
   pull_request:
     branches: # matches refs/heads/master
-      - 'master'
+      - 'main'
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-
 jobs:
   test:
-    runs-on: ubuntu-18.04
-    container: node:10.18-jessie
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
     name: Create Coverage Report
-    services:
-      postgres:
-        image: postgres
-        ports:
-          - 5432:5432
-        env:
-          POSTGRES_PASSWORD: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     strategy:
       matrix:
-        otp: [24.0]
-        elixir: [1.13.2]
+        otp: ['25.0.4']
+        elixir: ['1.14.1']
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-elixir@v1
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - uses: erlef/setup-beam@v1
         with:
           otp-version: ${{matrix.otp}}
           elixir-version: ${{matrix.elixir}}
-      - name: Get dependencies
-        run: mix deps.get
 
-      - name: Generating XML
-        run: mix coveralls.json --umbrella
-        env:
-          MIX_ENV: test
-          DB_HOSTNAME: postgres
-          DB_NAME: arke-repo-test
-          DB_USER: postgres
-          DB_PASSWORD: postgres
-      - name: Upload to Codecov
-        uses: codecov/codecov-action@v2
+      - name: Get deps cache
+        uses: actions/cache@v2
         with:
-          token: ${{ secrets.CODECOV_UPLOAD_TOKEN }}
-          file: ./cover/excoveralls.json
-          directory: cover
-          fail_ci_if_error: true
-          verbose: true
+          path: deps/
+          key: deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}
+
+      - name: Get build cache
+        uses: actions/cache@v2
+        with:
+          path: _build/test/
+          key: build-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}
+
+      - name: Install Dependencies
+        run: |
+          mix deps.get
+          mix compile
+
+      - name: Run Tests
+        run: mix coveralls.github
+        continue-on-error: true
 

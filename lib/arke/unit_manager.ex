@@ -92,7 +92,6 @@ defmodule Arke.UnitManager do
       def remove(unit_id, project) do
         case get_pid(unit_id, project) do
           {:error, msg} ->
-
             {:error, msg}
 
           pid ->

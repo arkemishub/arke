@@ -37,13 +37,13 @@ defmodule Arke.QueryManager do
     - in =>  value is in a collection => `IN`
 
   """
-  alias Arke.Boundary.{ArkeManager, ParameterManager, GroupManager}
+  alias Arke.Boundary.{ArkeManager, ParameterManager, GroupManager, ParamsManager}
   alias Arke.Validator
   alias Arke.LinkManager
   alias Arke.Core.{Arke, Unit, Query, Parameter}
 
   @persistence Application.get_env(:arke, :persistence)
-  @record_fields [:id, :data, :configuration, :inserted_at, :updated_at]
+  @record_fields [:id, :data, :metadata, :inserted_at, :updated_at]
 
   @type func_return() :: {:ok, Unit.t()} | Error.t()
   @type operator() ::
@@ -59,6 +59,7 @@ defmodule Arke.QueryManager do
           | :gt
           | :gte
           | :in
+          | :isnull
 
   @doc """
   Create a new query
@@ -580,10 +581,10 @@ defmodule Arke.QueryManager do
   defp get_parameter_operator(_, _), do: nil
 
   defp get_parameter(%{arke: nil, project: project} = query, %{id: id} = _parameter),
-    do: ParameterManager.get(id, project)
+    do: ParamsManager.get(id, project)
 
   defp get_parameter(%{arke: nil, project: project} = query, key),
-    do: ParameterManager.get(key, project)
+    do: ParamsManager.get(key, project)
 
   defp get_parameter(%{arke: arke, project: project} = query, key),
     do: ArkeManager.get_parameter(arke, project, key)
