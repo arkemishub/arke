@@ -151,6 +151,7 @@ defmodule Arke.Validator do
   defp check_parameter(parameter, value, project) do
     value = get_default_value(parameter, value)
     value = parse_value(parameter, value)
+    value = check_whitespace(parameter, value)
 
     errors =
       []
@@ -294,6 +295,13 @@ defmodule Arke.Validator do
 
     Enum.all?(value, &condition.(&1))
   end
+
+  defp check_whitespace(%{data: %{strip: true}} = parameter, value) do
+    value |> String.trim() |> String.replace(~r/\s+/, "-")
+  end
+
+  defp check_whitespace(_, value),
+    do: value
 
   defp check_max_length(errors, %{data: %{max_length: max_length}} = parameter, _)
        when is_nil(max_length),

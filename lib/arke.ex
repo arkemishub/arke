@@ -115,7 +115,8 @@ defmodule Arke do
             values: nil,
             multiple: false,
             unique: true,
-            default_string: nil
+            default_string: nil,
+            strip: true
           }
         ),
         :string,
@@ -142,7 +143,8 @@ defmodule Arke do
             values: nil,
             multiple: false,
             unique: false,
-            default_string: nil
+            default_string: nil,
+            strip: true
           }
         ),
         :string,
@@ -221,6 +223,7 @@ defmodule Arke do
           %{
             min_length: 2,
             max_length: 200,
+            strip: false,
             values: nil,
             multiple: false,
             unique: false,
@@ -243,6 +246,7 @@ defmodule Arke do
           %{
             min_length: 2,
             max_length: nil,
+            strip: false,
             values: nil,
             multiple: false,
             unique: false,
@@ -310,6 +314,7 @@ defmodule Arke do
           %{
             min_length: 2,
             max_length: nil,
+            strip: false,
             values: [
               %{label: "Arke Parameter", value: "arke_parameter"},
               %{label: "Table Column", value: "table_column"}
@@ -335,6 +340,7 @@ defmodule Arke do
           %{
             min_length: 2,
             max_length: nil,
+            strip: false,
             values: nil,
             multiple: false,
             unique: false,
@@ -372,6 +378,21 @@ defmodule Arke do
           %{min: nil, max: nil, values: nil, multiple: false, unique: false, default_integer: nil}
         ),
         :integer,
+        nil,
+        %{},
+        nil,
+        nil,
+        nil
+      )
+
+    strip =
+      Unit.new(
+        :strip,
+        Map.merge(
+          base_parameter(label: "Remove Whitespace"),
+          %{default_boolean: false}
+        ),
+        :boolean,
         nil,
         %{},
         nil,
@@ -492,6 +513,7 @@ defmodule Arke do
           %{
             min_length: nil,
             max_length: nil,
+            strip: false,
             values: nil,
             multiple: false,
             unique: false,
@@ -656,6 +678,7 @@ defmodule Arke do
           %{
             min_length: 0,
             max_length: 500,
+            strip: false,
             values: nil,
             multiple: false,
             unique: false,
@@ -708,6 +731,7 @@ defmodule Arke do
           %{
             min_length: 2,
             max_length: nil,
+            strip: true,
             values: nil,
             multiple: false,
             unique: false,
@@ -730,6 +754,7 @@ defmodule Arke do
           %{
             min_length: 2,
             max_length: nil,
+            strip: true,
             values: nil,
             multiple: false,
             unique: false,
@@ -752,6 +777,7 @@ defmodule Arke do
           %{
             min_length: 2,
             max_length: nil,
+            strip: true,
             values: nil,
             multiple: false,
             unique: false,
@@ -774,6 +800,7 @@ defmodule Arke do
           %{
             min_length: 2,
             max_length: 100,
+            strip: false,
             values: nil,
             multiple: false,
             unique: false,
@@ -796,6 +823,7 @@ defmodule Arke do
           %{
             min_length: 2,
             max_length: nil,
+            strip: false,
             values: nil,
             multiple: false,
             unique: false,
@@ -818,6 +846,7 @@ defmodule Arke do
           %{
             min_length: 2,
             max_length: nil,
+            strip: true,
             values: nil,
             multiple: false,
             unique: false,
@@ -840,6 +869,7 @@ defmodule Arke do
           %{
             min_length: 2,
             max_length: nil,
+            strip: false,
             values: nil,
             multiple: false,
             unique: false,
@@ -862,6 +892,7 @@ defmodule Arke do
           %{
             min_length: 2,
             max_length: nil,
+            strip: false,
             values: nil,
             multiple: false,
             unique: false,
@@ -884,6 +915,7 @@ defmodule Arke do
           %{
             min_length: 3,
             max_length: nil,
+            strip: false,
             values: nil,
             multiple: false,
             unique: false,
@@ -906,6 +938,7 @@ defmodule Arke do
           %{
             min_length: 3,
             max_length: nil,
+            strip: false,
             values: nil,
             multiple: false,
             unique: false,
@@ -928,6 +961,7 @@ defmodule Arke do
           %{
             min_length: 3,
             max_length: nil,
+            strip: false,
             values: nil,
             multiple: false,
             unique: false,
@@ -950,6 +984,7 @@ defmodule Arke do
           %{
             min_length: 3,
             max_length: nil,
+            strip: false,
             values: nil,
             multiple: false,
             unique: false,
@@ -972,6 +1007,7 @@ defmodule Arke do
           %{
             min_length: 3,
             max_length: nil,
+            strip: false,
             values: nil,
             multiple: false,
             unique: false,
@@ -1009,6 +1045,7 @@ defmodule Arke do
           %{
             min_length: 1,
             max_length: nil,
+            strip: false,
             values: nil,
             multiple: false,
             unique: false,
@@ -1031,6 +1068,7 @@ defmodule Arke do
           %{
             min_length: 1,
             max_length: nil,
+            strip: false,
             values: nil,
             multiple: false,
             unique: false,
@@ -1083,6 +1121,7 @@ defmodule Arke do
           %{
             min_length: 1,
             max_length: nil,
+            strip: true,
             values: nil,
             multiple: false,
             unique: false,
@@ -1139,6 +1178,7 @@ defmodule Arke do
           %{
             min_length: nil,
             max_length: nil,
+            strip: false,
             values: nil,
             multiple: true,
             unique: false,
@@ -1176,6 +1216,7 @@ defmodule Arke do
           %{
             min_length: nil,
             max_length: nil,
+            strip: false,
             values: nil,
             multiple: false,
             unique: false,
@@ -1198,6 +1239,7 @@ defmodule Arke do
           %{
             min_length: nil,
             max_length: nil,
+            strip: false,
             values: ["local", "gcloud", "aws"],
             multiple: false,
             unique: false,
@@ -1220,6 +1262,7 @@ defmodule Arke do
           %{
             min_length: nil,
             max_length: nil,
+            strip: false,
             values: nil,
             multiple: false,
             unique: false,
@@ -1278,6 +1321,7 @@ defmodule Arke do
       required,
       persistence,
       helper_text,
+      strip,
       min_length,
       max_length,
       values,
