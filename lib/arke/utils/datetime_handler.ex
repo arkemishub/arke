@@ -13,9 +13,12 @@
 # limitations under the License.
 
 defmodule Arke.DatetimeHandler do
+  @moduledoc """
+  This module is responsible for managing datetime, date and time values
+  """
   use Timex
 
-  @datetime_msg "must be %DateTime | %NaiveDatetime{} | ~N[YYYY-MM-DDTHH:MM:SS] | ~N[YYYY-MM-DD HH:MM:SS] | ~U[YYYY-MM-DD HH:MM:SS]  format"
+  @datetime_msg "must be %DateTime{} | %NaiveDatetime{} | ~N[YYYY-MM-DDTHH:MM:SS] | ~N[YYYY-MM-DD HH:MM:SS] | ~U[YYYY-MM-DD HH:MM:SS]  format"
 
   @date_msg "must be %Date{} | ~D[YYYY-MM-DD] | iso8601 (YYYY-MM-DD) format"
 
@@ -67,8 +70,22 @@ defmodule Arke.DatetimeHandler do
   end
 
   # ----- DATETIME -----
+  @doc """
+  Returns a %DateTime{} | %Date{}| %Time{} representing the current moment in time.
 
+  """
+  @spec now(:datetime | :date | :time) :: DateTime.t() | Date.t() | Time.t()
   def now(:datetime), do: Timex.set(Timex.now(), microsecond: 0)
+
+  @doc """
+  Parse the given value to a %DateTime{}.
+  Usually returns `{:ok, value}` except if the `only_value` parameter is set to `true`. In this case it will returns only the value but it still returns `{:error, msg}` if an error occured
+  Returns `nil` if `nil` is given
+  """
+  @spec parse_datetime(
+          value :: DateTime.t() | NaiveDateTime.t() | nil | String.t(),
+          only_value :: boolean()
+        ) :: nil | {:ok, DateTime.t()} | DateTime.t() | {:error, term()}
   def parse_datetime(value, only_value \\ false)
   def parse_datetime(value, true) when is_nil(value), do: value
   def parse_datetime(value, _only_value) when is_nil(value), do: {:ok, value}
@@ -78,7 +95,6 @@ defmodule Arke.DatetimeHandler do
   def parse_datetime(%NaiveDateTime{} = value, only_value), do: check_datetime(value, only_value)
 
   def parse_datetime(value, only_value) do
-
     case Timex.parse(value, "{ISO:Extended:Z}") do
       {:ok, datetime} -> check_datetime(datetime, only_value)
       {:error, _} -> {:error, @datetime_msg}
@@ -87,6 +103,16 @@ defmodule Arke.DatetimeHandler do
 
   # ----- DATE -----
   def now(:date), do: Timex.now() |> Timex.to_date()
+
+  @doc """
+  Parse the given value to a %Date{}.
+  Usually returns `{:ok, value}` except if the `only_value` parameter is set to `true`. In this case it will returns only the value but it still returns `{:error, msg}` if an error occured
+  Returns `nil` if `nil` is given
+  """
+  @spec parse_date(
+          value :: Date.t() | nil | String.t(),
+          only_value :: boolean()
+        ) :: nil | {:ok, Date.t()} | Date.t() | {:error, term()}
   def parse_date(value, only_value \\ false)
   def parse_date(value, true) when is_nil(value), do: nil
   def parse_date(value, _only_value) when is_nil(value), do: {:ok, nil}
@@ -103,6 +129,15 @@ defmodule Arke.DatetimeHandler do
   # ----- TIME -----
 
   def now(:time), do: Time.utc_now() |> Time.truncate(:second)
+  @doc """
+  Parse the given value to a %Time{}.
+  Usually returns `{:ok, value}` except if the `only_value` parameter is set to `true`. In this case it will returns only the value but it still returns `{:error, msg}` if an error occured
+  Returns `nil` if `nil` is given
+  """
+  @spec parse_time(
+    value :: Time.t() | nil | String.t(),
+    only_value :: boolean()
+  ) :: nil | {:ok, Date.t()} | Date.t() | {:error, term()}
   def parse_time(value, only_value \\ false)
   def parse_time(value, true) when is_nil(value), do: nil
   def parse_time(value, _only_value) when is_nil(value), do: {:ok, nil}

@@ -1,11 +1,16 @@
 defmodule Arke.MixProject do
   use Mix.Project
 
+  @version "0.1.8"
+  @scm_url "https://github.com/arkemishub/arke"
+  @site_url "https://arkehub.com"
+  @logo_url "public/arke-logo.png"
+
   def project do
     [
       app: :arke,
       name: "Arke",
-      version: "0.1.8",
+      version: @version,
       build_path: "./_build",
       deps_path: "./deps",
       lockfile: "./mix.lock",
@@ -17,8 +22,16 @@ defmodule Arke.MixProject do
       test_coverage: [tool: ExCoveralls],
       aliases: aliases(),
       deps: deps(),
+      source_url: @scm_url,
+      homepage_url: @site_url,
       elixirc_paths: elixirc_paths(Mix.env()),
-      elixirc_options: [warnings_as_errors: false]
+      docs: [
+        # The main page in the docs
+        main: "Arke",
+        logo: @logo_url,
+        extras: ["README.md", "LICENSE"],
+        groups_for_modules: groups_for_modules()
+      ]
     ]
   end
 
@@ -70,9 +83,19 @@ defmodule Arke.MixProject do
       # These are the default files included in the package
       licenses: ["Apache-2.0"],
       links: %{
-        "Website" => "https://arkehub.com",
-        "Github" => "https://github.com/arkemishub/arke"
+        "Website" => @site_url,
+        "Github" => @scm_url
       }
+    ]
+  end
+
+  defp groups_for_modules() do
+    [
+      System: [~r"Arke.System"],
+      Parameter: [~r"Arke.Core.Parameter"],
+      Query: [~r"Arke.Core.Query"],
+      Core: [~r"Arke.Core."],
+      Utils: [~r"Arke.Utils."]
     ]
   end
 end
