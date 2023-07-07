@@ -38,17 +38,18 @@ defmodule Arke.StructManager do
   Function that encodes a Unit or list of Unit
 
   ## Parameters
-    - unit => [%{arke_struct}] | %{arke_struct} => unit or list of units that we want to encode
-    - type => :json => desired encode type
+    - `unit` -> unit or list of units that we want to encode
+    - `type` -> desired encode type
 
   ## Example
       iex> units = QueryManager.filter_by(arke_id: id)
       ...> StructManager.encode(units, type: :json)
 
+  ## Returns
+    All the given units encoded based on the given type
+
   """
-  @spec encode(unit :: Unit.t(), format :: atom()) :: %{
-          key: String.t() | number() | boolean() | atom()
-        }
+  @spec encode(unit :: [Unit.t(), ...], format :: :json) :: %{atom() => String.t()} | [...]
   def encode(unit, opts \\ [])
 
   def encode(unit, opts) do
@@ -110,8 +111,6 @@ defmodule Arke.StructManager do
   defp handle_load_link(_, _, false, _opts), do: []
 
   defp handle_load_link(unit, project, true, opts) do
-    # IO.inspect("query done for link load")
-
     get_link_id_list(unit)
     |> get_link_units(project, opts)
   end
@@ -161,6 +160,34 @@ defmodule Arke.StructManager do
   end
 
   def encode(_unit, _format), do: raise("Must pass a valid unit")
+
+
+  @doc """
+  Validates the given data for links parameter
+
+  ## Parameters
+    - `id` -> parameter to valorize
+    - `value` -> desired value
+    - `arke` -> Arke to look for the parameter
+    - `opts` -> options
+
+  ## Example
+      iex> units = QueryManager.filter_by(arke_id: id)
+      ...> StructManager.encode(units, type: :json)
+
+  ## Returns
+    All the given units encoded based on the given type
+
+  """
+  @spec validate_data(
+          id :: String.t() | atom(),
+          value :: any(),
+          arke :: Unit.t(),
+          opts :: [] | [...]
+        ) :: %{
+          parameters: [parameter()],
+          label: String.t()
+        }
   def validate_data(id, value, arke, opts \\ [])
 
   def validate_data(id, value, arke, opts) do
@@ -202,10 +229,10 @@ defmodule Arke.StructManager do
   Function that decodes data into a Unit or list of Unit
 
   ## Parameters
-    - project => :atom =>  identify the `Arke.Core.Project`
-    - arke_id => atom | string => arke id
-    - json => %{key: value} => json data that we want to decode
-    - type => :json => data input type
+    - `project` -> identify the `Arke.Core.Project`
+    - `arke_id` -> arke id
+    - `json` -> json data that we want to decode
+    - `type` -> data input type
 
   ## Example
       iex> StructManager.decode(:arke, my_json_data, :json)
@@ -282,10 +309,10 @@ defmodule Arke.StructManager do
   defp handle_default_value(_, value), do: value
 
   @doc """
-  Function that returns a Struct that describes an Arke or a Unit
+  Function to get a Unit Struct
 
   ## Parameters
-    - unit => %Unit{} | %Arke{} => unit or arke struct
+    - `unit` -> unit struct
 
   ## Example
         iex> arke = ArkeManager.get(:test, :default)
@@ -296,6 +323,13 @@ defmodule Arke.StructManager do
     %{parameters: get_struct_parameters(ArkeManager.get_parameters(arke), %{}), label: data.label}
   end
 
+  @doc """
+  Function to get a Unit Struct
+  """
+  @spec get_struct(arke :: Unit.t(), unit :: Unit.t(), opts :: [] | [...]) :: %{
+          parameters: [parameter()],
+          label: String.t()
+        }
   def get_struct(arke, %{data: data} = unit, opts) do
     %{
       parameters: get_struct_parameters(ArkeManager.get_parameters(arke), unit, opts),
@@ -303,6 +337,13 @@ defmodule Arke.StructManager do
     }
   end
 
+  @doc """
+  Function to get a Unit Struct
+  """
+  @spec get_struct(arke :: Unit.t(), unit :: Unit.t()) :: %{
+          parameters: [parameter()],
+          label: String.t()
+        }
   def get_struct(arke, %{data: data} = unit) do
     %{
       parameters: get_struct_parameters(ArkeManager.get_parameters(arke), unit, %{}),
@@ -310,10 +351,6 @@ defmodule Arke.StructManager do
     }
   end
 
-  @spec get_struct(arke :: Unit.t(), opts :: list()) :: %{
-          parameters: [parameter()],
-          label: String.t()
-        }
   def get_struct(%{arke_id: :arke, data: data} = arke, opts) do
     %{
       parameters: get_struct_parameters(ArkeManager.get_parameters(arke), opts),
@@ -454,7 +491,6 @@ defmodule Arke.StructManager do
   defp add_type_fields(
          {%{arke_id: :link, data: data, metadata: %{project: project}} = _parameter, base_data}
        ) do
-
     Map.merge(base_data, %{
       default: data.default_link,
       multiple: data.multiple,
