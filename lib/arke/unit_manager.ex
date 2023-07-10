@@ -13,6 +13,13 @@
 # limitations under the License.
 
 defmodule Arke.UnitManager do
+  @moduledoc """
+  Module for the GenServer management o a Unit
+  """
+  @doc """
+  Macro that is used to standardize the creation of GenServer.
+  It makes available a set of functions useful for arke management
+  """
   defmacro __using__(_) do
     quote do
       use GenServer
@@ -80,6 +87,9 @@ defmodule Arke.UnitManager do
         }
       end
 
+      @doc """
+      Get all the actives GenServers in a given project
+      """
       def get_all(project \\ :arke_system) do
         supervisor_name
         |> DynamicSupervisor.which_children()
@@ -87,8 +97,16 @@ defmodule Arke.UnitManager do
         |> Enum.flat_map(&active_managers(&1, project, nil))
       end
 
+      @doc """
+      Terminate the GenServer corresponding to the given unit
+      """
+      @spec remove(unit :: Unit.t()) :: {:error, msg :: String.t()} | :ok
       def remove(%{id: id, metadata: %{project: project}} = unit), do: remove(id, project)
 
+      @doc """
+      Terminate the GenServer corresponding to the given unit
+      """
+      @spec remove(unit_id :: atom(), project :: atom()) :: {:error, msg :: String.t()} | :ok
       def remove(unit_id, project) do
         case get_pid(unit_id, project) do
           {:error, msg} ->
@@ -104,6 +122,9 @@ defmodule Arke.UnitManager do
         end
       end
 
+      @doc """
+      Start a new GenServer for the given unit
+      """
       def create(%{id: id, metadata: %{project: project}} = unit), do: create(unit, project)
 
       def create(unit, project) do
@@ -115,6 +136,9 @@ defmodule Arke.UnitManager do
         )
       end
 
+      @doc """
+      Overridable function called in `QueryManager.create/3`
+      """
       def before_create(unit, project), do: {unit, project}
 
       defp child_pid?({:undefined, pid, :worker, [__MODULE__]}) when is_pid(pid), do: true
@@ -144,6 +168,9 @@ defmodule Arke.UnitManager do
         |> Enum.any?()
       end
 
+      @doc """
+      Get server process id
+      """
       def get_pid(%{id: id, metadata: %{project: project}} = unit), do: get_pid(id, project)
 
       def get_pid(unit_id, project) do
@@ -158,8 +185,8 @@ defmodule Arke.UnitManager do
         Return a struct with all the parameter associated for the given double schema_id, project in its GenServer.
 
         ## Parameters
-          - arke_id => :atom => identify the schema
-          - project => :atom => identify the schema's project
+          - `arke_id` -> identify the schema
+          - `project` -> identify the schema's project
 
         ## Examples
             iex> ArkeManager.get_schema(:arke_schema, :default)
@@ -180,6 +207,9 @@ defmodule Arke.UnitManager do
         end
       end
 
+      @doc """
+      Function called when a unit is being updated. It will update the status stored in the GenServer
+      """
       def update(%{id: id, metadata: %{project: project}} = unit, new_unit),
         do: update(id, project, new_unit)
 
@@ -188,6 +218,9 @@ defmodule Arke.UnitManager do
         GenServer.call(via({unit_id, project}), {:update, new_unit})
       end
 
+      @doc """
+      Get the name of the module where the Arke struct is defined
+      """
       def get_module(%{id: id, metadata: %{project: project}} = unit), do: get_module(id, project)
 
       def get_module(unit_id, project) do
