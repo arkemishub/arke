@@ -28,22 +28,29 @@ defmodule Arke.Validator do
   Function to check the given data based on the fields in the reference schema.
 
   ## Parameters
-    - unit =>  => %Arke.Core.Unit{} => unit to add
-    - persistence_fn => fun.() => function containng the action that will be performed on the Repo
-    - project => :atom => identify the `Arke.Core.Project`
+    - `unit` -> unit to validate
+    - `persistence_fn` -> operation identifiers
+    - `project` ->  `Arke.Core.Project`
 
   ## Example
-      iex> schema = Arke.Core.Arke.new
-      ...> param = Arke.Core.Parameter.new(%{type: :string,opts: [id: :name]})
-      ...> schema = Arke.Core.Arke.add_parameter(schema, param)
-      ...> Arke.Validator.validate(%{arke: schema, data: %{name: "test"}})
+      iex> arke = ArkeManager.get(:arke, :arke_system)
+      ...> unit = Arke.Core.Unit.load(arke, %{
+            id: :test,
+            label: "Test",
+            type: "arke",
+            active: true,
+            parameters: [],
+            metadata: %{}
+            })
+
+      ...> Arke.Validator.validate(unit, :update, :test_schema)
 
   ## Return
       %{:ok,_}
       %{:error, [message]}
 
   """
-  @spec validate(unit :: Unit.t(), peristence_fn :: (() -> any()), project :: atom()) ::
+  @spec validate(unit :: Unit.t(), peristence_fn :: :create | :update, project :: atom()) ::
           func_return()
   def validate(%{arke_id: arke_id} = unit, persistence_fn, project \\ :arke_system) do
     with {:ok, unit} <- check_duplicate_unit(unit, project, persistence_fn) do
@@ -113,13 +120,14 @@ defmodule Arke.Validator do
   Check if the value can be assigned to a given parameter in a specific schema struct.
 
   ## Parameters
-    - schema_struct => %{arke_struct} => the element where to find and check the field
-    - field => :atom => the id of the paramater
-    - value => any => the value we want to assign to the above field
-    - project => :atom => identify the `Arke.Core.Project`
+    - `schema_struct` -> the element where to find and check the field
+    - `field` -> the id of the paramater
+    - `value` -> the value we want to assign to the above field
+    - `project` -> identify the `Arke.Core.Project`
 
   ## Example
-        iex> Arke.Boundary.ArkeValidator.validate_field(schema_struct, :field_id, value_to_check)
+        iex> arke = ArkeManager.get(:arke, :arke_system)
+        ...> Arke.Boundary.ArkeValidator.validate_field(arke, :label, "test")
 
   ## Returns
       {value,[]} if success
@@ -128,7 +136,7 @@ defmodule Arke.Validator do
   @spec validate_parameter(
           arke :: Arke.t(),
           parameter :: Sring.t() | atom() | Parameter.parameter_struct(),
-          value :: String.t() | number() | atom() | boolean() | map() | list(),
+          value :: any(),
           project :: atom()
         ) :: func_return()
   def validate_parameter(arke, parameter, value, project \\ :arke_system)
@@ -162,8 +170,8 @@ defmodule Arke.Validator do
     {value, errors}
   end
 
-  def get_default_value(parameter, value) when is_nil(value), do: handle_default_value(parameter)
-  def get_default_value(parameter, value), do: value
+  defp get_default_value(parameter, value) when is_nil(value), do: handle_default_value(parameter)
+  defp get_default_value(parameter, value), do: value
 
   defp parse_value(%{arke_id: :integer, data: %{multiple: false} = data} = _, value)
        when not is_integer(value) and not is_nil(value) do
