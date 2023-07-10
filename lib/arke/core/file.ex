@@ -44,6 +44,7 @@ defmodule Arke.Core.File do
   end
 
   def before_update(_, %{binary: binary} = unit) when is_nil(binary), do: {:ok, unit}
+
   def before_update(_, %{data: %{name: name, path: path, binary: binary}} = unit) do
     case Gcp.upload_file("#{path}/#{name}", binary) do
       {:ok, _object} -> {:ok, unit}

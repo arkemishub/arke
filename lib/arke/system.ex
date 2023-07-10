@@ -13,6 +13,15 @@
 # limitations under the License.
 
 defmodule Arke.System do
+  @moduledoc """
+  Module which manage the creation of every Arke struct
+  """
+
+  @doc """
+  Macro to simplify the creation of a new Arke
+
+        use Arke.System
+  """
   defmacro __using__(_) do
     quote do
       #      @after_compile __MODULE__
@@ -37,16 +46,59 @@ defmodule Arke.System do
         unit.data.parameters
       end
 
+      @doc """
+      Overridable function in order to be able to edit data during the  unit load
+      """
       def on_load(data, _persistence_fn), do: {:ok, data}
+
+      @doc """
+      Overridable function in order to be able to edit data before the load
+      """
       def before_load(data, _persistence_fn), do: {:ok, data}
+
+      @doc """
+      Overridable function in order to be able to edit data during the validation
+      """
       def on_validate(arke, unit), do: {:ok, unit}
+
+      @doc """
+      Overridable function in order to be able to edit data before the validation
+      """
       def before_validate(arke, unit), do: {:ok, unit}
+
+      @doc """
+      Overridable function in order to be able to edit data during the creation
+      """
       def on_create(arke, unit), do: {:ok, unit}
+
+      @doc """
+      Overridable function in order to be able to edit data before the creation
+      """
       def before_create(arke, unit), do: {:ok, unit}
+
+      @doc """
+      Overridable function in order to be able to edit data during the encoding
+      """
       def on_struct_encode(unit, _), do: {:ok, unit}
+
+      @doc """
+      Overridable function in order to be able to edit data on the update
+      """
       def on_update(arke, unit), do: {:ok, unit}
+
+      @doc """
+      Overridable function in order to be able to edit data before the update
+      """
       def before_update(arke, unit), do: {:ok, unit}
+
+      @doc """
+      Overridable function in order to be able to edit data during the deletion
+      """
       def on_delete(arke, unit), do: {:ok, unit}
+
+      @doc """
+      Overridable function in order to be able to edit data before the deletion
+      """
       def before_delete(arke, unit), do: {:ok, unit}
 
       defoverridable on_load: 2,
@@ -63,21 +115,12 @@ defmodule Arke.System do
     end
   end
 
-  #  defmacro __before_compile__(env) do
-  #  end
-  #
-  #  def compile(translations) do
-  #
-  #  end
-
   ######################################################################################################################
   # ARKE MACRO #########################################################################################################
   ######################################################################################################################
 
   @doc """
-  Macro to create an arke struct with the given parameters.
-  Usable only via `code` and not `iex`.
-
+  Macro to create an arke struct with the given parameters
 
   ## Example
       arke do
@@ -85,10 +128,8 @@ defmodule Arke.System do
         parameter :custom_parameter2, :string, required: true, values: ["value1", "value2"]
         parameter :custom_parameter3, :integer, required: true, values: [%{label: "option 1", value: 1},%{label: "option 2", value: 2}]
         parameter :custom_parameter4, :dict, required: true, default: %{"default_dict_key": "default_dict_value"}
+        parameter :custom_parameter5, :type, ...opts
       end
-
-  ## Return
-      %Arke.Core.'{arke_struct}'{}
 
   """
   @spec arke(args :: list(), Macro.t()) :: %{}
@@ -147,20 +188,6 @@ defmodule Arke.System do
   end
 
   defp get_base_arke_parameters(_type), do: nil
-
-  #  @spec __arke_info__(caller :: caller(), options :: list()) :: [id: atom() | String.t(), label: String.t(), active: boolean(), metadata: map(), type: atom()]
-  #  defp __arke_info__(caller, options) do
-  #
-  #    id = Keyword.get(options, :id, caller |> to_string |> String.split(".") |> List.last |> Macro.underscore |> String.to_atom)
-  #    label = Keyword.get(options, :label, id |> Atom.to_string |> String.replace("_", " ") |> String.capitalize)
-  #    [
-  #      id: id,
-  #      label: label,
-  #      active: Keyword.get(options, :active, true),
-  #      metadata: Keyword.get(options, :metadata, %{}),
-  #      type: Keyword.get(options, :type, :arke)
-  #    ]
-  #  end
 
   ######################################################################################################################
   # END ARKE MACRO #####################################################################################################
@@ -227,18 +254,13 @@ defmodule Arke.System.BaseParameter do
        [%{label "given label", value: given_value}, %{label "given label two ", value: given_value_two}]
 
   Keep in mind that if the values are declared as list instead of map the label will be generated from the value itself.
-       ... omitted code
 
             parameter :custom_parameter2, :integer, required: true, values: [1, 2, 3]
 
-       ... omitted code
-    The code above will results in an `{arke_struct}` with the values as follows
-
-        ... omitted code
+  The code above will be modified to be as follows
 
             values: [%{label "1", value: 1}, %{label "2", value: 2}, %{label "3", value: 3}]
 
-        ... omitted code
 
   """
   @spec parameter_options(opts :: list(), id :: atom(), type :: atom()) :: %{
@@ -254,6 +276,12 @@ defmodule Arke.System.BaseParameter do
     %{type: type, opts: opts}
   end
 
+  @doc """
+  It checks if the given values match the type of the parameter.
+
+  """
+  @spec check_enum(type :: :string | :integer | :float, opts :: [...] | []) ::
+          [...] | [] | [%{label: String.t(), value: float() | integer() | String.t()}, ...]
   def check_enum(type, opts) do
     enum_parameters = [:string, :integer, :float]
 
