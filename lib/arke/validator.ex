@@ -222,6 +222,9 @@ defmodule Arke.Validator do
 
   defp check_required_parameter(errors, _parameter, _value), do: errors
 
+  defp check_duplicate(errors, %{id: id, data: %{unique: true}} = _parameter, nil, project),
+    do: errors ++ [{"value must not be null for", id}]
+
   defp check_duplicate(errors, %{id: id, data: %{unique: true}} = _parameter, value, project) do
     with nil <- QueryManager.get_by(%{id => value, :project => project}),
          do: errors,
