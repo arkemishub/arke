@@ -19,6 +19,7 @@ defmodule Arke.Core.Group do
 
   use Arke.System
   alias Arke.Boundary.GroupManager
+  alias Arke.Core.Unit
 
   arke do
     group(:arke_or_group)
@@ -36,6 +37,12 @@ defmodule Arke.Core.Group do
   end
 
   def on_create(_, unit) do
+    group = Unit.update(unit, arke_list: [])
+    GroupManager.create(group)
+    {:ok, unit}
+  end
+
+  def on_update(_, unit) do
     GroupManager.create(unit)
     {:ok, unit}
   end
