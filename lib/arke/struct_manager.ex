@@ -165,21 +165,35 @@ defmodule Arke.StructManager do
 
   def validate_data(id, value, arke, opts) do
     param = ArkeManager.get_parameter(arke, id)
-
-    new_value = parse_value(value, param.arke_id, opts)
+    new_value = parse_value(value, param, Enum.into(opts, %{}))
     %{id => new_value}
   end
 
-  defp parse_value(value, type, _opts \\ [])
+  defp parse_value(value, param, _opts \\ [])
 
-  defp parse_value(value, :link, opts) do
-    load_links = Keyword.get(opts, :load_links, false)
+  defp parse_value(value, %{arke_id: :link}=_param, opts) do
+    load_links = Map.get(opts, :load_links, false)
 
-    Keyword.get(opts, :link_units, [])
+    Map.get(opts, :link_units, [])
     |> filter_link_units(value, load_links)
   end
 
-  defp parse_value(value, _type, _opts), do: value
+  defp parse_value(value, %{data: %{values: nil}}=param, %{load_values: true}=opts) do
+    opts = Map.delete(opts, :load_values)
+    parse_value(value, param, opts)
+  end
+
+  defp parse_value(value,%{arke_id: param_type, data: %{multiple: false, values: values}}=param, %{load_values: true}=opts) when param_type in [:string, :float, :integer] and is_list(values) do
+    Enum.find(values, fn map -> Map.get(map, :value, nil) == value end)
+  end
+
+  defp parse_value(value,%{arke_id: param_type, data: %{multiple: true, values: values}}=param, %{load_values: true}=opts) when param_type in [:string, :float, :integer] and is_list(values) and is_list(value) do
+    Enum.reduce(value, [], fn v, new_value ->
+      [Enum.find(values, fn map -> Map.get(map, :value, nil) == v end) | new_value]
+    end)
+  end
+
+  defp parse_value(value, _param, _opts), do: value
 
   defp filter_link_units(link_units, map_list, false) when is_list(map_list) do
     Enum.map(map_list, fn map -> filter_link_units(link_units, map, false) end)
