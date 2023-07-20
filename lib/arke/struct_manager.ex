@@ -171,23 +171,33 @@ defmodule Arke.StructManager do
 
   defp parse_value(value, param, _opts \\ [])
 
-  defp parse_value(value, %{arke_id: :link}=_param, opts) do
+  defp parse_value(value, %{arke_id: :link} = _param, opts) do
     load_links = Map.get(opts, :load_links, false)
 
     Map.get(opts, :link_units, [])
     |> filter_link_units(value, load_links)
   end
 
-  defp parse_value(value, %{data: %{values: nil}}=param, %{load_values: true}=opts) do
+  defp parse_value(value, %{data: %{values: nil}} = param, %{load_values: true} = opts) do
     opts = Map.delete(opts, :load_values)
     parse_value(value, param, opts)
   end
 
-  defp parse_value(value,%{arke_id: param_type, data: %{multiple: false, values: values}}=param, %{load_values: true}=opts) when param_type in [:string, :float, :integer] and is_list(values) do
+  defp parse_value(
+         value,
+         %{arke_id: param_type, data: %{multiple: false, values: values}} = param,
+         %{load_values: true} = opts
+       )
+       when param_type in [:string, :float, :integer] and is_list(values) do
     Enum.find(values, fn map -> Map.get(map, :value, nil) == value end)
   end
 
-  defp parse_value(value,%{arke_id: param_type, data: %{multiple: true, values: values}}=param, %{load_values: true}=opts) when param_type in [:string, :float, :integer] and is_list(values) and is_list(value) do
+  defp parse_value(
+         value,
+         %{arke_id: param_type, data: %{multiple: true, values: values}} = param,
+         %{load_values: true} = opts
+       )
+       when param_type in [:string, :float, :integer] and is_list(values) and is_list(value) do
     Enum.reduce(value, [], fn v, new_value ->
       [Enum.find(values, fn map -> Map.get(map, :value, nil) == v end) | new_value]
     end)
@@ -347,13 +357,15 @@ defmodule Arke.StructManager do
 
   defp get_filtered_parameters(parameters, _), do: parameters
 
-  defp get_struct_parameters(%{metadata: %{project: project}}=arke, opts) do
+  defp get_struct_parameters(%{metadata: %{project: project}} = arke, opts) do
     ArkeManager.get_parameters(arke)
     |> get_filtered_parameters(opts)
-    |> Enum.reduce([], fn p, acc -> [base_parameter_struct(p) |> add_type_fields(project) | acc] end)
+    |> Enum.reduce([], fn p, acc ->
+      [base_parameter_struct(p) |> add_type_fields(project) | acc]
+    end)
   end
 
-  defp get_struct_parameters(%{metadata: %{project: project}}=arke, unit, opts) do
+  defp get_struct_parameters(%{metadata: %{project: project}} = arke, unit, opts) do
     ArkeManager.get_parameters(arke)
     |> get_filtered_parameters(opts)
     |> Enum.reduce([], fn p, acc ->
@@ -468,14 +480,14 @@ defmodule Arke.StructManager do
   ######################################################################
 
   defp add_type_fields(
-         {%{arke_id: :link, data: data} = _parameter, base_data}, project
+         {%{arke_id: :link, data: data} = _parameter, base_data},
+         project
        ) do
-
     Map.merge(base_data, %{
       default: data.default_link,
       multiple: data.multiple,
       filter_keys: data.filter_keys,
-      ref: encode(get_arke_or_group_id(data.arke_or_group_id, project), type: :json)
+      link_ref: encode(get_arke_or_group_id(data.arke_or_group_id, project), type: :json)
       # depth: data.depth,
       # connection_type: data.connection_type
     })
@@ -500,6 +512,6 @@ defmodule Arke.StructManager do
   # DEFAULT PARAMETER ##################################################
   ######################################################################
   defp add_type_fields({p, base_data}, _project) do
-     base_data
+    base_data
   end
 end
