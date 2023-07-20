@@ -19,32 +19,29 @@ jobs:
         otp: ['25.0.4']
         elixir: ['1.14.1']
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - uses: erlef/setup-beam@v1
+      - uses: actions/checkout@v2
+      - uses: actions/setup-elixir@v1
         with:
           otp-version: ${{matrix.otp}}
           elixir-version: ${{matrix.elixir}}
+      - name: Get dependencies
+        run: mix deps.get
 
-      - name: Get deps cache
-        uses: actions/cache@v2
-        with:
-          path: deps/
-          key: deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}
-
-      - name: Get build cache
-        uses: actions/cache@v2
-        with:
-          path: _build/test/
-          key: build-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}
-
-      - name: Install Dependencies
-        run: |
-          mix deps.get
-          mix compile
-
-      - name: Run Tests
-        run: mix coveralls.github
+      - name: Generating XML
+        run: mix coveralls.json
+        # todo: remove after tests are added
         continue-on-error: true
-
+        env:
+          MIX_ENV: test
+          DB_HOSTNAME: postgres
+          DB_NAME: test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./cover/excoveralls.json
+          directory: cover
+          fail_ci_if_error: true
+          verbose: true
