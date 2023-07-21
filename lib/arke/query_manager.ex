@@ -171,6 +171,7 @@ defmodule Arke.QueryManager do
   def update(%{arke_id: arke_id, metadata: %{project: project}, data: data} = unit, args) do
     persistence_fn = @persistence[:arke_postgres][:update]
     arke = ArkeManager.get(arke_id, project)
+
     with %Unit{} = unit <- Unit.update(unit, args),
          {:ok, unit} <- Validator.validate(unit, :update, project),
          {:ok, unit} <- ArkeManager.call_func(arke, :before_update, [arke, unit]),
@@ -607,8 +608,6 @@ defmodule Arke.QueryManager do
   defp handle_link_parameter(_, nil, _, _), do: nil
 
   defp handle_link_parameter(unit, %{data: %{multiple: false}} = parameter, old_value, new_value) do
-    IO.inspect("node to delete #{old_value}")
-    IO.inspect("node to add #{new_value}")
     update_parameter_link(unit, parameter, old_value, :delete, old_value == new_value)
     update_parameter_link(unit, parameter, new_value, :add, old_value == new_value)
     {:ok, unit}
@@ -620,17 +619,15 @@ defmodule Arke.QueryManager do
     old_value = old_value || []
     new_value = new_value || []
 
-    notdes_to_delete = old_value -- new_value
+    nodes_to_delete = old_value -- new_value
     nodes_to_add = new_value -- old_value
-    IO.inspect("nodes to delete #{notdes_to_delete}")
-    IO.inspect("nodes to add #{nodes_to_add}")
 
-    Enum.each(notdes_to_delete, fn n ->
-      update_parameter_link(unit, parameter, n, :delete, false)
+    Enum.each(nodes_to_delete, fn n ->
+      update_parameter_link(unit, parameter, n.id, :delete, false)
     end)
 
     Enum.each(nodes_to_add, fn n ->
-      update_parameter_link(unit, parameter, n, :add, false)
+      update_parameter_link(unit, parameter, n.id, :add, false)
     end)
 
     {:ok, unit}
