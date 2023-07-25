@@ -78,12 +78,20 @@ defmodule Arke.DatetimeHandler do
   def parse_datetime(%NaiveDateTime{} = value, only_value), do: check_datetime(value, only_value)
 
   def parse_datetime(value, only_value) do
-
     case Timex.parse(value, "{ISO:Extended:Z}") do
       {:ok, datetime} -> check_datetime(datetime, only_value)
       {:error, _} -> {:error, @datetime_msg}
     end
   end
+
+  def shift_datetime(datetime, opts) do
+    case parse_datetime(datetime) do
+      {:ok, value} -> Timex.shift(value, opts)
+      {:error, msg} -> {:error, msg}
+    end
+  end
+
+  def shift_datetime(opts), do: Timex.shift(now(:datetime), opts)
 
   # ----- DATE -----
   def now(:date), do: Timex.now() |> Timex.to_date()
@@ -99,6 +107,15 @@ defmodule Arke.DatetimeHandler do
       {:error, _} -> {:error, @date_msg}
     end
   end
+
+  def shift_date(date, opts) do
+    case parse_date(date) do
+      {:ok, value} -> Timex.shift(value, opts)
+      {:error, msg} -> {:error, msg}
+    end
+  end
+
+  def shift_date(opts), do: Timex.shift(now(:date), opts)
 
   # ----- TIME -----
 

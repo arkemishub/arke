@@ -400,6 +400,44 @@ defmodule Arke do
         nil
       )
 
+    token =
+      Unit.new(
+        :token,
+        Map.merge(
+          base_parameter(label: "Token"),
+          %{
+            min_length: 3,
+            max_length: nil,
+            strip: true,
+            values: nil,
+            multiple: false,
+            unique: false,
+            default_string: nil
+          }
+        ),
+        :string,
+        nil,
+        %{},
+        nil,
+        nil,
+        nil
+      )
+
+    expiration =
+      Unit.new(
+        :expiration,
+        Map.merge(
+          base_parameter(label: "Expiration date"),
+          %{default_datetime: nil}
+        ),
+        :datetime,
+        nil,
+        %{},
+        nil,
+        nil,
+        nil
+      )
+
     values =
       Unit.new(
         :values,
@@ -1083,6 +1121,29 @@ defmodule Arke do
         nil
       )
 
+    user_id =
+      Unit.new(
+        :user_id,
+        Map.merge(
+          base_parameter(label: "Unit id"),
+          %{
+            min_length: 1,
+            max_length: nil,
+            strip: true,
+            values: nil,
+            multiple: false,
+            unique: false,
+            default_string: nil
+          }
+        ),
+        :string,
+        nil,
+        %{},
+        nil,
+        nil,
+        nil
+      )
+
     first_access =
       Unit.new(
         :first_access,
@@ -1371,7 +1432,10 @@ defmodule Arke do
       provider,
       extension,
       binary,
-      size
+      size,
+      expiration,
+      token,
+      user_id
     ]
 
     Enum.map(parameters, fn parameter ->
