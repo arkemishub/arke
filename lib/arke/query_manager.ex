@@ -683,8 +683,8 @@ defmodule Arke.QueryManager do
   # Function to get only the parameter id from `handle_link_parameter`
   defp normalize_value(nil), do: nil
 
-  defp normalize_value(%{} = value) do
-    to_string(value.id)
+  defp normalize_value(%{id: id} = value) do
+    to_string(id)
   end
 
   defp normalize_value(value), do: to_string(value)
