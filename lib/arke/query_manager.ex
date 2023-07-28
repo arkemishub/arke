@@ -171,6 +171,7 @@ defmodule Arke.QueryManager do
   def update(%{arke_id: arke_id, metadata: %{project: project}, data: data} = unit, args) do
     persistence_fn = @persistence[:arke_postgres][:update]
     arke = ArkeManager.get(arke_id, project)
+
     with %Unit{} = unit <- Unit.update(unit, args),
          {:ok, unit} <- Validator.validate(unit, :update, project),
          {:ok, unit} <- ArkeManager.call_func(arke, :before_update, [arke, unit]),
@@ -640,31 +641,44 @@ defmodule Arke.QueryManager do
   defp update_parameter_link(_, _, nil, _, _), do: nil
 
   defp update_parameter_link(
-         %{metadata: %{project: project}} = parent,
-         %{id: p_id, data: p_data} = _parameter,
-         child_id,
+         %{metadata: %{project: project}} = unit,
+         %{id: p_id, data: %{connection_type: connection_type, direction: direction}} =
+           _parameter,
+         id_to_link,
          :add,
          false
        ) do
-    child = get_by(project: project, id: child_id)
+    to_link = get_by(project: project, id: id_to_link)
 
-    LinkManager.add_node(project, parent, child, p_data.connection_type, %{
-      parameter_id: Atom.to_string(p_id)
-    })
+    if direction == "child" do
+      LinkManager.add_node(project, unit, to_link, connection_type, %{
+        parameter_id: Atom.to_string(p_id)
+      })
+    else
+      LinkManager.add_node(project, to_link, unit, connection_type, %{
+        parameter_id: Atom.to_string(p_id)
+      })
+    end
   end
 
   defp update_parameter_link(
-         %{metadata: %{project: project}} = parent,
-         %{id: p_id, data: p_data} = _parameter,
-         child_id,
+         %{metadata: %{project: project}} = unit,
+         %{id: p_id, data: %{connection_type: connection_type, direction: direction}} =
+           _parameter,
+         id_to_link,
          :delete,
          false
        ) do
-    IO.inspect("delete nodes #{child_id} with project #{project}")
-    child = get_by(project: project, id: child_id)
+    to_link = get_by(project: project, id: id_to_link)
 
-    LinkManager.delete_node(project, parent, child, p_data.connection_type, %{
-      parameter_id: Atom.to_string(p_id)
-    })
+    if direction == "child" do
+      LinkManager.delete_node(project, unit, to_link, connection_type, %{
+        parameter_id: Atom.to_string(p_id)
+      })
+    else
+      LinkManager.delete_node(project, to_link, unit, connection_type, %{
+        parameter_id: Atom.to_string(p_id)
+      })
+    end
   end
 end
