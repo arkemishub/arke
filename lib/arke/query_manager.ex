@@ -642,43 +642,51 @@ defmodule Arke.QueryManager do
 
   defp update_parameter_link(
          %{metadata: %{project: project}} = unit,
-         %{id: p_id, data: %{connection_type: connection_type, direction: direction}} =
-           _parameter,
+         %{
+           id: p_id,
+           data: %{connection_type: connection_type, direction: "child"}
+         } = _parameter,
          id_to_link,
-         :add,
+         action,
          false
        ) do
-    to_link = get_by(project: project, id: id_to_link)
-
-    if direction == "child" do
-      LinkManager.add_node(project, unit, to_link, connection_type, %{
-        parameter_id: Atom.to_string(p_id)
-      })
-    else
-      LinkManager.add_node(project, to_link, unit, connection_type, %{
-        parameter_id: Atom.to_string(p_id)
-      })
-    end
+    handle_update_parameter_link(
+      project,
+      unit,
+      get_by(project, id_to_link),
+      connection_type,
+      p_id,
+      action
+    )
   end
 
   defp update_parameter_link(
          %{metadata: %{project: project}} = unit,
-         %{id: p_id, data: %{connection_type: connection_type, direction: direction}} =
-           _parameter,
+         %{
+           id: p_id,
+           data: %{connection_type: connection_type, direction: "parent"}
+         } = _parameter,
          id_to_link,
-         :delete,
+         action,
          false
        ) do
-    to_link = get_by(project: project, id: id_to_link)
+    handle_update_parameter_link(
+      project,
+      get_by(project, id_to_link),
+      unit,
+      connection_type,
+      p_id,
+      action
+    )
+  end
 
-    if direction == "child" do
-      LinkManager.delete_node(project, unit, to_link, connection_type, %{
-        parameter_id: Atom.to_string(p_id)
-      })
-    else
-      LinkManager.delete_node(project, to_link, unit, connection_type, %{
-        parameter_id: Atom.to_string(p_id)
-      })
-    end
+  defp handle_update_parameter_link(project, from, to, connection_type, p_id, :add) do
+    LinkManager.add_node(project, from, to, connection_type, %{parameter_id: Atom.to_string(p_id)})
+  end
+
+  defp handle_update_parameter_link(project, from, to, connection_type, p_id, :delete) do
+    LinkManager.delete_node(project, from, to, connection_type, %{
+      parameter_id: Atom.to_string(p_id)
+    })
   end
 end
