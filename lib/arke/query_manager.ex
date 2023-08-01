@@ -664,7 +664,7 @@ defmodule Arke.QueryManager do
     handle_update_parameter_link(
       project,
       unit,
-      get_by(project, id_to_link),
+      get_by(project: project, id: id_to_link),
       connection_type,
       p_id,
       action
@@ -683,7 +683,7 @@ defmodule Arke.QueryManager do
        ) do
     handle_update_parameter_link(
       project,
-      get_by(project, id_to_link),
+      get_by(project: project, id: id_to_link),
       unit,
       connection_type,
       p_id,
