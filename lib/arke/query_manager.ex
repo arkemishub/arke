@@ -608,10 +608,22 @@ defmodule Arke.QueryManager do
   defp handle_link_parameter(_, nil, _, _), do: nil
 
   defp handle_link_parameter(unit, %{data: %{multiple: false}} = parameter, old_value, new_value) do
-    IO.inspect("node to delete #{old_value}")
-    IO.inspect("node to add #{new_value}")
-    update_parameter_link(unit, parameter, old_value, :delete, old_value == new_value)
-    update_parameter_link(unit, parameter, new_value, :add, old_value == new_value)
+    update_parameter_link(
+      unit,
+      parameter,
+      normalize_value(old_value),
+      :delete,
+      old_value == new_value
+    )
+
+    update_parameter_link(
+      unit,
+      parameter,
+      normalize_value(new_value),
+      :add,
+      old_value == new_value
+    )
+
     {:ok, unit}
   end
 
@@ -621,12 +633,11 @@ defmodule Arke.QueryManager do
     old_value = old_value || []
     new_value = new_value || []
 
-    notdes_to_delete = old_value -- new_value
-    nodes_to_add = new_value -- old_value
-    IO.inspect("nodes to delete #{notdes_to_delete}")
-    IO.inspect("nodes to add #{nodes_to_add}")
+    nodes_to_delete = Enum.map(old_value -- new_value, &normalize_value(&1))
 
-    Enum.each(notdes_to_delete, fn n ->
+    nodes_to_add = Enum.map(new_value -- old_value, &normalize_value(&1))
+
+    Enum.each(nodes_to_delete, fn n ->
       update_parameter_link(unit, parameter, n, :delete, false)
     end)
 
@@ -689,4 +700,13 @@ defmodule Arke.QueryManager do
       parameter_id: Atom.to_string(p_id)
     })
   end
+
+  # Function to get only the parameter id from `handle_link_parameter`
+  defp normalize_value(nil), do: nil
+
+  defp normalize_value(%{id: id} = value) do
+    to_string(id)
+  end
+
+  defp normalize_value(value), do: to_string(value)
 end
