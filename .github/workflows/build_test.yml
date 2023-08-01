@@ -1,4 +1,4 @@
-name: Test 🧪
+name: Build and Test
 on:
   workflow_dispatch:
   # Triggers the workflow on pull request events but only for the master branch
@@ -13,20 +13,30 @@ jobs:
     runs-on: ubuntu-latest
     env:
       MIX_ENV: test
-    name: Create Coverage Report
+    name: Build and Create Coverage Report
     strategy:
       matrix:
         otp: ['25.0.4']
         elixir: ['1.14.1']
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-elixir@v1
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
         with:
-          otp-version: ${{matrix.otp}}
-          elixir-version: ${{matrix.elixir}}
-      - name: Get dependencies
+          elixir-version: '1.13.4'
+          otp-version: '24.3'
+      - name: Restore dependencies cache
+        uses: actions/cache@v3.3.1
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
+      - name: Install dependencies
         run: mix deps.get
-
+      - name: Compile dependencies
+        run: mix deps.compile
+      - name: Build package
+        run: mix hex.build
       - name: Generating XML
         run: mix coveralls.json
         # todo: remove after tests are added
