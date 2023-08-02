@@ -907,6 +907,29 @@ defmodule Arke do
         nil
       )
 
+    oauth_id =
+      Unit.new(
+        :oauth_id,
+        Map.merge(
+          base_parameter(label: "Oauth id"),
+          %{
+            min_length: 2,
+            max_length: nil,
+            strip: false,
+            values: nil,
+            multiple: false,
+            unique: false,
+            default_string: nil
+          }
+        ),
+        :string,
+        nil,
+        %{},
+        nil,
+        nil,
+        nil
+      )
+
     username =
       Unit.new(
         :username,
@@ -1398,7 +1421,8 @@ defmodule Arke do
       provider,
       extension,
       binary,
-      size
+      size,
+      oauth_id
     ]
 
     Enum.map(parameters, fn parameter ->
