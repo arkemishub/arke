@@ -73,13 +73,22 @@ defmodule Arke do
     %{id: id, data: data, metadata: metadata} = mod.arke_from_attr
     unit = Unit.new(id, data, :arke, nil, metadata, nil, nil, mod)
 
-    ArkeManager.create(unit, :arke_system)
+    case mod.setup(%{
+           arke: mod.arke_from_attr,
+           group: mod.groups_from_attr
+         }) do
+      :ok ->
+        ArkeManager.create(unit, :arke_system)
 
-    Enum.map(mod.groups_from_attr, fn %{id: parent_id, metadata: link_metadata} ->
-      GroupManager.add_link(parent_id, :arke_system, :arke_list, id, link_metadata)
-    end)
+        Enum.map(mod.groups_from_attr, fn %{id: parent_id, metadata: link_metadata} ->
+          GroupManager.add_link(parent_id, :arke_system, :arke_list, id, link_metadata)
+        end)
 
-    [mod | arke_list]
+        [mod | arke_list]
+
+      _ ->
+        raise "Something went wrong during the setup of #{to_string(mod)}. Must return `:ok`"
+    end
   end
 
   defp check_arke_module(_, arke_list, false), do: arke_list

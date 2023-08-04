@@ -37,6 +37,7 @@ defmodule Arke.System do
         unit.data.parameters
       end
 
+      def setup(module_data), do: :ok
       def on_load(data, _persistence_fn), do: {:ok, data}
       def before_load(data, _persistence_fn), do: {:ok, data}
       def on_validate(arke, unit), do: {:ok, unit}
@@ -49,7 +50,8 @@ defmodule Arke.System do
       def on_delete(arke, unit), do: {:ok, unit}
       def before_delete(arke, unit), do: {:ok, unit}
 
-      defoverridable on_load: 2,
+      defoverridable setup: 1,
+                     on_load: 2,
                      before_load: 2,
                      on_validate: 2,
                      before_validate: 2,
