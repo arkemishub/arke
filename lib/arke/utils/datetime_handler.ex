@@ -69,6 +69,7 @@ defmodule Arke.DatetimeHandler do
   # ----- DATETIME -----
 
   def now(:datetime), do: Timex.set(Timex.now(), microsecond: 0)
+  def from_unix(s, unit \\ :second), do: Timex.from_unix(s, unit)
   def parse_datetime(value, only_value \\ false)
   def parse_datetime(value, true) when is_nil(value), do: value
   def parse_datetime(value, _only_value) when is_nil(value), do: {:ok, value}
@@ -78,7 +79,6 @@ defmodule Arke.DatetimeHandler do
   def parse_datetime(%NaiveDateTime{} = value, only_value), do: check_datetime(value, only_value)
 
   def parse_datetime(value, only_value) do
-
     case Timex.parse(value, "{ISO:Extended:Z}") do
       {:ok, datetime} -> check_datetime(datetime, only_value)
       {:error, _} -> {:error, @datetime_msg}
