@@ -1197,6 +1197,32 @@ defmodule Arke do
         nil
       )
 
+    direction =
+      Unit.new(
+        :direction,
+        Map.merge(
+          base_parameter(label: "Direction"),
+          %{
+            min_length: 1,
+            max_length: nil,
+            strip: true,
+            values: [
+              %{label: "Child", value: "child"},
+              %{label: "Parent", value: "parent"}
+            ],
+            multiple: false,
+            unique: false,
+            default_string: "child"
+          }
+        ),
+        :string,
+        nil,
+        %{},
+        nil,
+        nil,
+        nil
+      )
+
     depth =
       Unit.new(
         :depth,
@@ -1424,6 +1450,7 @@ defmodule Arke do
       birth_date,
       default_link,
       connection_type,
+      direction,
       depth,
       arke_or_group_id,
       filter_keys,
