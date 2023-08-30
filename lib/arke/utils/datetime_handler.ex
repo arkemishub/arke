@@ -15,11 +15,12 @@
 defmodule Arke.DatetimeHandler do
   use Timex
 
-  @datetime_msg "must be %DateTime | %NaiveDatetime{} | ~N[YYYY-MM-DDTHH:MM:SS] | ~N[YYYY-MM-DD HH:MM:SS] | ~U[YYYY-MM-DD HH:MM:SS]  format"
+  @datetime_msg "must be %DateTime{} | %NaiveDatetime{} | ~N[YYYY-MM-DDTHH:MM:SS] | ~N[YYYY-MM-DD HH:MM:SS] | ~U[YYYY-MM-DD HH:MM:SS]  format"
 
   @date_msg "must be %Date{} | ~D[YYYY-MM-DD] | iso8601 (YYYY-MM-DD) format"
 
   @time_msg "must be must be %Time{} |~T[HH:MM:SS] | iso8601 (HH:MM:SS) format"
+  @general_msg " values must be %Date{} | ~D[YYYY-MM-DD]| %DateTime{} | %NaiveDateTime{} | ~N[YYYY-MM-DDTHH:MM:SS] | ~N[YYYY-MM-DD HH:MM:SS] | ~U[YYYY-MM-DD HH:MM:SS]"
 
   defp check_datetime(v, only_value) do
     case Timex.is_valid?(v) do
@@ -85,6 +86,15 @@ defmodule Arke.DatetimeHandler do
     end
   end
 
+  def shift_datetime(datetime, opts) do
+    case parse_datetime(datetime) do
+      {:ok, value} -> Timex.shift(value, opts)
+      {:error, msg} -> {:error, msg}
+    end
+  end
+
+  def shift_datetime(opts), do: Timex.shift(now(:datetime), opts)
+
   # ----- DATE -----
   def now(:date), do: Timex.now() |> Timex.to_date()
   def parse_date(value, only_value \\ false)
@@ -99,6 +109,15 @@ defmodule Arke.DatetimeHandler do
       {:error, _} -> {:error, @date_msg}
     end
   end
+
+  def shift_date(date, opts) do
+    case parse_date(date) do
+      {:ok, value} -> Timex.shift(value, opts)
+      {:error, msg} -> {:error, msg}
+    end
+  end
+
+  def shift_date(opts), do: Timex.shift(now(:date), opts)
 
   # ----- TIME -----
 
@@ -123,6 +142,24 @@ defmodule Arke.DatetimeHandler do
 
       {:error, _} ->
         {:error, @time_msg}
+    end
+  end
+
+  def after?(first_date, second_date) do
+    try do
+      Timex.after?(first_date, second_date)
+    rescue
+      _ ->
+        @general_msg
+    end
+  end
+
+  def before?(first_date, second_date) do
+    try do
+      Timex.before?(first_date, second_date)
+    rescue
+      _ ->
+        @general_msg
     end
   end
 end
