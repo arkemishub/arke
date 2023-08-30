@@ -1,15 +1,21 @@
 defmodule Arke.MixProject do
   use Mix.Project
 
+  @version "0.1.12"
+  @scm_url "https://github.com/arkemishub/arke"
+  @site_url "https://arkehub.com"
+
   def project do
     [
       app: :arke,
       name: "Arke",
-      version: "0.1.8",
+      version: @version,
       build_path: "./_build",
       deps_path: "./deps",
       lockfile: "./mix.lock",
       elixir: "~> 1.13",
+      source_url: @scm_url,
+      homepage_url: @site_url,
       dialyzer: [plt_add_apps: ~w[eex]a],
       description: description(),
       package: package(),
@@ -70,8 +76,8 @@ defmodule Arke.MixProject do
       # These are the default files included in the package
       licenses: ["Apache-2.0"],
       links: %{
-        "Website" => "https://arkehub.com",
-        "Github" => "https://github.com/arkemishub/arke"
+        "Website" => @site_url,
+        "Github" => @scm_url
       }
     ]
   end

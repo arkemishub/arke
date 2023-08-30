@@ -585,6 +585,7 @@ defmodule Arke.Core.Parameter.Link do
     parameter(:connection_type, :string, default_string: "link")
     parameter(:default_link, :link, default_link: nil)
     parameter(:filter_keys, :string, default_string: ["id", "arke_id"])
+    parameter(:direction, :string)
   end
 
   def on_create(_, %{metadata: %{project: project}} = unit) do
