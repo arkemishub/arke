@@ -483,6 +483,7 @@ defmodule Arke.StructManager do
          {%{arke_id: :link, data: data} = _parameter, base_data},
          project
        ) do
+
     Map.merge(base_data, %{
       default: data.default_link,
       multiple: data.multiple,
@@ -502,7 +503,11 @@ defmodule Arke.StructManager do
           {:error, _} -> nil
           group -> group
         end
-
+      nil ->
+        case GroupManager.get(arke_or_group_id, project) do
+          {:error, _} -> nil
+          group -> group
+        end
       arke ->
         arke
     end

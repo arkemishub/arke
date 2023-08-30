@@ -143,12 +143,29 @@ defmodule Arke.QueryManager do
     with %Unit{} = unit <- Unit.load(arke, args, :create),
          {:ok, unit} <- Validator.validate(unit, :create, project),
          {:ok, unit} <- ArkeManager.call_func(arke, :before_create, [arke, unit]),
+         {:ok, unit} <- handle_group_call_func(arke, unit, :before_unit_create),
          {:ok, unit} <- persistence_fn.(project, unit),
          {:ok, unit} <- ArkeManager.call_func(arke, :on_create, [arke, unit]),
          {:ok, unit} <- handle_link_parameters(unit, %{}),
+         {:ok, unit} <- handle_group_call_func(arke, unit, :on_unit_create),
          do: {:ok, unit},
          else: ({:error, errors} -> {:error, errors})
   end
+
+  defp handle_group_call_func(arke, unit, func) do
+    IO.inspect("handle_group_call_func")
+    IO.inspect(Enum.map(GroupManager.get_groups_by_arke(arke), fn g -> g.id end))
+    GroupManager.get_groups_by_arke(arke)
+    |> Enum.reduce_while(unit, fn group, new_unit ->
+      with {:ok, new_unit} <- GroupManager.call_func(group, func, [arke, new_unit]),
+           do: {:cont, new_unit},
+           else: ({:error, errors} -> {:halt, {:error, errors}})
+    end)
+    |> check_group_manager_functions_errors()
+  end
+
+  defp check_group_manager_functions_errors({:error, errors}=_), do: {:error, errors}
+  defp check_group_manager_functions_errors(unit), do: {:ok, unit}
 
   @doc """
   Function to update an element
