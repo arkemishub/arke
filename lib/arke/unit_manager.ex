@@ -164,14 +164,19 @@ defmodule Arke.UnitManager do
         ## Examples
             iex> ArkeManager.get_schema(:arke_schema, :default)
       """
-      def get(unit_id, project) when is_binary(unit_id),
-        do: get(String.to_existing_atom(unit_id), project)
+
+      def get(unit_id, project) when is_binary(unit_id) do
+        get(String.to_existing_atom(unit_id), project)
+      rescue
+        ArgumentError -> nil
+      end
 
       def get(unit_id, project) do
         case is_child_alive?({unit_id, project}) do
           false ->
             case is_child_alive?({unit_id, :arke_system}) do
-              false -> Error.create(__MODULE__, "Unit with id '#{unit_id}' not found")
+              # false -> Error.create(__MODULE__, "Unit with id '#{unit_id}' not found")
+              false -> nil
               true -> GenServer.call(via({unit_id, :arke_system}), :get)
             end
 

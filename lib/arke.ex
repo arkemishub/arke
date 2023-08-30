@@ -30,7 +30,7 @@ defmodule Arke do
         %{},
         nil,
         nil,
-        nil
+        Arke.System.BaseGroup
       ),
       :arke_system
     )
@@ -44,7 +44,7 @@ defmodule Arke do
         %{},
         nil,
         nil,
-        nil
+        Arke.System.BaseGroup
       ),
       :arke_system
     )

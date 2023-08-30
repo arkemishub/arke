@@ -296,6 +296,10 @@ defmodule Arke.Validator do
     Enum.all?(value, &condition.(&1))
   end
 
+  defp check_whitespace(%{data: %{strip: true}} = parameter, value) when is_atom(value) do
+    value |> Atom.to_string() |> String.trim() |> String.replace(~r/\s+/, "-") |> String.to_existing_atom()
+  end
+
   defp check_whitespace(%{data: %{strip: true}} = parameter, value) do
     value |> String.trim() |> String.replace(~r/\s+/, "-")
   end

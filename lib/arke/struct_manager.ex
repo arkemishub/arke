@@ -459,7 +459,7 @@ defmodule Arke.StructManager do
       default: data.default_link,
       multiple: data.multiple,
       filter_keys: data.filter_keys,
-      ref: encode(get_arke_or_group_id(data.arke_or_group_id, project), type: :json)
+      link_ref: encode(get_arke_or_group_id(data.arke_or_group_id, project), type: :json)
       # depth: data.depth,
       # connection_type: data.connection_type
     })
