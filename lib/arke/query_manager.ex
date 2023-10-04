@@ -40,6 +40,7 @@ defmodule Arke.QueryManager do
   alias Arke.Boundary.{ArkeManager, ParameterManager, GroupManager, ParamsManager}
   alias Arke.Validator
   alias Arke.LinkManager
+  alias Arke.QueryManager
   alias Arke.Core.{Arke, Unit, Query, Parameter}
 
   @persistence Application.get_env(:arke, :persistence)
@@ -139,7 +140,6 @@ defmodule Arke.QueryManager do
   @spec create(project :: atom(), arke :: Arke.t(), args :: list()) :: func_return()
   def create(project, arke, args) do
     persistence_fn = @persistence[:arke_postgres][:create]
-
     with %Unit{} = unit <- Unit.load(arke, args, :create),
          {:ok, unit} <- Validator.validate(unit, :create, project),
          {:ok, unit} <- ArkeManager.call_func(arke, :before_create, [arke, unit]),
@@ -153,8 +153,6 @@ defmodule Arke.QueryManager do
   end
 
   defp handle_group_call_func(arke, unit, func) do
-    IO.inspect("handle_group_call_func")
-    IO.inspect(Enum.map(GroupManager.get_groups_by_arke(arke), fn g -> g.id end))
     GroupManager.get_groups_by_arke(arke)
     |> Enum.reduce_while(unit, fn group, new_unit ->
       with {:ok, new_unit} <- GroupManager.call_func(group, func, [arke, new_unit]),
@@ -603,8 +601,9 @@ defmodule Arke.QueryManager do
   defp get_parameter(%{arke: nil, project: project} = query, key),
     do: ParamsManager.get(key, project)
 
-  defp get_parameter(%{arke: arke, project: project} = query, key),
-    do: ArkeManager.get_parameter(arke, project, key)
+  defp get_parameter(%{arke: arke, project: project} = query, key) do
+    ArkeManager.get_parameter(arke, project, key)
+  end
 
   defp handle_link_parameters(
          %{arke_id: arke_id, metadata: %{project: project}, data: new_data, id: id} = unit,
@@ -680,8 +679,8 @@ defmodule Arke.QueryManager do
        ) do
     handle_update_parameter_link(
       project,
-      unit,
-      get_by(project: project, id: id_to_link),
+      unit.id,
+      id_to_link,
       connection_type,
       p_id,
       action
@@ -700,8 +699,8 @@ defmodule Arke.QueryManager do
        ) do
     handle_update_parameter_link(
       project,
-      get_by(project: project, id: id_to_link),
-      unit,
+      id_to_link,
+      unit.id,
       connection_type,
       p_id,
       action
