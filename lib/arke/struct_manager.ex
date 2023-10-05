@@ -100,7 +100,7 @@ defmodule Arke.StructManager do
       metadata: unit.metadata
     }
 
-    {:ok, new_unit} = ArkeManager.call_func(arke, :on_struct_encode, [unit, nil])
+    {:ok, new_unit} = ArkeManager.call_func(arke, :on_struct_encode, [arke, unit])
 
     data = get_parsed_data(new_unit.data, arke, opts) |> Map.merge(base_data)
     # TODO figure out why in link units project key in metadata is a string
@@ -317,21 +317,24 @@ defmodule Arke.StructManager do
   """
   @spec get_struct(arke :: Unit.t()) :: %{parameters: [parameter()], label: String.t()}
   def get_struct(%{arke_id: :arke, data: data} = arke) do
-    %{parameters: get_struct_parameters(arke, %{}), label: data.label}
+    struct = %{parameters: get_struct_parameters(arke, %{}), label: data.label}
+    ArkeManager.call_func(arke, :after_get_struct, [arke, struct])
   end
 
   def get_struct(arke, %{data: data} = unit, opts) do
-    %{
+    struct = %{
       parameters: get_struct_parameters(arke, unit, opts),
       label: arke.data.label
     }
+    ArkeManager.call_func(arke, :after_get_struct, [arke, unit, struct])
   end
 
   def get_struct(arke, %{data: data} = unit) do
-    %{
+    struct = %{
       parameters: get_struct_parameters(arke, unit, %{}),
       label: arke.data.label
     }
+    ArkeManager.call_func(arke, :after_get_struct, [arke, unit, struct])
   end
 
   @spec get_struct(arke :: Unit.t(), opts :: list()) :: %{
@@ -339,10 +342,11 @@ defmodule Arke.StructManager do
           label: String.t()
         }
   def get_struct(%{arke_id: :arke, data: data} = arke, opts) do
-    %{
+    struct = %{
       parameters: get_struct_parameters(arke, opts),
       label: data.label
     }
+    ArkeManager.call_func(arke, :after_get_struct, [arke, struct])
   end
 
   def get_struct(_), do: raise("Must pass a valid arke or unit")

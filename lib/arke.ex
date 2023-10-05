@@ -60,7 +60,7 @@ defmodule Arke do
         Enum.reduce(modules, [], fn mod, mod_arke_list ->
           is_arke =
             Code.ensure_loaded?(mod) and :erlang.function_exported(mod, :arke_from_attr, 0) and
-              mod.arke_from_attr != nil
+              mod.arke_from_attr != nil and mod.arke_from_attr.remote == false
 
           mod_arke_list = check_arke_module(mod, mod_arke_list, is_arke)
         end)
@@ -399,6 +399,21 @@ defmodule Arke do
         nil,
         nil
       )
+
+      remote =
+        Unit.new(
+          :remote,
+          Map.merge(
+            base_parameter(label: "Remote"),
+            %{default_boolean: false}
+          ),
+          :boolean,
+          nil,
+          %{},
+          nil,
+          nil,
+          nil
+        )
 
     token =
       Unit.new(
@@ -1409,6 +1424,7 @@ defmodule Arke do
       persistence,
       helper_text,
       strip,
+      remote,
       min_length,
       max_length,
       values,

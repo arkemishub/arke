@@ -21,9 +21,9 @@ defmodule Arke.Core.Unit do
   alias Arke.Boundary.ArkeManager
   alias Arke.Utils.ErrorGenerator, as: Error
 
-  defstruct ~w[id data arke_id link metadata inserted_at updated_at __module__]a
+  defstruct ~w[id data arke_id link metadata inserted_at updated_at __module__ runtime_data]a
 
-  def new(id, data, arke_id, link, metadata, inserted_at, updated_at, __module__) do
+  def new(id, data, arke_id, link, metadata, inserted_at, updated_at, __module__, runtime_data \\ %{}) do
     case check_id(id) do
       {:error, msg} ->
         {:error, msg}
@@ -37,7 +37,8 @@ defmodule Arke.Core.Unit do
           metadata: metadata,
           inserted_at: DatetimeHandler.parse_datetime(inserted_at, true),
           updated_at: DatetimeHandler.parse_datetime(updated_at, true),
-          __module__: __module__
+          __module__: __module__,
+          runtime_data: runtime_data,
         )
     end
   end
@@ -65,10 +66,11 @@ defmodule Arke.Core.Unit do
     {inserted_at, opts} = Map.pop(opts, :inserted_at, nil)
     {updated_at, opts} = Map.pop(opts, :updated_at, nil)
     {__module__, opts} = Map.pop(opts, :__module__, nil)
+    {runtime_data, opts} = Map.pop(opts, :runtime_data, %{})
 
     with {:ok, opts} <- ArkeManager.call_func(arke, :before_load, [opts, persistence_fn]) do
       data = load_data(arke, %{}, opts)
-      new(id, data, arke.id, link, metadata, inserted_at, updated_at, __module__)
+      new(id, data, arke.id, link, metadata, inserted_at, updated_at, __module__, runtime_data)
     end
   end
 
@@ -165,13 +167,14 @@ defmodule Arke.Core.Unit do
     {inserted_at, args} = Map.pop(args, :inserted_at, unit.inserted_at)
     {updated_at, args} = Map.pop(args, :updated_at, unit.updated_at)
     {module, args} = Map.pop(args, :__module__, unit.__module__)
+    {runtime_data, opts} = Map.pop(args, :runtime_data, unit.runtime_data)
 
     data =
       Enum.reduce(args, data, fn {key, val}, new_data ->
         update_data(new_data, key, val)
       end)
 
-    new(id, data, arke_id, link, metadata, inserted_at, updated_at, module)
+    new(id, data, arke_id, link, metadata, inserted_at, updated_at, module, runtime_data)
   end
 
   defp update_data(data, key, value) when is_atom(key), do: Map.put(data, key, value)
@@ -280,6 +283,20 @@ defmodule Arke.Core.Unit do
     with {:ok, datetime} <- DatetimeHandler.parse_datetime(value),
          do: datetime,
          else: ({:error, msg} -> to_string(msg))
+  end
+
+  defp parse_value(value, :boolean) do
+    case value do
+        "true" -> true
+        "True" -> true
+        "1" -> true
+        1 -> true
+        "false" -> false
+        "False" -> false
+        "0" -> false
+        0 -> true
+        _ -> value
+      end
   end
 
   defp parse_value(value, _), do: value

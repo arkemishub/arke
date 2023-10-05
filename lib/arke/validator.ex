@@ -63,6 +63,7 @@ defmodule Arke.Validator do
 
       {new_unit, errors} = res
       filtered_errors = check_old_values(errors, data, new_unit.data, persistence_fn)
+
       get_result({new_unit, filtered_errors})
     else
       {:error, errors} -> get_result({unit, errors})

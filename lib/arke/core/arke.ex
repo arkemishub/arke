@@ -28,6 +28,7 @@ defmodule Arke.Core.Arke do
     parameter(:label, :string, required: true)
     parameter(:active, :boolean, required: false, default_boolean: true)
     parameter(:type, :string, required: true, default_string: "arke")
+    parameter(:remote, :boolean, required: true, default_boolean: false)
 
     parameter(:parameters, :link,
       multiple: true,
