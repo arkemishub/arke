@@ -677,9 +677,10 @@ defmodule Arke.QueryManager do
          action,
          false
        ) do
+
     handle_update_parameter_link(
       project,
-      unit.id,
+      Atom.to_string(unit.id),
       id_to_link,
       connection_type,
       p_id,
@@ -697,10 +698,11 @@ defmodule Arke.QueryManager do
          action,
          false
        ) do
+
     handle_update_parameter_link(
       project,
       id_to_link,
-      unit.id,
+      Atom.to_string(unit.id),
       connection_type,
       p_id,
       action
