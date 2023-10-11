@@ -18,7 +18,7 @@ defmodule Arke.Utils.Gcp do
   @default_bucket @storage[:gcp][:default_bucket]
 
   def upload_file(file_name, file_data, opts \\ []) do
-    bucket = opts[:bucket] || @default_bucket
+    bucket = opts[:bucket] || System.get_env("DEFAULT_BUCKET")
     conn = get_connection()
 
     {:ok, object} =
@@ -32,7 +32,7 @@ defmodule Arke.Utils.Gcp do
   end
 
   def get_file(file_path, opts \\ []) do
-    bucket = opts[:bucket] || @default_bucket
+    bucket = opts[:bucket] || System.get_env("DEFAULT_BUCKET")
     conn = get_connection()
 
     GoogleApi.Storage.V1.Api.Objects.storage_objects_get(
@@ -43,7 +43,7 @@ defmodule Arke.Utils.Gcp do
   end
 
   def delete_file(file_path, opts \\ []) do
-    bucket = opts[:bucket] || @default_bucket
+    bucket = opts[:bucket] || System.get_env("DEFAULT_BUCKET")
     conn = get_connection()
 
     GoogleApi.Storage.V1.Api.Objects.storage_objects_delete(
@@ -62,8 +62,8 @@ defmodule Arke.Utils.Gcp do
   # end
 
   def get_bucket_file_signed_url(file_path, opts \\ []) do
-    gcp_service_account = opts[:service_account] || @service_account
-    bucket = opts[:bucket] || @default_bucket
+    gcp_service_account = opts[:service_account] || System.get_env("GOOGLE_APPLICATION_CREDENTIALS")
+    bucket = opts[:bucket] || System.get_env("DEFAULT_BUCKET")
 
     %Tesla.Client{pre: [{Tesla.Middleware.Headers, :call, [auth_headers]}]} = get_connection()
     headers = [{"Content-Type", "application/json"}] ++ auth_headers
