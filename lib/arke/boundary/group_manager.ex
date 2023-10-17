@@ -14,23 +14,12 @@
 
 defmodule Arke.Boundary.GroupManager do
   @moduledoc false
-  use Arke.UnitManager
+  use Arke.Boundary.UnitManager
   alias Arke.Utils.ErrorGenerator, as: Error
 
-  set_registry_name(:group_registry)
-  set_supervisor_name(:group_supervisor)
-
-  # def before_create(%{id: id, data: data, metadata: unit_metadata} = unit, project) do
-  #   # arke_list =
-  #   #   Enum.reduce(data.arke_list, [], fn %{id: arke_id, metadata: arke_metadata} = _, arke_list ->
-  #   #     case init_arke(project, arke_id, arke_metadata) do
-  #   #       {:error, msg} -> %{id: arke_id, metadata: arke_metadata}
-  #   #       arke -> [arke | arke_list]
-  #   #     end
-  #   #   end)
-
-  #   # {Unit.update(unit, arke_list: arke_list), project}
-  # end
+  manager_id(:group)
+  # set_registry_name(:group_registry)
+  # set_supervisor_name(:group_supervisor)
 
   def get_arke_list(%{data: data, metadata: %{project: project}} = unit) do
     Enum.reduce(data.arke_list, [], fn %{id: arke_id, metadata: arke_metadata} = _,
@@ -60,8 +49,13 @@ defmodule Arke.Boundary.GroupManager do
       {:error, _msg} ->
         nil
 
-      %{id: id, metadata: %{project: project}} ->
-        GenServer.call(via({id, project}), {:get_arke, arke_id})
+      unit ->
+        with %Unit{} = arke <-
+          Enum.find(get_arke_list(unit), {:error, "arke id not found"}, fn f ->
+            f.id == arke_id
+          end),
+        do: arke,
+        else: ({:error, msg} -> nil)
     end
   end
 
@@ -80,33 +74,14 @@ defmodule Arke.Boundary.GroupManager do
     end)
   end
 
-  def get_parameters(%{id: id, metadata: %{project: project}} = group),
-    do: get_parameters(id, project)
-
-  def get_parameters(group_id, project) do
-    GenServer.call(via({group_id, project}), :get_parameters)
-  end
-
-  # Get arke call handler
-  def handle_call({:get_arke, arke_id}, _from, {%{data: data} = unit, project})
-      when is_atom(arke_id) do
-    with %Unit{} = arke <-
-           Enum.find(get_arke_list(unit), {:error, "arke id not found"}, fn f ->
-             f.id == arke_id
-           end),
-         do: {:reply, arke, {unit, project}},
-         else: ({:error, msg} -> {:reply, nil})
-  end
-
-  # Get parameters call handler
-  def handle_call(:get_parameters, _from, {unit, project}) do
+  def get_parameters(group_id, project), do: get(group_id, project) |> get_parameters
+  def get_parameters(%{id: id, metadata: %{project: project}} = group) do
     parameters =
-      get_arke_list(unit)
+      get_arke_list(group)
       |> get_group_parameters(project)
       |> init_parameters_by_ids(project)
-
-    {:reply, parameters, {unit, project}}
   end
+
 
   defp get_group_parameters(arke_list, _project) do
     Enum.reduce(arke_list, [], fn arke, group_parameters ->
@@ -116,7 +91,7 @@ defmodule Arke.Boundary.GroupManager do
 
   defp init_parameters_by_ids(ids, project) do
     Enum.reduce(ids, [], fn id, parameters ->
-      [Arke.Boundary.ParamsManager.get(id, project) | parameters]
+      [Arke.Boundary.ParameterManager.get(id, project) | parameters]
     end)
   end
 

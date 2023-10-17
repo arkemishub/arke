@@ -34,6 +34,7 @@ defmodule Arke.Core.Arke do
       multiple: true,
       arke_or_group_id: "parameter",
       connection_type: "parameter",
+      direction: "child",
       filter_keys: ["arke_id", "id", "label"],
       depth: 0,
       default_link: []

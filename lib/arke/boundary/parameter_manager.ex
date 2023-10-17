@@ -14,8 +14,11 @@
 
 defmodule Arke.Boundary.ParameterManager do
   @moduledoc false
-  use Arke.UnitManager
+  use Arke.Boundary.UnitManager
 
-  set_registry_name(:parameter_registry)
-  set_supervisor_name(:parameter_supervisor)
+  manager_id(:parameter)
+  # set_registry_name(:parameter_registry)
+  # set_supervisor_name(:parameter_supervisor)
+
+  
 end

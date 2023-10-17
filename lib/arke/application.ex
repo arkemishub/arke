@@ -22,13 +22,9 @@ defmodule Arke.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      {Arke.Boundary.ParamsManager, [name: Arke.Boundary.ParamsManager]},
-      {Registry, [name: :parameter_registry, keys: :unique]},
-      {DynamicSupervisor, [name: :parameter_supervisor, strategy: :one_for_one]},
-      {Registry, [name: :arke_registry, keys: :unique]},
-      {DynamicSupervisor, [name: :arke_supervisor, strategy: :one_for_one]},
-      {Registry, [name: :group_registry, keys: :unique]},
-      {DynamicSupervisor, [name: :group_supervisor, strategy: :one_for_one]}
+      {Arke.Boundary.ParameterManager, [name: Arke.Boundary.ParameterManager]},
+      {Arke.Boundary.ArkeManager, [name: Arke.Boundary.ArkeManager]},
+      {Arke.Boundary.GroupManager, [name: Arke.Boundary.GroupManager]},
       # Starts a worker by calling: ArkeMonorepo.Worker.start_link(arg)
       # {ArkeMonorepo.Worker, arg}
     ]

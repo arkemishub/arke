@@ -16,7 +16,7 @@ defmodule Arke.Validator do
   @moduledoc """
   This module provide validation before assign a certain value to an `{arke_struct}`
   """
-  alias Arke.Boundary.{ArkeManager, ParameterManager, ParamsManager}
+  alias Arke.Boundary.{ArkeManager, ParameterManager}
   alias Arke.QueryManager, as: QueryManager
   alias Arke.Utils.ErrorGenerator, as: Error
   alias Arke.DatetimeHandler, as: DatetimeHandler
@@ -140,7 +140,7 @@ defmodule Arke.Validator do
   end
 
   defp get_parameter(nil, parameter_id, project),
-    do: ParamsManager.get(parameter_id, project)
+    do: ParameterManager.get(parameter_id, project)
 
   defp get_parameter(arke, parameter_id, project),
     do: ArkeManager.get_parameter(arke, parameter_id)
