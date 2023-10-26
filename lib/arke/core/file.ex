@@ -19,6 +19,7 @@ defmodule Arke.Core.File do
 
   use Arke.System
   alias Arke.Utils.Gcp
+  alias Arke.Boundary.ArkeManager
 
   arke id: :arke_file, label: "Arke file" do
     parameter(:name, :string, required: true)
@@ -27,6 +28,38 @@ defmodule Arke.Core.File do
     parameter(:size, :float, required: false)
     parameter(:extension, :string, required: false)
     parameter(:binary, :bynary, required: true, only_runtime: true)
+  end
+
+  def before_load(
+        %{path: path, content_type: content_type, filename: filename} = _,
+        :create
+      ) do
+    {:ok, file_stat} = File.stat(path)
+    extension = Path.extname(filename)
+    {:ok, binary} = File.read(path)
+    path = "arke_file/#{DateTime.to_string(DateTime.utc_now())}"
+
+    unit_data = %{
+      binary: binary,
+      extension: extension,
+      size: file_stat.size,
+      provider: "gcloud",
+      path: path,
+      name: filename
+    }
+
+    {:ok, unit_data}
+  end
+
+  def before_load(opts, _persistence_fn), do: {:ok, opts}
+
+  def on_struct_encode(arke, unit, data, opts) do
+    load_files = Keyword.get(opts, :load_files, false)
+
+    case load_files do
+      false -> {:ok, data}
+      true -> {:ok, Map.put(data, :signed_url, get_signed_url(unit))}
+    end
   end
 
   def before_create(_, %{data: %{name: name, path: path, binary: binary}} = unit) do
@@ -44,6 +77,7 @@ defmodule Arke.Core.File do
   end
 
   def before_update(_, %{binary: binary} = unit) when is_nil(binary), do: {:ok, unit}
+
   def before_update(_, %{data: %{name: name, path: path, binary: binary}} = unit) do
     case Gcp.upload_file("#{path}/#{name}", binary) do
       {:ok, _object} -> {:ok, unit}
@@ -51,11 +85,9 @@ defmodule Arke.Core.File do
     end
   end
 
-  def get_signed_url(arke, %{data: data}=unit) do
-    %{
-      signed_url: Gcp.get_bucket_file_signed_url(data.path),
-      name: data.name
-    }
+  def get_signed_url(%{data: data} = unit) do
+    {:ok, signed_url} = Gcp.get_bucket_file_signed_url("#{data.path}/#{data.name}")
+    signed_url
   end
 
   # def test() do
@@ -101,8 +133,6 @@ defmodule Arke.Core.File do
   #       "file.txt"
   #     )
   # end
-
-
 
   # def get_url() do
   #   service_account = "arke-storage@arkemis-lab.iam.gserviceaccount.com"

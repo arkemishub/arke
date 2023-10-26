@@ -23,7 +23,17 @@ defmodule Arke.Core.Unit do
 
   defstruct ~w[id data arke_id link metadata inserted_at updated_at __module__ runtime_data]a
 
-  def new(id, data, arke_id, link, metadata, inserted_at, updated_at, __module__, runtime_data \\ %{}) do
+  def new(
+        id,
+        data,
+        arke_id,
+        link,
+        metadata,
+        inserted_at,
+        updated_at,
+        __module__,
+        runtime_data \\ %{}
+      ) do
     case check_id(id) do
       {:error, msg} ->
         {:error, msg}
@@ -38,7 +48,7 @@ defmodule Arke.Core.Unit do
           inserted_at: DatetimeHandler.parse_datetime(inserted_at, true),
           updated_at: DatetimeHandler.parse_datetime(updated_at, true),
           __module__: __module__,
-          runtime_data: runtime_data,
+          runtime_data: runtime_data
         )
     end
   end
@@ -168,6 +178,7 @@ defmodule Arke.Core.Unit do
     {updated_at, args} = Map.pop(args, :updated_at, unit.updated_at)
     {module, args} = Map.pop(args, :__module__, unit.__module__)
     {runtime_data, args} = Map.pop(args, :runtime_data, unit.runtime_data)
+
     data =
       Enum.reduce(args, data, fn {key, val}, new_data ->
         update_data(new_data, key, val)
@@ -237,16 +248,19 @@ defmodule Arke.Core.Unit do
   """
   @spec get_value(data :: %Arke.Core.Unit{}, arg2 :: atom() | String.t()) ::
           String.t() | boolean() | number() | list() | %{}
-  def get_value(data, key) when is_map(data) and is_atom(key) do
-    get_data_value(Map.get(data, key, nil))
+  def get_value(%Arke.Core.Unit{data: data} = unit, parameter_id),
+    do: get_value(data, parameter_id)
+
+  def get_value(data, parameter_id) when is_map(data) and is_atom(parameter_id) do
+    get_data_value(Map.get(data, parameter_id, nil))
   end
 
-  def get_value(data, key) when is_map(data) and is_binary(key) do
-    get_data_value(Map.get(data, String.to_existing_atom(key), nil))
+  def get_value(data, parameter_id) when is_map(data) and is_binary(parameter_id) do
+    get_data_value(Map.get(data, String.to_existing_atom(parameter_id), nil))
   end
 
-  def get_value(data, _key) when is_nil(data), do: {:error, "data can not be nil"}
-  def get_value(data, key), do: Keyword.get(data, key, nil)
+  def get_value(data, _parameter_id) when is_nil(data), do: {:error, "data can not be nil"}
+  def get_value(data, parameter_id), do: Keyword.get(data, parameter_id, nil)
 
   @doc """
   Parse value to atom
@@ -286,16 +300,16 @@ defmodule Arke.Core.Unit do
 
   defp parse_value(value, :boolean) do
     case value do
-        "true" -> true
-        "True" -> true
-        "1" -> true
-        1 -> true
-        "false" -> false
-        "False" -> false
-        "0" -> false
-        0 -> true
-        _ -> value
-      end
+      "true" -> true
+      "True" -> true
+      "1" -> true
+      1 -> true
+      "false" -> false
+      "False" -> false
+      "0" -> false
+      0 -> true
+      _ -> value
+    end
   end
 
   defp parse_value(value, _), do: value

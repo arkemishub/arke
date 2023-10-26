@@ -298,7 +298,11 @@ defmodule Arke.Validator do
   end
 
   defp check_whitespace(%{data: %{strip: true}} = parameter, value) when is_atom(value) do
-    value |> Atom.to_string() |> String.trim() |> String.replace(~r/\s+/, "-") |> String.to_existing_atom()
+    value
+    |> Atom.to_string()
+    |> String.trim()
+    |> String.replace(~r/\s+/, "-")
+    |> String.to_existing_atom()
   end
 
   defp check_whitespace(%{data: %{strip: true}} = parameter, value) do

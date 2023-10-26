@@ -33,7 +33,7 @@ defmodule Arke.Boundary.UnitManager do
       def manager_id,
         do: Keyword.get(__MODULE__.__info__(:attributes), :manager_id, []) |> List.first()
 
-        # client
+      # client
       def start_link(state \\ []) do
         GenServer.start_link(__MODULE__, state, name: __MODULE__)
       end
@@ -47,30 +47,42 @@ defmodule Arke.Boundary.UnitManager do
       end
 
       def get_all(project \\ :arke_system) do
-        fun = :ets.fun2ms(fn {{unit_id, project_id}, _unit} when project_id == project -> {unit_id, project_id} end)
+        fun =
+          :ets.fun2ms(fn {{unit_id, project_id}, _unit} when project_id == project ->
+            {unit_id, project_id}
+          end)
+
         :ets.select(manager_id, fun)
       end
 
       def get(unit_id, _) when is_nil(unit_id), do: nil
+
       def get(unit_id, project) when is_binary(unit_id) do
         get(String.to_existing_atom(unit_id), project)
       rescue
         ArgumentError -> nil
       end
+
       def get(unit_id, project) do
         case :ets.lookup(manager_id, {unit_id, project}) do
-          [{_, unit}] -> unit
-          [] -> case :ets.lookup(manager_id, {unit_id, :arke_system}) do
-            [{_, unit}] -> unit
-            [] -> nil
-          end
+          [{_, unit}] ->
+            unit
+
+          [] ->
+            case :ets.lookup(manager_id, {unit_id, :arke_system}) do
+              [{_, unit}] -> unit
+              [] -> nil
+            end
         end
       end
 
       def remove(%{id: id, metadata: %{project: project}} = unit), do: remove(id, project)
+
       def remove(unit_id, project) do
         case get(unit_id, project) do
-          nil -> {:error, "#{unit_id} doesn't exist in project: #{project}"}
+          nil ->
+            {:error, "#{unit_id} doesn't exist in project: #{project}"}
+
           _ ->
             :ets.delete(manager_id, {unit_id, project})
             :ok
@@ -78,52 +90,82 @@ defmodule Arke.Boundary.UnitManager do
       end
 
       def create(unit), do: create(unit, [])
-      def create(%{id: id, metadata: %{project: project}} = unit, opts) when is_list(opts), do: create(unit, project, opts)
+
+      def create(%{id: id, metadata: %{project: project}} = unit, opts) when is_list(opts),
+        do: create(unit, project, opts)
+
       def create(unit, project), do: create(unit, project, [])
+
       def create(unit, project, opts) do
         {manager, opts} = Keyword.pop(opts, :manager, __MODULE__)
         {unit, project} = before_create(unit, project)
         GenServer.call(manager, {:create, unit, project})
       end
+
       def before_create(unit, project), do: {unit, project}
 
       def update(manager \\ __MODULE__, unit, new_unit)
+
       def update(manager, %{id: id, metadata: %{project: project}} = unit, new_unit),
         do: update(manager, id, project, new_unit)
+
       def update(manager, unit_id, project, new_unit) do
         unit = get(unit_id, project)
         GenServer.call(manager, {:update, new_unit, project})
       end
 
-      def call_func(%{id: id, metadata: %{project: project}} = unit, func, opts), do: call_func(id, project, func, opts)
-      def call_func(unit_id, project, func, opts), do: get(unit_id, project) |> exec_call_func(func, opts)
-      defp exec_call_func(unit, func, opts) when is_nil(unit), do: get(:arke, :arke_system) |> exec_call_func(func, opts)
-      defp exec_call_func(%{__module__: module}=unit, func, opts) when is_nil(module), do: {:error, "No Module"}
-      defp exec_call_func(%{id: id, metadata: %{project: project}, __module__: module}=unit, func, opts) do
+      def call_func(%{id: id, metadata: %{project: project}} = unit, func, opts),
+        do: call_func(id, project, func, opts)
+
+      def call_func(unit_id, project, func, opts),
+        do: get(unit_id, project) |> exec_call_func(func, opts)
+
+      defp exec_call_func(unit, func, opts) when is_nil(unit),
+        do: get(:arke, :arke_system) |> exec_call_func(func, opts)
+
+      defp exec_call_func(%{__module__: module} = unit, func, opts) when is_nil(module),
+        do: {:error, "No Module"}
+
+      defp exec_call_func(
+             %{id: id, metadata: %{project: project}, __module__: module} = unit,
+             func,
+             opts
+           ) do
         try do
           apply(module, func, opts)
-        rescue  e ->
-          IO.inspect(e)
-          {:error, "Undefined function"}
+        rescue
+          e ->
+            IO.inspect(e)
+            {:error, "Undefined function"}
         end
       end
 
       ####
       # Link
       ####
-      def get_link(%{id: id, metadata: %{project: project}} = unit, parameter_id), do: get_link(id, project, parameter_id)
+      def get_link(%{id: id, metadata: %{project: project}} = unit, parameter_id),
+        do: get_link(id, project, parameter_id)
+
       def get_link(unit_id, project, parameter_id) do
         case get(unit_id, project) do
           nil -> {:error, "#{unit_id} doesn't exist in project: #{project}"}
-          %{data: data}=unit -> Enum.map(Map.get(data, parameter_id, []), fn l -> l end)
+          %{data: data} = unit -> Enum.map(Map.get(data, parameter_id, []), fn l -> l end)
         end
       end
 
       def add_link(unit, parameter_id, child_id, metadata)
-      def add_link(%{id: id, metadata: %{project: project}} = unit, parameter_id, child_id, metadata),
+
+      def add_link(
+            %{id: id, metadata: %{project: project}} = unit,
+            parameter_id,
+            child_id,
+            metadata
+          ),
           do: add_link(id, project, parameter_id, child_id, metadata)
+
       def add_link(unit_id, project, parameter_id, child_id, metadata) do
         manager = __MODULE__
+
         case get(unit_id, project) do
           nil -> {:error, "#{unit_id} doesn't exist in project: #{project}"}
           unit -> GenServer.call(manager, {:add_link, unit, parameter_id, child_id, metadata})
@@ -131,23 +173,25 @@ defmodule Arke.Boundary.UnitManager do
       end
 
       def remove_link(unit, parameter_id, child_id)
+
       def remove_link(%{id: id, metadata: %{project: project}} = unit, parameter_id, child_id),
         do: remove_link(id, project, parameter_id, child_id)
+
       def remove_link(unit_id, project, parameter_id, child_id) do
         manager = __MODULE__
+
         case get(unit_id, project) do
           nil -> {:error, "#{unit_id} doesn't exist in project: #{project}"}
           unit -> GenServer.call(manager, {:remove_link, unit, parameter_id, child_id})
         end
       end
 
-
       ######
       ## HANDLE
       ######
 
-       # Update Unit
-       def handle_call({:create, %{metadata: metadata}=unit, project}, _from, state) do
+      # Update Unit
+      def handle_call({:create, %{metadata: metadata} = unit, project}, _from, state) do
         unit = Unit.update(unit, metadata: Map.put(metadata, :project, project))
         :ets.insert(manager_id, {{unit.id, project}, unit})
         {:reply, unit, state}
@@ -162,10 +206,14 @@ defmodule Arke.Boundary.UnitManager do
       # Call handle link
 
       # Add link
-      def handle_call({:add_link, %{data: data, metadata: %{project: project}} = unit, parameter_id, child_id, metadata},
-            _from, state) do
-
-        opts = %{}
+      def handle_call(
+            {:add_link, %{data: data, metadata: %{project: project}} = unit, parameter_id,
+             child_id, metadata},
+            _from,
+            state
+          ) do
+        opts =
+          %{}
           |> Map.put(parameter_id, [
             link_init(project, parameter_id, child_id, metadata) | Map.get(data, parameter_id, [])
           ])
@@ -181,11 +229,13 @@ defmodule Arke.Boundary.UnitManager do
 
       # Remove link
       def handle_call(
-            {:remove_link, %{data: data, metadata: %{project: project}} = unit, parameter_id, child_id},
+            {:remove_link, %{data: data, metadata: %{project: project}} = unit, parameter_id,
+             child_id},
             _from,
             state
           ) do
-        opts = %{}
+        opts =
+          %{}
           |> Map.put(
             parameter_id,
             Enum.filter(Map.get(data, parameter_id, []), fn link -> link.id != child_id end)
@@ -214,5 +264,4 @@ defmodule Arke.Boundary.UnitManager do
       @manager_id unquote(name)
     end
   end
-
 end

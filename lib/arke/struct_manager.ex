@@ -57,6 +57,7 @@ defmodule Arke.StructManager do
     handle_encode(unit, type, load_links, opts)
   end
 
+  def encode(unit, opts)
   defp handle_encode(u, type, load_links, opts \\ [])
 
   defp handle_encode([], _, _, _), do: []
@@ -100,9 +101,12 @@ defmodule Arke.StructManager do
       metadata: unit.metadata
     }
 
-    {:ok, new_unit} = ArkeManager.call_func(arke, :on_struct_encode, [arke, unit])
+    {:ok, new_unit} = ArkeManager.call_func(arke, :before_struct_encode, [arke, unit])
 
     data = get_parsed_data(new_unit.data, arke, opts) |> Map.merge(base_data)
+
+    {:ok, data} = ArkeManager.call_func(arke, :on_struct_encode, [arke, new_unit, data, opts])
+
     # TODO figure out why in link units project key in metadata is a string
     Map.put(data, :metadata, Map.drop(data.metadata, [:project, "project"]))
   end
@@ -326,6 +330,7 @@ defmodule Arke.StructManager do
       parameters: get_struct_parameters(arke, unit, opts),
       label: arke.data.label
     }
+
     ArkeManager.call_func(arke, :after_get_struct, [arke, unit, struct])
   end
 
@@ -334,6 +339,7 @@ defmodule Arke.StructManager do
       parameters: get_struct_parameters(arke, unit, %{}),
       label: arke.data.label
     }
+
     ArkeManager.call_func(arke, :after_get_struct, [arke, unit, struct])
   end
 
@@ -346,6 +352,7 @@ defmodule Arke.StructManager do
       parameters: get_struct_parameters(arke, opts),
       label: data.label
     }
+
     ArkeManager.call_func(arke, :after_get_struct, [arke, struct])
   end
 
@@ -487,7 +494,6 @@ defmodule Arke.StructManager do
          {%{arke_id: :link, data: data} = _parameter, base_data},
          project
        ) do
-
     Map.merge(base_data, %{
       default: data.default_link,
       multiple: data.multiple,
@@ -507,11 +513,13 @@ defmodule Arke.StructManager do
           {:error, _} -> nil
           group -> group
         end
+
       nil ->
         case GroupManager.get(arke_or_group_id, project) do
           {:error, _} -> nil
           group -> group
         end
+
       arke ->
         arke
     end

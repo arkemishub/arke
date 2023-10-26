@@ -140,10 +140,12 @@ defmodule Arke.QueryManager do
   @spec create(project :: atom(), arke :: Arke.t(), args :: list()) :: func_return()
   def create(project, arke, args) do
     persistence_fn = @persistence[:arke_postgres][:create]
+
     with %Unit{} = unit <- Unit.load(arke, args, :create),
          {:ok, unit} <- Validator.validate(unit, :create, project),
          {:ok, unit} <- ArkeManager.call_func(arke, :before_create, [arke, unit]),
          {:ok, unit} <- handle_group_call_func(arke, unit, :before_unit_create),
+         {:ok, unit} <- handle_link_parameters_unit(arke, unit),
          {:ok, unit} <- persistence_fn.(project, unit),
          {:ok, unit} <- ArkeManager.call_func(arke, :on_create, [arke, unit]),
          {:ok, unit} <- handle_link_parameters(unit, %{}),
@@ -151,6 +153,71 @@ defmodule Arke.QueryManager do
          do: {:ok, unit},
          else: ({:error, errors} -> {:error, errors})
   end
+
+  defp handle_link_parameters_unit(
+         %{data: parameters} = arke,
+         %{metadata: %{project: project}} = unit
+       ) do
+    {errors, link_units} =
+      Enum.filter(ArkeManager.get_parameters(arke), fn p -> p.arke_id == :link end)
+      |> Enum.reduce({[], []}, fn p, {errors, link_units} ->
+        arke = ArkeManager.get(String.to_existing_atom(p.data.arke_or_group_id), project)
+
+        case handle_create_on_link_parameters_unit(
+               project,
+               unit,
+               p,
+               arke,
+               Unit.get_value(unit, p.id)
+             ) do
+          {:ok, parameter, %Unit{} = link_unit} -> {errors, [{parameter, link_unit} | link_units]}
+          {:ok, parameter, link_unit} -> {errors, link_units}
+          {:error, e} -> {[e | errors], link_units}
+        end
+      end)
+
+    case length(errors) > 0 do
+      true ->
+        Enum.map(link_units, fn {p, u} ->
+          delete(project, u)
+        end)
+
+        {:error, errors}
+
+      false ->
+        args =
+          Enum.reduce(link_units, %{}, fn {p, u}, args ->
+            Map.put(args, p.id, Atom.to_string(u.id))
+          end)
+
+        {:ok, Unit.update(unit, args)}
+    end
+  end
+
+  defp handle_create_on_link_parameters_unit(project, unit, parameter, arke, value)
+       when is_nil(value),
+       do: {:ok, parameter, value}
+
+  defp handle_create_on_link_parameters_unit(project, unit, parameter, arke, value)
+       when is_binary(value),
+       do: {:ok, parameter, value}
+
+  defp handle_create_on_link_parameters_unit(project, unit, parameter, arke, value)
+       when is_binary(value),
+       do: {:ok, parameter, value}
+
+  defp handle_create_on_link_parameters_unit(project, unit, parameter, arke, value)
+       when is_map(value) do
+    value = Map.put(value, :runtime_data, %{link: unit, link_parameter: parameter})
+
+    case create(project, arke, value) do
+      {:ok, unit} -> {:ok, parameter, unit}
+      {:error, error} -> {:error, error}
+    end
+  end
+
+  defp handle_create_on_link_parameters_unit(_, _, parameter, _, value),
+    do: {:ok, parameter, value}
 
   defp handle_group_call_func(arke, unit, func) do
     GroupManager.get_groups_by_arke(arke)
@@ -162,7 +229,7 @@ defmodule Arke.QueryManager do
     |> check_group_manager_functions_errors()
   end
 
-  defp check_group_manager_functions_errors({:error, errors}=_), do: {:error, errors}
+  defp check_group_manager_functions_errors({:error, errors} = _), do: {:error, errors}
   defp check_group_manager_functions_errors(unit), do: {:ok, unit}
 
   @doc """
@@ -678,7 +745,6 @@ defmodule Arke.QueryManager do
          action,
          false
        ) do
-
     handle_update_parameter_link(
       project,
       Atom.to_string(unit.id),
@@ -699,7 +765,6 @@ defmodule Arke.QueryManager do
          action,
          false
        ) do
-
     handle_update_parameter_link(
       project,
       id_to_link,

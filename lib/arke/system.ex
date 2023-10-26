@@ -43,7 +43,8 @@ defmodule Arke.System do
       def before_validate(arke, unit), do: {:ok, unit}
       def on_create(arke, unit), do: {:ok, unit}
       def before_create(arke, unit), do: {:ok, unit}
-      def on_struct_encode(_, unit), do: {:ok, unit}
+      def on_struct_encode(_, _, data, opts), do: {:ok, data}
+      def before_struct_encode(_, unit), do: {:ok, unit}
       def on_update(arke, unit), do: {:ok, unit}
       def before_update(arke, unit), do: {:ok, unit}
       def on_delete(arke, unit), do: {:ok, unit}
@@ -52,14 +53,14 @@ defmodule Arke.System do
       def after_get_struct(arke, unit, struct), do: struct
       def after_get_struct(arke, struct), do: struct
 
-
       defoverridable on_load: 2,
                      before_load: 2,
                      on_validate: 2,
                      before_validate: 2,
                      on_create: 2,
                      before_create: 2,
-                     on_struct_encode: 2,
+                     before_struct_encode: 2,
+                     on_struct_encode: 4,
                      on_update: 2,
                      before_update: 2,
                      on_delete: 2,
