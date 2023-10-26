@@ -154,6 +154,8 @@ defmodule Arke.QueryManager do
          else: ({:error, errors} -> {:error, errors})
   end
 
+  defp handle_link_parameters_unit(%{id: :arke_link} = _, unit), do: {:ok, unit}
+
   defp handle_link_parameters_unit(
          %{data: parameters} = arke,
          %{metadata: %{project: project}} = unit
