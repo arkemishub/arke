@@ -125,7 +125,7 @@ defmodule Arke.StructManager do
 
   defp get_link_units(id_list, project, opts) do
     QueryManager.filter_by(id__in: id_list, project: project)
-    |> Enum.map(fn unit -> encode(unit, Keyword.put(opts, :load_links, false)) end)
+    |> Enum.map(fn unit -> encode(unit, opts) end)
   end
 
   defp get_link_id_list(units) when is_list(units) do
