@@ -717,7 +717,6 @@ defmodule Arke.QueryManager do
 
     old_value = old_value || []
     new_value = new_value || []
-
     nodes_to_delete = Enum.map(old_value -- new_value, &normalize_value(&1))
 
     nodes_to_add = Enum.map(new_value -- old_value, &normalize_value(&1))

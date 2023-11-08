@@ -52,6 +52,26 @@ defmodule Arke.Core.Arke do
     {:ok, unit}
   end
 
+  def on_update(_, %{id: id, metadata: %{project: project}, data: data} = unit) do
+    parameters =
+      Enum.reduce(data.parameters, [], fn a, new_parameters ->
+        [handle_link_init(a, :parameters) | new_parameters]
+      end)
+
+    unit = Unit.update(unit, %{parameters: parameters})
+
+    ArkeManager.update(id, project, unit)
+    {:ok, unit}
+  end
+
+  def handle_link_init(u, p) when is_binary(u),
+    do: %{id: String.to_atom(u), metadata: %{"parameter_id" => Atom.to_string(p)}}
+
+  def handle_link_init(u, p) when is_atom(u),
+    do: %{id: u, metadata: %{"parameter_id" => Atom.to_string(p)}}
+
+  def handle_link_init(u, _), do: u
+
   def on_delete(_, unit) do
     ArkeManager.remove(unit)
     {:ok, unit}

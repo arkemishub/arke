@@ -104,14 +104,12 @@ defmodule Arke.Boundary.UnitManager do
 
       def before_create(unit, project), do: {unit, project}
 
-      def update(manager \\ __MODULE__, unit, new_unit)
+      def update(%{id: id, metadata: %{project: project}} = unit, new_unit),
+        do: update(id, project, new_unit)
 
-      def update(manager, %{id: id, metadata: %{project: project}} = unit, new_unit),
-        do: update(manager, id, project, new_unit)
-
-      def update(manager, unit_id, project, new_unit) do
+      def update(unit_id, project, new_unit) do
         unit = get(unit_id, project)
-        GenServer.call(manager, {:update, new_unit, project})
+        GenServer.call(__MODULE__, {:update, new_unit, project})
       end
 
       def call_func(%{id: id, metadata: %{project: project}} = unit, func, opts),

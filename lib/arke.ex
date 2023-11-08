@@ -400,20 +400,20 @@ defmodule Arke do
         nil
       )
 
-      remote =
-        Unit.new(
-          :remote,
-          Map.merge(
-            base_parameter(label: "Remote"),
-            %{default_boolean: false}
-          ),
-          :boolean,
-          nil,
-          %{},
-          nil,
-          nil,
-          nil
-        )
+    remote =
+      Unit.new(
+        :remote,
+        Map.merge(
+          base_parameter(label: "Remote"),
+          %{default_boolean: false}
+        ),
+        :boolean,
+        nil,
+        %{},
+        nil,
+        nil,
+        nil
+      )
 
     token =
       Unit.new(
@@ -682,7 +682,8 @@ defmodule Arke do
             arke_or_group_id: nil,
             depth: 0,
             connection_type: "link",
-            filter_keys: ["arke_id", "id"]
+            filter_keys: ["arke_id", "id"],
+            direction: "child"
           }
         ),
         :link,
@@ -751,7 +752,15 @@ defmodule Arke do
         :arke_list,
         Map.merge(
           base_parameter(label: "Arke List"),
-          %{default_link: [], multiple: true, filter_keys: ["arke_id", "id"]}
+          %{
+            default_link: [],
+            multiple: true,
+            filter_keys: ["arke_id", "id"],
+            connection_type: "group",
+            arke_or_group_id: "arke",
+            depth: 0,
+            direction: "child"
+          }
         ),
         :link,
         nil,
@@ -766,7 +775,13 @@ defmodule Arke do
         :parameters,
         Map.merge(
           base_parameter(label: "Parameters"),
-          %{default_link: [], depth: 0, connection_type: "link", multiple: false}
+          %{
+            default_link: [],
+            depth: 0,
+            connection_type: "link",
+            multiple: false,
+            direction: "child"
+          }
         ),
         :link,
         nil,
@@ -1262,7 +1277,8 @@ defmodule Arke do
           arke_or_group_id: "arke_or_group",
           depth: 0,
           connection_type: "link",
-          filter_keys: ["id", "label"]
+          filter_keys: ["id", "label"],
+          direction: "child"
         }),
         :link,
         nil,
