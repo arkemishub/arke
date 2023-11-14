@@ -18,7 +18,7 @@ defmodule Arke.Utils.Gcp do
   @default_bucket @storage[:gcp][:default_bucket]
 
   def upload_file(file_name, file_data, opts \\ []) do
-    bucket = opts[:bucket] || @default_bucket
+    bucket = opts[:bucket] || System.get_env("DEFAULT_BUCKET")
     conn = get_connection()
 
     {:ok, object} =
@@ -32,7 +32,7 @@ defmodule Arke.Utils.Gcp do
   end
 
   def get_file(file_path, opts \\ []) do
-    bucket = opts[:bucket] || @default_bucket
+    bucket = opts[:bucket] || System.get_env("DEFAULT_BUCKET")
     conn = get_connection()
 
     GoogleApi.Storage.V1.Api.Objects.storage_objects_get(
@@ -43,7 +43,7 @@ defmodule Arke.Utils.Gcp do
   end
 
   def delete_file(file_path, opts \\ []) do
-    bucket = opts[:bucket] || @default_bucket
+    bucket = opts[:bucket] || System.get_env("DEFAULT_BUCKET")
     conn = get_connection()
 
     GoogleApi.Storage.V1.Api.Objects.storage_objects_delete(
@@ -62,8 +62,8 @@ defmodule Arke.Utils.Gcp do
   # end
 
   def get_bucket_file_signed_url(file_path, opts \\ []) do
-    gcp_service_account = opts[:service_account] || @service_account
-    bucket = opts[:bucket] || @default_bucket
+    gcp_service_account = opts[:service_account] || System.get_env("STORAGE_SERVICE_ACCOUNT")
+    bucket = opts[:bucket] || System.get_env("DEFAULT_BUCKET")
 
     %Tesla.Client{pre: [{Tesla.Middleware.Headers, :call, [auth_headers]}]} = get_connection()
     headers = [{"Content-Type", "application/json"}] ++ auth_headers
@@ -72,22 +72,25 @@ defmodule Arke.Utils.Gcp do
       "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/#{gcp_service_account}:signBlob"
 
     expires = DateTime.utc_now() |> DateTime.to_unix() |> Kernel.+(1 * 3600)
-    resource = "/#{bucket}/#{file_path}"
+    resource = "/#{bucket}/#{URI.encode(file_path)}"
     signature = ["GET", "", "", expires, resource] |> Enum.join("\n") |> Base.encode64()
     body = %{"payload" => signature} |> Poison.encode!()
-    {:ok, %{status_code: 200, body: result}} = HTTPoison.post(url, body, headers)
+    case HTTPoison.post(url, body, headers) do
+      {:ok, %{status_code: 200, body: result}} ->
+        %{"signedBlob" => signed_blob} = Poison.decode!(result)
+        qs =
+          %{
+            "GoogleAccessId" => gcp_service_account,
+            "Expires" => expires,
+            "Signature" => signed_blob
+          }
+          |> URI.encode_query()
 
-    %{"signedBlob" => signed_blob} = Poison.decode!(result)
-
-    qs =
-      %{
-        "GoogleAccessId" => gcp_service_account,
-        "Expires" => expires,
-        "Signature" => signed_blob
-      }
-      |> URI.encode_query()
-
-    Enum.join(["https://storage.googleapis.com#{resource}", "?", qs])
+        {:ok, Enum.join(["https://storage.googleapis.com#{resource}", "?", qs])}
+      {:ok, e} ->
+        IO.inspect(e)
+        {:error, "error on signed url"}
+    end
   end
 
   defp get_connection() do

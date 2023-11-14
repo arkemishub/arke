@@ -139,7 +139,6 @@ defmodule Arke.Core.Parameter.String do
   end
 
   def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
     ParameterManager.create(unit)
     {:ok, unit}
   end
@@ -150,7 +149,6 @@ defmodule Arke.Core.Parameter.String do
   end
 
   def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
     ParameterManager.remove(unit)
     {:ok, unit}
   end
@@ -195,7 +193,6 @@ defmodule Arke.Core.Parameter.Integer do
   end
 
   def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
     ParameterManager.create(unit)
     {:ok, unit}
   end
@@ -206,7 +203,6 @@ defmodule Arke.Core.Parameter.Integer do
   end
 
   def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
     ParameterManager.remove(unit)
     {:ok, unit}
   end
@@ -251,7 +247,6 @@ defmodule Arke.Core.Parameter.Float do
   end
 
   def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
     ParameterManager.create(unit)
     {:ok, unit}
   end
@@ -262,7 +257,6 @@ defmodule Arke.Core.Parameter.Float do
   end
 
   def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
     ParameterManager.remove(unit)
     {:ok, unit}
   end
@@ -294,7 +288,6 @@ defmodule Arke.Core.Parameter.Boolean do
   end
 
   def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
     ParameterManager.create(unit)
     {:ok, unit}
   end
@@ -305,7 +298,6 @@ defmodule Arke.Core.Parameter.Boolean do
   end
 
   def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
     ParameterManager.remove(unit)
     {:ok, unit}
   end
@@ -337,7 +329,6 @@ defmodule Arke.Core.Parameter.Dict do
   end
 
   def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
     ParameterManager.create(unit)
     {:ok, unit}
   end
@@ -348,7 +339,6 @@ defmodule Arke.Core.Parameter.Dict do
   end
 
   def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
     ParameterManager.remove(unit)
     {:ok, unit}
   end
@@ -380,7 +370,6 @@ defmodule Arke.Core.Parameter.List do
   end
 
   def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
     ParameterManager.create(unit)
     {:ok, unit}
   end
@@ -391,7 +380,6 @@ defmodule Arke.Core.Parameter.List do
   end
 
   def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
     ParameterManager.remove(unit)
     {:ok, unit}
   end
@@ -431,7 +419,6 @@ defmodule Arke.Core.Parameter.Date do
   end
 
   def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
     ParameterManager.create(unit)
     {:ok, unit}
   end
@@ -442,7 +429,6 @@ defmodule Arke.Core.Parameter.Date do
   end
 
   def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
     ParameterManager.remove(unit)
     {:ok, unit}
   end
@@ -481,7 +467,6 @@ defmodule Arke.Core.Parameter.Time do
   end
 
   def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
     ParameterManager.create(unit)
     {:ok, unit}
   end
@@ -492,7 +477,6 @@ defmodule Arke.Core.Parameter.Time do
   end
 
   def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
     ParameterManager.remove(unit)
     {:ok, unit}
   end
@@ -534,7 +518,6 @@ defmodule Arke.Core.Parameter.DateTime do
   end
 
   def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
     ParameterManager.create(unit)
     {:ok, unit}
   end
@@ -545,7 +528,6 @@ defmodule Arke.Core.Parameter.DateTime do
   end
 
   def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
     ParameterManager.remove(unit)
     {:ok, unit}
   end
@@ -589,7 +571,6 @@ defmodule Arke.Core.Parameter.Link do
   end
 
   def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
     ParameterManager.create(unit)
     {:ok, unit}
   end
@@ -600,7 +581,6 @@ defmodule Arke.Core.Parameter.Link do
   end
 
   def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
     ParameterManager.remove(unit)
     {:ok, unit}
   end
@@ -625,7 +605,6 @@ defmodule Arke.Core.Parameter.Dynamic do
   end
 
   def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
     ParameterManager.create(unit)
     {:ok, unit}
   end
@@ -636,7 +615,6 @@ defmodule Arke.Core.Parameter.Dynamic do
   end
 
   def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
     ParameterManager.remove(unit)
     {:ok, unit}
   end
@@ -661,7 +639,6 @@ defmodule Arke.Core.Parameter.Binary do
   end
 
   def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
     ParameterManager.create(unit)
     {:ok, unit}
   end
@@ -672,7 +649,6 @@ defmodule Arke.Core.Parameter.Binary do
   end
 
   def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
     ParameterManager.remove(unit)
     {:ok, unit}
   end

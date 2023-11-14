@@ -37,9 +37,10 @@ defmodule Arke.QueryManager do
     - in =>  value is in a collection => `IN`
 
   """
-  alias Arke.Boundary.{ArkeManager, ParameterManager, GroupManager, ParamsManager}
+  alias Arke.Boundary.{ArkeManager, ParameterManager, GroupManager}
   alias Arke.Validator
   alias Arke.LinkManager
+  alias Arke.QueryManager
   alias Arke.Core.{Arke, Unit, Query, Parameter}
 
   @persistence Application.get_env(:arke, :persistence)
@@ -143,12 +144,95 @@ defmodule Arke.QueryManager do
     with %Unit{} = unit <- Unit.load(arke, args, :create),
          {:ok, unit} <- Validator.validate(unit, :create, project),
          {:ok, unit} <- ArkeManager.call_func(arke, :before_create, [arke, unit]),
+         {:ok, unit} <- handle_group_call_func(arke, unit, :before_unit_create),
+         {:ok, unit} <- handle_link_parameters_unit(arke, unit),
          {:ok, unit} <- persistence_fn.(project, unit),
          {:ok, unit} <- ArkeManager.call_func(arke, :on_create, [arke, unit]),
          {:ok, unit} <- handle_link_parameters(unit, %{}),
+         {:ok, unit} <- handle_group_call_func(arke, unit, :on_unit_create),
          do: {:ok, unit},
          else: ({:error, errors} -> {:error, errors})
   end
+
+  defp handle_link_parameters_unit(%{id: :arke_link} = _, unit), do: {:ok, unit}
+
+  defp handle_link_parameters_unit(
+         %{data: parameters} = arke,
+         %{metadata: %{project: project}} = unit
+       ) do
+    {errors, link_units} =
+      Enum.filter(ArkeManager.get_parameters(arke), fn p -> p.arke_id == :link end)
+      |> Enum.reduce({[], []}, fn p, {errors, link_units} ->
+        arke = ArkeManager.get(String.to_existing_atom(p.data.arke_or_group_id), project)
+
+        case handle_create_on_link_parameters_unit(
+               project,
+               unit,
+               p,
+               arke,
+               Unit.get_value(unit, p.id)
+             ) do
+          {:ok, parameter, %Unit{} = link_unit} -> {errors, [{parameter, link_unit} | link_units]}
+          {:ok, parameter, link_unit} -> {errors, link_units}
+          {:error, e} -> {[e | errors], link_units}
+        end
+      end)
+
+    case length(errors) > 0 do
+      true ->
+        Enum.map(link_units, fn {p, u} ->
+          delete(project, u)
+        end)
+
+        {:error, errors}
+
+      false ->
+        args =
+          Enum.reduce(link_units, %{}, fn {p, u}, args ->
+            Map.put(args, p.id, Atom.to_string(u.id))
+          end)
+
+        {:ok, Unit.update(unit, args)}
+    end
+  end
+
+  defp handle_create_on_link_parameters_unit(project, unit, parameter, arke, value)
+       when is_nil(value),
+       do: {:ok, parameter, value}
+
+  defp handle_create_on_link_parameters_unit(project, unit, parameter, arke, value)
+       when is_binary(value),
+       do: {:ok, parameter, value}
+
+  defp handle_create_on_link_parameters_unit(project, unit, parameter, arke, value)
+       when is_binary(value),
+       do: {:ok, parameter, value}
+
+  defp handle_create_on_link_parameters_unit(project, unit, parameter, arke, value)
+       when is_map(value) do
+    value = Map.put(value, :runtime_data, %{link: unit, link_parameter: parameter})
+
+    case create(project, arke, value) do
+      {:ok, unit} -> {:ok, parameter, unit}
+      {:error, error} -> {:error, error}
+    end
+  end
+
+  defp handle_create_on_link_parameters_unit(_, _, parameter, _, value),
+    do: {:ok, parameter, value}
+
+  defp handle_group_call_func(arke, unit, func) do
+    GroupManager.get_groups_by_arke(arke)
+    |> Enum.reduce_while(unit, fn group, new_unit ->
+      with {:ok, new_unit} <- GroupManager.call_func(group, func, [arke, new_unit]),
+           do: {:cont, new_unit},
+           else: ({:error, errors} -> {:halt, {:error, errors}})
+    end)
+    |> check_group_manager_functions_errors()
+  end
+
+  defp check_group_manager_functions_errors({:error, errors} = _), do: {:error, errors}
+  defp check_group_manager_functions_errors(unit), do: {:ok, unit}
 
   @doc """
   Function to update an element
@@ -581,13 +665,14 @@ defmodule Arke.QueryManager do
   defp get_parameter_operator(_, _), do: nil
 
   defp get_parameter(%{arke: nil, project: project} = query, %{id: id} = _parameter),
-    do: ParamsManager.get(id, project)
+    do: ParameterManager.get(id, project)
 
   defp get_parameter(%{arke: nil, project: project} = query, key),
-    do: ParamsManager.get(key, project)
+    do: ParameterManager.get(key, project)
 
-  defp get_parameter(%{arke: arke, project: project} = query, key),
-    do: ArkeManager.get_parameter(arke, project, key)
+  defp get_parameter(%{arke: arke, project: project} = query, key) do
+    ArkeManager.get_parameter(arke, project, key)
+  end
 
   defp handle_link_parameters(
          %{arke_id: arke_id, metadata: %{project: project}, data: new_data, id: id} = unit,
@@ -632,7 +717,6 @@ defmodule Arke.QueryManager do
 
     old_value = old_value || []
     new_value = new_value || []
-
     nodes_to_delete = Enum.map(old_value -- new_value, &normalize_value(&1))
 
     nodes_to_add = Enum.map(new_value -- old_value, &normalize_value(&1))
@@ -642,6 +726,7 @@ defmodule Arke.QueryManager do
     end)
 
     Enum.each(nodes_to_add, fn n ->
+      IO.inspect({unit.id, parameter, n, :add, false})
       update_parameter_link(unit, parameter, n, :add, false)
     end)
 
@@ -663,8 +748,8 @@ defmodule Arke.QueryManager do
        ) do
     handle_update_parameter_link(
       project,
-      unit,
-      get_by(project: project, id: id_to_link),
+      Atom.to_string(unit.id),
+      id_to_link,
       connection_type,
       p_id,
       action
@@ -683,8 +768,8 @@ defmodule Arke.QueryManager do
        ) do
     handle_update_parameter_link(
       project,
-      get_by(project: project, id: id_to_link),
-      unit,
+      id_to_link,
+      Atom.to_string(unit.id),
       connection_type,
       p_id,
       action

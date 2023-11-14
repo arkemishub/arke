@@ -57,6 +57,7 @@ defmodule Arke.StructManager do
     handle_encode(unit, type, load_links, opts)
   end
 
+  def encode(unit, opts)
   defp handle_encode(u, type, load_links, opts \\ [])
 
   defp handle_encode([], _, _, _), do: []
@@ -100,9 +101,12 @@ defmodule Arke.StructManager do
       metadata: unit.metadata
     }
 
-    {:ok, new_unit} = ArkeManager.call_func(arke, :on_struct_encode, [unit, nil])
+    {:ok, new_unit} = ArkeManager.call_func(arke, :before_struct_encode, [arke, unit])
 
     data = get_parsed_data(new_unit.data, arke, opts) |> Map.merge(base_data)
+
+    {:ok, data} = ArkeManager.call_func(arke, :on_struct_encode, [arke, new_unit, data, opts])
+
     # TODO figure out why in link units project key in metadata is a string
     Map.put(data, :metadata, Map.drop(data.metadata, [:project, "project"]))
   end
@@ -121,7 +125,7 @@ defmodule Arke.StructManager do
 
   defp get_link_units(id_list, project, opts) do
     QueryManager.filter_by(id__in: id_list, project: project)
-    |> Enum.map(fn unit -> encode(unit, Keyword.put(opts, :load_links, false)) end)
+    |> Enum.map(fn unit -> encode(unit, opts) end)
   end
 
   defp get_link_id_list(units) when is_list(units) do
@@ -317,21 +321,26 @@ defmodule Arke.StructManager do
   """
   @spec get_struct(arke :: Unit.t()) :: %{parameters: [parameter()], label: String.t()}
   def get_struct(%{arke_id: :arke, data: data} = arke) do
-    %{parameters: get_struct_parameters(arke, %{}), label: data.label}
+    struct = %{parameters: get_struct_parameters(arke, %{}), label: data.label}
+    ArkeManager.call_func(arke, :after_get_struct, [arke, struct])
   end
 
   def get_struct(arke, %{data: data} = unit, opts) do
-    %{
+    struct = %{
       parameters: get_struct_parameters(arke, unit, opts),
       label: arke.data.label
     }
+
+    ArkeManager.call_func(arke, :after_get_struct, [arke, unit, struct])
   end
 
   def get_struct(arke, %{data: data} = unit) do
-    %{
+    struct = %{
       parameters: get_struct_parameters(arke, unit, %{}),
       label: arke.data.label
     }
+
+    ArkeManager.call_func(arke, :after_get_struct, [arke, unit, struct])
   end
 
   @spec get_struct(arke :: Unit.t(), opts :: list()) :: %{
@@ -339,10 +348,12 @@ defmodule Arke.StructManager do
           label: String.t()
         }
   def get_struct(%{arke_id: :arke, data: data} = arke, opts) do
-    %{
+    struct = %{
       parameters: get_struct_parameters(arke, opts),
       label: data.label
     }
+
+    ArkeManager.call_func(arke, :after_get_struct, [arke, struct])
   end
 
   def get_struct(_), do: raise("Must pass a valid arke or unit")
@@ -498,6 +509,12 @@ defmodule Arke.StructManager do
   defp get_arke_or_group_id(arke_or_group_id, project) do
     case ArkeManager.get(arke_or_group_id, project) do
       {:error, _} ->
+        case GroupManager.get(arke_or_group_id, project) do
+          {:error, _} -> nil
+          group -> group
+        end
+
+      nil ->
         case GroupManager.get(arke_or_group_id, project) do
           {:error, _} -> nil
           group -> group

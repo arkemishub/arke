@@ -42,10 +42,24 @@ defmodule Arke.Core.Group do
     {:ok, unit}
   end
 
-  def on_update(_, unit) do
-    GroupManager.create(unit)
+  def on_update(_, %{id: id, metadata: %{project: project}, data: data} = unit) do
+    arke_list =
+      Enum.reduce(data.arke_list, [], fn a, new_arke_list ->
+        [handle_link_init(a, :arke_list) | new_arke_list]
+      end)
+
+    unit = Unit.update(unit, %{arke_list: arke_list})
+    GroupManager.update(id, project, unit)
     {:ok, unit}
   end
+
+  def handle_link_init(u, p) when is_binary(u),
+    do: %{id: String.to_atom(u), metadata: %{"parameter_id" => Atom.to_string(p)}}
+
+  def handle_link_init(u, p) when is_atom(u),
+    do: %{id: u, metadata: %{"parameter_id" => Atom.to_string(p)}}
+
+  def handle_link_init(u, _), do: u
 
   def on_delete(_, unit) do
     GroupManager.remove(unit)

@@ -16,7 +16,7 @@ defmodule Arke.Validator do
   @moduledoc """
   This module provide validation before assign a certain value to an `{arke_struct}`
   """
-  alias Arke.Boundary.{ArkeManager, ParameterManager, ParamsManager}
+  alias Arke.Boundary.{ArkeManager, ParameterManager}
   alias Arke.QueryManager, as: QueryManager
   alias Arke.Utils.ErrorGenerator, as: Error
   alias Arke.DatetimeHandler, as: DatetimeHandler
@@ -63,6 +63,7 @@ defmodule Arke.Validator do
 
       {new_unit, errors} = res
       filtered_errors = check_old_values(errors, data, new_unit.data, persistence_fn)
+
       get_result({new_unit, filtered_errors})
     else
       {:error, errors} -> get_result({unit, errors})
@@ -139,7 +140,7 @@ defmodule Arke.Validator do
   end
 
   defp get_parameter(nil, parameter_id, project),
-    do: ParamsManager.get(parameter_id, project)
+    do: ParameterManager.get(parameter_id, project)
 
   defp get_parameter(arke, parameter_id, project),
     do: ArkeManager.get_parameter(arke, parameter_id)
@@ -294,6 +295,14 @@ defmodule Arke.Validator do
       end
 
     Enum.all?(value, &condition.(&1))
+  end
+
+  defp check_whitespace(%{data: %{strip: true}} = parameter, value) when is_atom(value) do
+    value
+    |> Atom.to_string()
+    |> String.trim()
+    |> String.replace(~r/\s+/, "-")
+    |> String.to_existing_atom()
   end
 
   defp check_whitespace(%{data: %{strip: true}} = parameter, value) do

@@ -30,7 +30,7 @@ defmodule Arke do
         %{},
         nil,
         nil,
-        nil
+        Arke.System.BaseGroup
       ),
       :arke_system
     )
@@ -44,7 +44,7 @@ defmodule Arke do
         %{},
         nil,
         nil,
-        nil
+        Arke.System.BaseGroup
       ),
       :arke_system
     )
@@ -60,7 +60,7 @@ defmodule Arke do
         Enum.reduce(modules, [], fn mod, mod_arke_list ->
           is_arke =
             Code.ensure_loaded?(mod) and :erlang.function_exported(mod, :arke_from_attr, 0) and
-              mod.arke_from_attr != nil
+              mod.arke_from_attr != nil and mod.arke_from_attr.remote == false
 
           mod_arke_list = check_arke_module(mod, mod_arke_list, is_arke)
         end)
@@ -400,6 +400,59 @@ defmodule Arke do
         nil
       )
 
+    remote =
+      Unit.new(
+        :remote,
+        Map.merge(
+          base_parameter(label: "Remote"),
+          %{default_boolean: false}
+        ),
+        :boolean,
+        nil,
+        %{},
+        nil,
+        nil,
+        nil
+      )
+
+    token =
+      Unit.new(
+        :token,
+        Map.merge(
+          base_parameter(label: "Token"),
+          %{
+            min_length: 3,
+            max_length: nil,
+            strip: true,
+            values: nil,
+            multiple: false,
+            unique: false,
+            default_string: nil
+          }
+        ),
+        :string,
+        nil,
+        %{},
+        nil,
+        nil,
+        nil
+      )
+
+    expiration =
+      Unit.new(
+        :expiration,
+        Map.merge(
+          base_parameter(label: "Expiration date"),
+          %{default_datetime: nil}
+        ),
+        :datetime,
+        nil,
+        %{},
+        nil,
+        nil,
+        nil
+      )
+
     values =
       Unit.new(
         :values,
@@ -629,7 +682,8 @@ defmodule Arke do
             arke_or_group_id: nil,
             depth: 0,
             connection_type: "link",
-            filter_keys: ["arke_id", "id"]
+            filter_keys: ["arke_id", "id"],
+            direction: "child"
           }
         ),
         :link,
@@ -698,7 +752,15 @@ defmodule Arke do
         :arke_list,
         Map.merge(
           base_parameter(label: "Arke List"),
-          %{default_link: [], multiple: true, filter_keys: ["arke_id", "id"]}
+          %{
+            default_link: [],
+            multiple: true,
+            filter_keys: ["arke_id", "id"],
+            connection_type: "group",
+            arke_or_group_id: "arke",
+            depth: 0,
+            direction: "child"
+          }
         ),
         :link,
         nil,
@@ -713,7 +775,13 @@ defmodule Arke do
         :parameters,
         Map.merge(
           base_parameter(label: "Parameters"),
-          %{default_link: [], depth: 0, connection_type: "link", multiple: false}
+          %{
+            default_link: [],
+            depth: 0,
+            connection_type: "link",
+            multiple: false,
+            direction: "child"
+          }
         ),
         :link,
         nil,
@@ -1106,6 +1174,29 @@ defmodule Arke do
         nil
       )
 
+    user_id =
+      Unit.new(
+        :user_id,
+        Map.merge(
+          base_parameter(label: "Unit id"),
+          %{
+            min_length: 1,
+            max_length: nil,
+            strip: true,
+            values: nil,
+            multiple: false,
+            unique: false,
+            default_string: nil
+          }
+        ),
+        :string,
+        nil,
+        %{},
+        nil,
+        nil,
+        nil
+      )
+
     first_access =
       Unit.new(
         :first_access,
@@ -1209,7 +1300,8 @@ defmodule Arke do
           arke_or_group_id: "arke_or_group",
           depth: 0,
           connection_type: "link",
-          filter_keys: ["id", "label"]
+          filter_keys: ["id", "label"],
+          direction: "child"
         }),
         :link,
         nil,
@@ -1371,6 +1463,7 @@ defmodule Arke do
       persistence,
       helper_text,
       strip,
+      remote,
       min_length,
       max_length,
       values,
@@ -1423,10 +1516,12 @@ defmodule Arke do
       binary,
       size,
       oauth_id
+      expiration,
+      token,
+      user_id
     ]
 
     Enum.map(parameters, fn parameter ->
-      Arke.Boundary.ParamsManager.create(parameter, :arke_system)
       ParameterManager.create(parameter, :arke_system)
     end)
   end
