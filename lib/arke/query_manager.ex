@@ -259,6 +259,7 @@ defmodule Arke.QueryManager do
     with %Unit{} = unit <- Unit.update(unit, args),
          {:ok, unit} <- Validator.validate(unit, :update, project),
          {:ok, unit} <- ArkeManager.call_func(arke, :before_update, [arke, unit]),
+         {:ok, unit} <- handle_link_parameters_unit(arke, unit),
          {:ok, unit} <- persistence_fn.(project, unit),
          {:ok, unit} <- ArkeManager.call_func(arke, :on_update, [arke, unit]),
          {:ok, unit} <- handle_link_parameters(unit, data),

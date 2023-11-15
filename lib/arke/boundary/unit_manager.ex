@@ -41,7 +41,7 @@ defmodule Arke.Boundary.UnitManager do
       # server
       @impl true
       def init(arg) do
-        :ets.new(manager_id, [:set, :named_table, :protected, read_concurrency: true])
+        :ets.new(manager_id, [:set, :named_table, :public, read_concurrency: true])
         # do not block the init
         {:ok, arg}
       end
