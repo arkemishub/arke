@@ -30,7 +30,7 @@ defmodule Arke.Boundary.UnitManager do
       def arke_list(), do: Keyword.get(__MODULE__.__info__(:attributes), :arke_list, [])
       def group_list(), do: Keyword.get(__MODULE__.__info__(:attributes), :arke_list, [])
 
-      def manager_id,
+      def manager_id(),
         do: Keyword.get(__MODULE__.__info__(:attributes), :manager_id, []) |> List.first()
 
       # client
@@ -41,7 +41,7 @@ defmodule Arke.Boundary.UnitManager do
       # server
       @impl true
       def init(arg) do
-        :ets.new(manager_id, [:set, :named_table, :public, read_concurrency: true])
+        :ets.new(manager_id(), [:set, :named_table, :public, read_concurrency: true])
         # do not block the init
         {:ok, arg}
       end
@@ -52,7 +52,7 @@ defmodule Arke.Boundary.UnitManager do
             {unit_id, project_id}
           end)
 
-        :ets.select(manager_id, fun)
+        :ets.select(manager_id(), fun)
       end
 
       def get(unit_id, _) when is_nil(unit_id), do: nil
@@ -64,12 +64,12 @@ defmodule Arke.Boundary.UnitManager do
       end
 
       def get(unit_id, project) do
-        case :ets.lookup(manager_id, {unit_id, project}) do
+        case :ets.lookup(manager_id(), {unit_id, project}) do
           [{_, unit}] ->
             unit
 
           [] ->
-            case :ets.lookup(manager_id, {unit_id, :arke_system}) do
+            case :ets.lookup(manager_id(), {unit_id, :arke_system}) do
               [{_, unit}] -> unit
               [] -> nil
             end
@@ -84,7 +84,7 @@ defmodule Arke.Boundary.UnitManager do
             {:error, "#{unit_id} doesn't exist in project: #{project}"}
 
           _ ->
-            :ets.delete(manager_id, {unit_id, project})
+            :ets.delete(manager_id(), {unit_id, project})
             :ok
         end
       end
@@ -191,13 +191,13 @@ defmodule Arke.Boundary.UnitManager do
       # Update Unit
       def handle_call({:create, %{metadata: metadata} = unit, project}, _from, state) do
         unit = Unit.update(unit, metadata: Map.put(metadata, :project, project))
-        :ets.insert(manager_id, {{unit.id, project}, unit})
+        :ets.insert(manager_id(), {{unit.id, project}, unit})
         {:reply, unit, state}
       end
 
       # Update Unit
       def handle_call({:update, new_unit, project}, _from, state) do
-        :ets.insert(manager_id, {{new_unit.id, project}, new_unit})
+        :ets.insert(manager_id(), {{new_unit.id, project}, new_unit})
         {:reply, new_unit, state}
       end
 
@@ -217,7 +217,7 @@ defmodule Arke.Boundary.UnitManager do
           ])
 
         unit = Unit.update(unit, opts)
-        :ets.insert(manager_id, {{unit.id, project}, unit})
+        :ets.insert(manager_id(), {{unit.id, project}, unit})
 
         {:reply, unit, state}
       end
@@ -240,7 +240,7 @@ defmodule Arke.Boundary.UnitManager do
           )
 
         unit = Unit.update(unit, opts)
-        :ets.insert(manager_id, {{unit.id, project}, unit})
+        :ets.insert(manager_id(), {{unit.id, project}, unit})
         {:reply, unit, state}
       end
 
