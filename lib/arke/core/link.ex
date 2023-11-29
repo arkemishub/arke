@@ -25,7 +25,6 @@ defmodule Arke.Core.Link do
     parameter(:type, :string, required: true, persistence: "table_column")
 
     parameter(:metadata, :dict,
-      is_primary: true,
       default_dict: %{},
       persistence: "table_column"
     )
