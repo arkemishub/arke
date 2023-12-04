@@ -16,6 +16,8 @@ defmodule Arke.Boundary.ArkeManager do
   @moduledoc """
              This module manage the gen servers for the element specified in `Arke.Core.Arke`
              """ && false
+
+  alias Arke.Utils.ErrorGenerator, as: Error
   use Arke.Boundary.UnitManager
 
   manager_id(:arke)
@@ -85,8 +87,11 @@ defmodule Arke.Boundary.ArkeManager do
 
   def update_parameter(unit_id, parameter_id, project, metadata) do
     case get(unit_id, project) do
+      nil ->
+        Error.create(:unit, "unit #{unit_id} not found")
+
       {:error, msg} ->
-        {:error, msg}
+        Error.create(:unit, msg)
 
       %{id: id, data: data} = arke ->
         parameters =
@@ -147,10 +152,10 @@ defmodule Arke.Boundary.ArkeManager do
   defp init_parameter(project, id, metadata) do
     case Arke.Boundary.ParameterManager.get(id, project) do
       nil ->
-        {:error, "parameter #{id} not found"}
+        Error.create(:parameter, "parameter #{id} not found")
 
       {:error, msg} ->
-        {:error, msg}
+        Error.create(:parameter, msg)
 
       parameter ->
         parameter = handle_init_p(id, parameter, metadata)
