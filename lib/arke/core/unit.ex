@@ -169,11 +169,15 @@ defmodule Arke.Core.Unit do
   def update(unit, args) when is_list(args), do: update(unit, Enum.into(args, %{}))
   def update(unit, %{metadata: nil} = args), do: update(unit, Map.replace(args, :metadata, %{}))
 
+  def update(unit, %{metadata: metadata} = args) when is_list(metadata),
+    do: update(unit, Map.replace(args, :metadata, Enum.into(metadata, %{})))
+
   def update(%{data: data, arke_id: arke_id} = unit, args) do
     {id, args} = Map.pop(args, :id, unit.id)
     {link, args} = Map.pop(args, :link, unit.link)
-    {metadata, args} = Map.pop(args, :metadata, %{})
-    metadata = Map.merge(unit.metadata, metadata)
+    {metadata, args} = Map.pop(args, :metadata, unit.metadata)
+    # todo: remove arke_system default once every arke is set on db
+    metadata = Map.put(metadata, :project, Map.get(unit.metadata, :project, :arke_system))
     {inserted_at, args} = Map.pop(args, :inserted_at, unit.inserted_at)
     {updated_at, args} = Map.pop(args, :updated_at, unit.updated_at)
     {module, args} = Map.pop(args, :__module__, unit.__module__)
