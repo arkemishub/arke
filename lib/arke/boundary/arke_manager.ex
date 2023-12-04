@@ -67,19 +67,37 @@ defmodule Arke.Boundary.ArkeManager do
 
       %{id: id, data: data} ->
         with %{id: id, metadata: metadata} <-
-          Enum.find(data.parameters, {:error, "parameter id not found"}, fn f ->
-            f.id == parameter_id
-          end),
-        %Unit{} = parameter <- init_parameter(project, id, metadata),
-        do: parameter,
-        else:
-          ({:error, msg} -> nil)
+               Enum.find(data.parameters, {:error, "parameter id not found"}, fn f ->
+                 f.id == parameter_id
+               end),
+             %Unit{} = parameter <- init_parameter(project, id, metadata),
+             do: parameter,
+             else: ({:error, msg} -> nil)
 
-            #  GenServer.call(via({id, project}), {:get_parameter, parameter_id})
+        #  GenServer.call(via({id, project}), {:get_parameter, parameter_id})
     end
   end
 
   def get_parameter(unit_id, project, %Unit{} = parameter), do: parameter
+
+  def update_parameter(unit_id, parameter_id, project, metadata) when is_binary(parameter_id),
+    do: update_parameter(unit_id, String.to_existing_atom(parameter_id), project, metadata)
+
+  def update_parameter(unit_id, parameter_id, project, metadata) do
+    case get(unit_id, project) do
+      {:error, msg} ->
+        {:error, msg}
+
+      %{id: id, data: data} = arke ->
+        parameters =
+          Enum.map(data.parameters, fn x ->
+            if x.id == parameter_id, do: Map.put(x, :metadata, metadata), else: x
+          end)
+
+        new_unit = Unit.update(arke, parameters: parameters)
+        update(unit_id, project, new_unit)
+    end
+  end
 
   # Call get link
   # def handle_call({:get_parameter, parameter_id}, _from, {%{data: data} = unit, project})
@@ -128,7 +146,9 @@ defmodule Arke.Boundary.ArkeManager do
 
   defp init_parameter(project, id, metadata) do
     case Arke.Boundary.ParameterManager.get(id, project) do
-      nil -> {:error, "parameter #{id} not found"}
+      nil ->
+        {:error, "parameter #{id} not found"}
+
       {:error, msg} ->
         {:error, msg}
 
