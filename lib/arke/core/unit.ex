@@ -66,8 +66,9 @@ defmodule Arke.Core.Unit do
   def load(arke, opts, persistence_fn) when is_list(opts),
     do: load(arke, Enum.into(opts, %{}), persistence_fn)
 
-  def load(%{metadata: %{project: project}} = arke, %{metadata: nil} = opts, persistence_fn),
-    do: load(arke, Map.replace(opts, :metadata, %{project: project}), persistence_fn)
+  def load(%{metadata: %{project: project}} = arke, %{metadata: nil} = opts, persistence_fn) do
+    load(arke, Map.put(opts, :metadata, %{project: project}), persistence_fn)
+  end
 
   def load(arke, opts, persistence_fn) do
     {id, opts} = Map.pop(opts, :id, nil)

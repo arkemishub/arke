@@ -27,3 +27,4 @@ arke-*.tar
 /tmp/
 .elixir_ls/
 .idea/
+.idea

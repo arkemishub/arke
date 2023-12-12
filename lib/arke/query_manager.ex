@@ -140,7 +140,6 @@ defmodule Arke.QueryManager do
   @spec create(project :: atom(), arke :: Arke.t(), args :: list()) :: func_return()
   def create(project, arke, args) do
     persistence_fn = @persistence[:arke_postgres][:create]
-
     with %Unit{} = unit <- Unit.load(arke, args, :create),
          {:ok, unit} <- Validator.validate(unit, :create, project),
          {:ok, unit} <- ArkeManager.call_func(arke, :before_create, [arke, unit]),
@@ -252,16 +251,16 @@ defmodule Arke.QueryManager do
 
   """
   @spec update(Unit.t(), args :: list()) :: func_return()
-  def update(%{arke_id: arke_id, metadata: %{project: project}, data: data} = unit, args) do
+  def update(%{arke_id: arke_id, metadata: %{project: project}, data: data} = current_unit, args) do
     persistence_fn = @persistence[:arke_postgres][:update]
     arke = ArkeManager.get(arke_id, project)
 
-    with %Unit{} = unit <- Unit.update(unit, args),
+    with %Unit{} = unit <- Unit.update(current_unit, args),
          {:ok, unit} <- Validator.validate(unit, :update, project),
          {:ok, unit} <- ArkeManager.call_func(arke, :before_update, [arke, unit]),
          {:ok, unit} <- handle_link_parameters_unit(arke, unit),
          {:ok, unit} <- persistence_fn.(project, unit),
-         {:ok, unit} <- ArkeManager.call_func(arke, :on_update, [arke, unit]),
+         {:ok, unit} <- ArkeManager.call_func(arke, :on_update, [arke, current_unit, unit]),
          {:ok, unit} <- handle_link_parameters(unit, data),
          do: {:ok, unit},
          else: ({:error, errors} -> {:error, errors})
