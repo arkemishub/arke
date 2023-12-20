@@ -1,0 +1,14 @@
+{ "group": [
+  {
+    "id": "parameter",
+    "label": "Parameter",
+    "description": "Parameter Group",
+    "arke_list": []
+  },
+  {
+    "id": "arke_or_group",
+    "label": "Arke or Group",
+    "description": "Arke or Group",
+    "arke_list": []
+  }
+]}
