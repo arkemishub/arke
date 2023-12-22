@@ -679,7 +679,7 @@ defmodule Arke do
           %{
             default_link: nil,
             multiple: false,
-            arke_or_group_id: nil,
+            arke_or_group_id: "arke",
             depth: 0,
             connection_type: "link",
             filter_keys: ["arke_id", "id"],

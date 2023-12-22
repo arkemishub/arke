@@ -159,6 +159,8 @@ defmodule Arke.QueryManager do
          %{data: parameters} = arke,
          %{metadata: %{project: project}} = unit
        ) do
+
+
     {errors, link_units} =
       Enum.filter(ArkeManager.get_parameters(arke), fn p -> p.arke_id == :link end)
       |> Enum.reduce({[], []}, fn p, {errors, link_units} ->
@@ -286,6 +288,7 @@ defmodule Arke.QueryManager do
 
     with {:ok, unit} <- ArkeManager.call_func(arke, :before_delete, [arke, unit]),
          {:ok, nil} <- persistence_fn.(project, unit),
+         {:ok, unit} <- handle_group_call_func(arke, unit, :on_unit_delete),
          {:ok, _unit} <- ArkeManager.call_func(arke, :on_delete, [arke, unit]),
          do: {:ok, nil},
          else: ({:error, errors} -> {:error, errors})
