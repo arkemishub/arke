@@ -1,10 +1,9 @@
 {"arke": [
   {
     "id": "arke",
-    "data": {
-      "label": "Arke"
-    },
-    "parameter": [
+    
+      "label": "Arke",
+"parameters": [
       {
         "id": "label",
         "metadata": {
@@ -35,8 +34,8 @@
         "id": "parameters",
         "metadata": {
           "multiple": true,
-          "arke_or_group_id": "parameter",
-          "connection_type": "parameter",
+          "arke_or_group_id": "parameters",
+          "connection_type": "parameters",
           "direction": "child",
           "filter_keys": [
             "arke_id",
@@ -51,10 +50,10 @@
   },
   {
     "id": "arke_link",
-    "data": {
+      
       "label": "Link"
-    },
-    "parameter": [
+
+    ,"parameters": [
       {
         "id": "parent_id",
         "metadata": {
@@ -90,10 +89,9 @@
   },
   {
     "id": "integer",
-    "data": {
-      "label": "Integer"
-    },
-    "parameter": [
+    
+      "label": "Integer",
+"parameters": [
       {
         "id": "label",
         "metadata": {
@@ -176,10 +174,9 @@
   },
   {
     "id": "string",
-    "data": {
-      "label": "String"
-    },
-    "parameter": [
+    
+      "label": "String",
+"parameters": [
       {
         "id": "label",
         "metadata": {
@@ -274,10 +271,9 @@
   },
   {
     "id": "dict",
-    "data": {
-      "label": "Dict"
-    },
-    "parameter": [
+    
+      "label": "Dict",
+"parameters": [
       {
         "id": "label",
         "metadata": {
@@ -336,10 +332,9 @@
   },
   {
     "id": "date",
-    "data": {
-      "label": "Date"
-    },
-    "parameter": [
+    
+      "label": "Date",
+"parameters": [
       {
         "id": "label",
         "metadata": {
@@ -398,10 +393,9 @@
   },
   {
     "id": "datetime",
-    "data": {
-      "label": "Datetime"
-    },
-    "parameter": [
+    
+      "label": "Datetime",
+"parameters": [
       {
         "id": "label",
         "metadata": {
@@ -460,10 +454,9 @@
   },
   {
     "id": "dynamic",
-    "data": {
-      "label": "Dynamic"
-    },
-    "parameter": [
+    
+      "label": "Dynamic",
+"parameters": [
       {
         "id": "label",
         "metadata": {
@@ -522,10 +515,9 @@
   },
   {
     "id": "binary",
-    "data": {
-      "label": "Binary"
-    },
-    "parameter": [
+    
+      "label": "Binary",
+"parameters": [
       {
         "id": "label",
         "metadata": {
@@ -584,10 +576,9 @@
   },
   {
     "id": "float",
-    "data": {
-      "label": "Float"
-    },
-    "parameter": [
+    
+      "label": "Float",
+"parameters": [
       {
         "id": "label",
         "metadata": {
@@ -670,10 +661,9 @@
   },
   {
     "id": "boolean",
-    "data": {
-      "label": "Boolean"
-    },
-    "parameter": [
+    
+      "label": "Boolean",
+"parameters": [
       {
         "id": "label",
         "metadata": {
@@ -732,10 +722,9 @@
   },
   {
     "id": "list",
-    "data": {
-      "label": "List"
-    },
-    "parameter": [
+    
+      "label": "List",
+"parameters": [
       {
         "id": "label",
         "metadata": {
@@ -794,10 +783,9 @@
   },
   {
     "id": "time",
-    "data": {
-      "label": "Time"
-    },
-    "parameter": [
+    
+      "label": "Time",
+"parameters": [
       {
         "id": "label",
         "metadata": {
@@ -856,10 +844,9 @@
   },
   {
     "id": "link",
-    "data": {
-      "label": "Link"
-    },
-    "parameter": [
+    
+      "label": "Link",
+"parameters": [
       {
         "id": "label",
         "metadata": {
@@ -936,16 +923,21 @@
         }
       },
       {
-        "id": "direction"
+        "id": "direction",
+        "metadata": {
+          "default_string": [
+            "id",
+            "arke_id"
+          ]
+        }
       }
     ]
   },
   {
     "id": "group",
-    "data": {
-      "label": "Group"
-    },
-    "parameter": [
+    
+      "label": "Group",
+"parameters": [
       {
         "id": "label",
         "metadata": {
@@ -972,10 +964,9 @@
   },
   {
     "id": "arke_file",
-    "data": {
-      "label": "Arke File"
-    },
-    "parameter": [
+    
+      "label": "Arke File",
+"parameters": [
       {
         "id": "name",
         "metadata": {
@@ -1022,10 +1013,8 @@
   },
   {
     "id": "arke_project",
-    "data": {
-      "label": "Project"
-    },
-    "parameter": [
+      "label": "Project",
+"parameters": [
       {
         "id": "label",
         "metadata": {

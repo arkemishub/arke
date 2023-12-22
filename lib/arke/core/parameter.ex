@@ -122,7 +122,7 @@ defmodule Arke.Core.Parameter.String do
   require Parameter
   use Arke.System
 
-  arke do
+  arke remote: true do
     Parameter.base_parameters()
     parameter(:min_length, :integer, required: false)
     parameter(:max_length, :integer, required: false)
@@ -178,7 +178,7 @@ defmodule Arke.Core.Parameter.Integer do
   require Parameter
   use Arke.System
 
-  arke do
+  arke remote: true do
     Parameter.base_parameters()
     parameter(:min, :integer, required: false)
     parameter(:max, :integer, required: false)
@@ -232,7 +232,7 @@ defmodule Arke.Core.Parameter.Float do
   require Parameter
   use Arke.System
 
-  arke do
+  arke remote: true do
     Parameter.base_parameters()
     parameter(:min, :float, required: false)
     parameter(:max, :float, required: false)
@@ -282,7 +282,7 @@ defmodule Arke.Core.Parameter.Boolean do
   require Parameter
   use Arke.System
 
-  arke do
+  arke remote: true  do
     Parameter.base_parameters()
     parameter(:default_boolean, :boolean, default_boolean: false)
   end
@@ -323,7 +323,7 @@ defmodule Arke.Core.Parameter.Dict do
   require Parameter
   use Arke.System
 
-  arke do
+  arke remote: true do
     Parameter.base_parameters()
     parameter(:default_dict, :dict, default_dict: nil)
   end
@@ -364,7 +364,7 @@ defmodule Arke.Core.Parameter.List do
   require Parameter
   use Arke.System
 
-  arke do
+  arke remote: true do
     Parameter.base_parameters()
     parameter(:default_list, :list, default_list: nil)
   end
@@ -413,7 +413,7 @@ defmodule Arke.Core.Parameter.Date do
   require Parameter
   use Arke.System
 
-  arke do
+  arke remote: true do
     Parameter.base_parameters()
     parameter(:default_date, :date, default_date: nil)
   end
@@ -461,7 +461,7 @@ defmodule Arke.Core.Parameter.Time do
   require Parameter
   use Arke.System
 
-  arke do
+  arke remote: true do
     Parameter.base_parameters()
     parameter(:default_time, :time, default_time: nil)
   end
@@ -512,7 +512,7 @@ defmodule Arke.Core.Parameter.DateTime do
   require Parameter
   use Arke.System
 
-  arke id: :datetime do
+  arke id: :datetime, remote: true do
     Parameter.base_parameters()
     parameter(:default_datetime, :datetime, default_datetime: nil)
   end
@@ -553,7 +553,7 @@ defmodule Arke.Core.Parameter.Link do
   require Parameter
   use Arke.System
 
-  arke do
+  arke remote: true do
     Parameter.base_parameters()
     parameter(:multiple, :boolean, default_boolean: false)
 
@@ -599,7 +599,7 @@ defmodule Arke.Core.Parameter.Dynamic do
   require Parameter
   use Arke.System
 
-  arke do
+  arke remote: true do
     Parameter.base_parameters()
     parameter(:default_dynamic, :dynamic, default_dynamic: nil)
   end
@@ -633,7 +633,7 @@ defmodule Arke.Core.Parameter.Binary do
   require Parameter
   use Arke.System
 
-  arke do
+  arke remote: true do
     Parameter.base_parameters()
     parameter(:default_binary, :binary, default_binary: nil)
   end

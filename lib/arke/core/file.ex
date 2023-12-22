@@ -21,7 +21,7 @@ defmodule Arke.Core.File do
   alias Arke.Utils.Gcp
   alias Arke.Boundary.ArkeManager
 
-  arke id: :arke_file, label: "Arke file" do
+  arke id: :arke_file, label: "Arke file", remote: true do
     parameter(:name, :string, required: true)
     parameter(:path, :string, required: true)
     parameter(:provider, :string, values: ["local", "gcloud", "aws"], default: "gcloud")

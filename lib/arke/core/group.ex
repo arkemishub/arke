@@ -21,7 +21,7 @@ defmodule Arke.Core.Group do
   alias Arke.Boundary.GroupManager
   alias Arke.Core.Unit
 
-  arke do
+  arke remote: true do
     group(:arke_or_group)
 
     parameter(:label, :string, required: false)

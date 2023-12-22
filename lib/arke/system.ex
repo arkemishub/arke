@@ -87,7 +87,7 @@ defmodule Arke.System do
 
 
   ## Example
-      arke do
+      arke remote: true do
         parameter :custom_parameter, :string, required: true, unique: true
         parameter :custom_parameter2, :string, required: true, values: ["value1", "value2"]
         parameter :custom_parameter3, :integer, required: true, values: [%{label: "option 1", value: 1},%{label: "option 2", value: 2}]
