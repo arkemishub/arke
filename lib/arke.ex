@@ -21,33 +21,33 @@ defmodule Arke do
   def init() do
     base_parameters()
 
-     GroupManager.create(
-      Unit.new(
-        :parameter,
-        %{label: "Parameter", description: "Parameter Group", arke_list: []},
-        :group,
-        nil,
-        %{},
-        nil,
-        nil,
-        Arke.System.BaseGroup
-      ),
-      :arke_system
-    )
+#     GroupManager.create(
+#      Unit.new(
+#        :parameter,
+#        %{label: "Parameter", description: "Parameter Group", arke_list: []},
+#        :group,
+#        nil,
+#        %{},
+#        nil,
+#        nil,
+#        Arke.System.BaseGroup
+#      ),
+#      :arke_system
+#    )
 
-    GroupManager.create(
-      Unit.new(
-        :arke_or_group,
-        %{label: "Arke or Group", description: "Arke or Group", arke_list: []},
-        :group,
-        nil,
-        %{},
-        nil,
-        nil,
-        Arke.System.BaseGroup
-      ),
-      :arke_system
-    )
+#    GroupManager.create(
+#      Unit.new(
+#        :arke_or_group,
+#        %{label: "Arke or Group", description: "Arke or Group", arke_list: []},
+#        :group,
+#        nil,
+#        %{},
+#        nil,
+#        nil,
+#        Arke.System.BaseGroup
+#      ),
+#      :arke_system
+#    )
 
     arke_modules = get_arke_modules()
   end

@@ -186,10 +186,6 @@
     "type": "link",
     "depth": 0,
     "direction": "child",
-    "filter_keys": [
-      "arke_id",
-      "id"
-    ],
     "format": "attribute",
     "helper_text": "Default",
     "id": "default_link",
@@ -207,10 +203,6 @@
     "type": "link",
     "depth": 0,
     "direction": "child",
-    "filter_keys": [
-      "arke_id",
-      "id"
-    ],
     "format": "attribute",
     "helper_text": "Arke List",
     "id": "arke_list",
@@ -244,10 +236,6 @@
     "type": "link",
     "depth": 0,
     "direction": "child",
-    "filter_keys": [
-      "id",
-      "label"
-    ],
     "format": "attribute",
     "helper_text": "Arke or Group id",
     "id": "arke_or_group_id",
@@ -617,24 +605,6 @@
     "label": "Min Length",
     "max_length": null,
     "min_length": 2,
-    "multiple": false,
-    "nullable": true,
-    "persistence": "arke_parameter",
-    "required": false,
-    "strip": false,
-    "unique": false,
-    "values": null
-  },
-  {
-    "default_string": null,
-    "type": "string",
-    "format": "attribute",
-    "helper_text": "Default",
-    "id": "default_string",
-    "is_primary": false,
-    "label": "Default",
-    "max_length": null,
-    "min_length": null,
     "multiple": false,
     "nullable": true,
     "persistence": "arke_parameter",

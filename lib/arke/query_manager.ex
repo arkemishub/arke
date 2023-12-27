@@ -140,6 +140,7 @@ defmodule Arke.QueryManager do
   @spec create(project :: atom(), arke :: Arke.t(), args :: list()) :: func_return()
   def create(project, arke, args) do
     persistence_fn = @persistence[:arke_postgres][:create]
+    IO.inspect({arke.id, arke.arke_id}, label: "arke123")
     with %Unit{} = unit <- Unit.load(arke, args, :create),
          {:ok, unit} <- Validator.validate(unit, :create, project),
          {:ok, unit} <- ArkeManager.call_func(arke, :before_create, [arke, unit]),
@@ -220,9 +221,11 @@ defmodule Arke.QueryManager do
   defp handle_create_on_link_parameters_unit(_, _, parameter, _, value),
     do: {:ok, parameter, value}
 
-  defp handle_group_call_func(arke, unit, func) do
+  def handle_group_call_func(arke, unit, func) do
+
     GroupManager.get_groups_by_arke(arke)
     |> Enum.reduce_while(unit, fn group, new_unit ->
+      IO.inspect(group, label: "gruppsss123")
       with {:ok, new_unit} <- GroupManager.call_func(group, func, [arke, new_unit]),
            do: {:cont, new_unit},
            else: ({:error, errors} -> {:halt, {:error, errors}})
@@ -230,8 +233,8 @@ defmodule Arke.QueryManager do
     |> check_group_manager_functions_errors()
   end
 
-  defp check_group_manager_functions_errors({:error, errors} = _), do: {:error, errors}
-  defp check_group_manager_functions_errors(unit), do: {:ok, unit}
+  def check_group_manager_functions_errors({:error, errors} = _), do: {:error, errors}
+  def check_group_manager_functions_errors(unit), do: {:ok, unit}
 
   @doc """
   Function to update an element

@@ -16,6 +16,20 @@ defmodule Mix.Tasks.Arke.SeedProject do
   * `--persistence` - The persistence to use. One of:
       * `arke_postgres` - via https://github.com/elixir-ecto/postgrex (Default)
   """
+  #  parameter.json
+  # add to:  arke_list,default_link {
+  ##          "id": "filter_keys",
+  ##          "metadata": {
+  ##               "default_string": ["id","arke_id"]
+  ##          }
+  ##        },
+  #  add to:  arke_or_group_id {
+  ##          "id": "filter_keys",
+  ##          "metadata": {
+  ##               "default_string": ["id","label"]
+  ##          }
+  ##        },
+
   use Mix.Task
   alias Arke.QueryManager
   alias Arke.LinkManager
@@ -141,7 +155,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
       end
       IO.inspect("start parameter")
       error_parameter = handle_parameter(parameter_list, project,[])
-      IO.inspect("end parameter")
+      IO.inspect(label: "end parameter")
       IO.inspect("start arke")
       error_arke = handle_arke(arke_list, project,[])
       IO.inspect("end arke")
@@ -152,7 +166,6 @@ defmodule Mix.Tasks.Arke.SeedProject do
       error_link = handle_link(link_list, project,[])
       IO.inspect("end link")
 
-      IO.inspect(error_parameter, label: "error_parameter123")
       IO.inspect(error_arke, label: "error_arke123")
       IO.inspect(error_group, label: "error_group123")
       IO.inspect(error_link, label: "error_link123")
@@ -201,7 +214,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
   defp handle_manager([data | t],project,:arke,error) do
     {flatten_data,other} = Map.pop(data,:data,%{})
     updated_data = Map.merge(flatten_data,other)
-                   |> Map.put(:type,"arke")
+                   |> Map.put(:type,Map.get(data,:type,"arke"))
                    |> Map.put_new(:active,true)
     final_data = Map.replace(updated_data,:parameters,parse_arke_parameter(updated_data,project))
     module = get_module(final_data)
@@ -234,7 +247,6 @@ defmodule Mix.Tasks.Arke.SeedProject do
                                     project
                                   ) do
                                %Unit{} = unit ->
-                                 IO.inspect(unit, label: "manager1234")
                                  error
                                _ -> [Error.create(:manager, "cannot start manager for: `#{id}`")| error]
                              end
@@ -307,20 +319,21 @@ defmodule Mix.Tasks.Arke.SeedProject do
          project,
          error
        ) do
-    parameter = Map.pop(current, :parameter, [])
+    {parameter,new_data} = Map.pop(current, :parameters, [])
+
     #aggiungere try do block
     with nil <- QueryManager.get_by(id: id, project: project, arke_id: "arke"),
-         %Unit{} = model <- ArkeManager.get(String.to_atom(id), project),
-         {:ok, unit} <- QueryManager.create(project, model, current),
-         {:ok, _} <- link_parameter(parameter, unit, project) do
-      handle_arke(t, project, error)
+         %Unit{} = model <- ArkeManager.get(:arke, project),
+         {:ok, unit} <- QueryManager.create(project, model, new_data),
+         link_parameter_error <- link_parameter(parameter, unit, project) do
+      handle_arke(t, project,  [%{parameter_error: link_parameter_error}|error])
 
     else
       nil -> IO.inspect("primo errore arke")
         handle_arke(t, project, [Error.create(:arke, "manager does not exists for: `#{id}`") | error])
-      %Unit{} -> IO.inspect("secondo errore arke")
+      %Unit{}=unit -> IO.inspect(unit,label: "secondo errore arke")
                  handle_arke(t, project, [Error.create(:arke, "Record already exists in db for: `#{id}`") | error])
-      {:error, create_error} -> IO.inspect("terzp errore arke")
+      {:error, create_error} -> IO.inspect({current.id, create_error}, label: "terzo errore arke")
                                 handle_arke(t, project, [create_error | error])
     end
   end
@@ -331,18 +344,19 @@ defmodule Mix.Tasks.Arke.SeedProject do
          [%{id: id, label: label} = current | t],
          project,error
        ) do
+
     with nil <- QueryManager.get_by(id: id, project: project, arke_id: :group),
-         %Unit{} = model <- GroupManager.get(:group, project),
+         %Unit{} = model <- ArkeManager.get(:group, project),
          {:ok, unit} <- QueryManager.create(project, model, current),
-         {:ok, error} <- add_arke_to_group(unit, Map.get(current, :arke_list, []), project) do
+         error_group <- add_arke_to_group(unit, Map.get(current, :arke_list, []), project) do
       handle_group(t, project, error)
     else
-      # non esiste manager
-      nil -> {:error, nil}
-      # esiste record a db
-      %Unit{} -> {:error, nil}
-      # errore durante la creazione, gestire di conseguenza
-      _ -> {:error, nil}
+      nil -> IO.inspect("primo errore group")
+             handle_group(t, project, [Error.create(:arke, "manager does not exists for: `#{id}`") | error])
+      %Unit{}=unit -> IO.inspect(unit,label: "secondo errore group")
+                      handle_group(t, project, [Error.create(:arke, "Record already exists in db for: `#{id}`") | error])
+      {:error, create_error} -> IO.inspect({current.id, create_error}, label: "terzo errore group")
+                                handle_group(t, project, [create_error | error])
     end
   end
 
@@ -353,6 +367,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
          project,
          error
        ) do
+
     case LinkManager.add_node(
         project,
         parent,
@@ -381,10 +396,10 @@ defmodule Mix.Tasks.Arke.SeedProject do
       Enum.reduce(p_list, [], fn parameter, acc ->
         [
           %{
-            "child" => Map.get(parameter, :id),
-            "parent" => to_string(arke.id),
-            "metadata" => Map.get(parameter, :metadata, %{}),
-            "type" => "parameter"
+            child: Map.get(parameter, :id),
+            parent: to_string(arke.id),
+            metadata: Map.get(parameter, :metadata, %{}),
+            type: "parameter"
           }
           | acc
         ]
@@ -398,10 +413,10 @@ defmodule Mix.Tasks.Arke.SeedProject do
       Enum.reduce(arke_list, [], fn arke, acc ->
         [
           %{
-            "parent" => to_string(group.id),
-            "child" => to_string(Map.get(arke, :id)),
-            "metadata" => Map.get(arke, :metadata, %{}),
-            "type" => "group"
+            parent: to_string(group.id),
+            child: to_string(Map.get(arke, :id)),
+            metadata: Map.get(arke, :metadata, %{}),
+            type: "group"
           }
           | acc
         ]
@@ -413,7 +428,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
   defp parse_arke_parameter(data,project) do
 
    Map.get(data,:parameters) |> Enum.reduce([], fn param,acc ->
-    # todo: fare controllo per cui se esce tbd (sarà poi nil) scrivere sul file che la chiave manca
+    # todo: fare controllo per cui se esce tbd (sarà poi nil) scrivere sul file che la chiave  id manca
       converted = Map.update(param,:id, "tbd", &String.to_atom(&1))
       id = converted[:id]
       arke = ParameterManager.get(id,project)

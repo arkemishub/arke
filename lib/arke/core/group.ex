@@ -36,7 +36,7 @@ defmodule Arke.Core.Group do
     )
   end
 
-  def on_create(_, unit) do
+  def on_create(arke, unit) do
     group = Unit.update(unit, arke_list: [])
     GroupManager.create(group)
     {:ok, unit}

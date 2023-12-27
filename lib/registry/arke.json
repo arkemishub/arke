@@ -50,17 +50,16 @@
   },
   {
     "id": "arke_link",
-      
-      "label": "Link"
-
-    ,"parameters": [
+    "label": "Link",
+    "type": "table",
+    "parameters": [
       {
         "id": "parent_id",
         "metadata": {
           "is_primary": true,
-          "required": true
-        },
-        "persistence": "table_column"
+          "required": true,
+          "persistence": "table_column"
+        }
       },
       {
         "id": "child_id",
@@ -783,9 +782,8 @@
   },
   {
     "id": "time",
-    
       "label": "Time",
-"parameters": [
+      "parameters": [
       {
         "id": "label",
         "metadata": {
@@ -844,9 +842,8 @@
   },
   {
     "id": "link",
-    
-      "label": "Link",
-"parameters": [
+    "label": "Link",
+    "parameters": [
       {
         "id": "label",
         "metadata": {
@@ -916,6 +913,7 @@
       {
         "id": "filter_keys",
         "metadata": {
+          "multiple": true,
           "default_string": [
             "id",
             "arke_id"
@@ -925,10 +923,7 @@
       {
         "id": "direction",
         "metadata": {
-          "default_string": [
-            "id",
-            "arke_id"
-          ]
+          "default_string": "child"
         }
       }
     ]
