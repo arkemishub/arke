@@ -85,6 +85,8 @@ defmodule Arke.DatetimeHandler do
       {:error, _} -> {:error, @datetime_msg}
     end
   end
+  def format(value, format \\ "{ISO:Extended}"), do:  Timex.format(value,format)
+  def format!(value, format \\ "{ISO:Extended}"), do:  Timex.format!(value,format)
 
   def shift_datetime(datetime, opts) do
     case parse_datetime(datetime) do

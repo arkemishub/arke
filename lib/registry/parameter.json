@@ -227,6 +227,7 @@
     "multiple": false,
     "nullable": true,
     "persistence": "arke_parameter",
+    "arke_or_group_id": "parameter",
     "required": false
   },
   {
@@ -585,24 +586,6 @@
     "id": "helper_text",
     "is_primary": false,
     "label": "Helper text",
-    "max_length": null,
-    "min_length": 2,
-    "multiple": false,
-    "nullable": true,
-    "persistence": "arke_parameter",
-    "required": false,
-    "strip": false,
-    "unique": false,
-    "values": null
-  },
-  {
-    "default_string": null,
-    "type": "string",
-    "format": "attribute",
-    "helper_text": "Min Length",
-    "id": "min_length",
-    "is_primary": false,
-    "label": "Min Length",
     "max_length": null,
     "min_length": 2,
     "multiple": false,

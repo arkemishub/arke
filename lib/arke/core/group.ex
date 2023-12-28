@@ -20,7 +20,6 @@ defmodule Arke.Core.Group do
   use Arke.System
   alias Arke.Boundary.GroupManager
   alias Arke.Core.Unit
-  require IEx
 
   arke remote: true do
     group(:arke_or_group)

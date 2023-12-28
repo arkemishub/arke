@@ -162,6 +162,7 @@ defmodule Arke.QueryManager do
     {errors, link_units} =
       Enum.filter(ArkeManager.get_parameters(arke), fn p -> p.arke_id == :link end)
       |> Enum.reduce({[], []}, fn p, {errors, link_units} ->
+
         arke = ArkeManager.get(String.to_existing_atom(p.data.arke_or_group_id), project)
 
         case handle_create_on_link_parameters_unit(
