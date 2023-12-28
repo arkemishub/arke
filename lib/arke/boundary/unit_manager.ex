@@ -121,10 +121,9 @@ defmodule Arke.Boundary.UnitManager do
       defp exec_call_func(unit, func, opts) when is_nil(unit),
         do: get(:arke, :arke_system) |> exec_call_func(func, opts)
 
-      defp exec_call_func(%{__module__: module} = unit, func, opts) when is_nil(module)
-        do IO.inspect(func,label: "bellafra")
+      defp exec_call_func(%{__module__: module} = unit, func, opts) when is_nil(module), do:
            {:error, "No Module"}
-        end
+
 
       defp exec_call_func(
              %{id: id, metadata: %{project: project}, __module__: module} = unit,

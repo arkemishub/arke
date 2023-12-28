@@ -153,18 +153,10 @@ defmodule Mix.Tasks.Arke.SeedProject do
         error_arke_manager = handle_manager(Map.get(core_data,:arke, []),project,:arke)
         error_group_manager = handle_manager(Map.get(core_data,:group, []),project,:group)
       end
-      IO.inspect("start parameter")
       error_parameter = handle_parameter(parameter_list, project,[])
-      IO.inspect(label: "end parameter")
-      IO.inspect("start arke")
       error_arke = handle_arke(arke_list, project,[])
-      IO.inspect("end arke")
-      IO.inspect("start group")
       error_group = handle_group(group_list, project,[])
-      IO.inspect("end group")
-      IO.inspect("start link")
       error_link = handle_link(link_list, project,[])
-      IO.inspect("end link")
 
       IO.inspect(error_arke, label: "error_arke123")
       IO.inspect(error_group, label: "error_group123")
@@ -297,7 +289,8 @@ defmodule Mix.Tasks.Arke.SeedProject do
       nil ->  handle_parameter(t, project, [Error.create(:parameter, "manager does not exists for: `#{id}`") | error])
       %Unit{} -> handle_parameter(t, project, [Error.create(:parameter, "Record already exists in db for: `#{id}`") | error])
       {:error, create_error} -> handle_parameter(t, project, [create_error | error])
-        err -> IO.inspect(err,label: "quarto error")
+        err -> IO.inspect(err)
+               handle_parameter(t, project, [create_error | error])
     end
     rescue
       _ ->  handle_parameter(t, project, [Error.create(:parameter, "Something went wrong for: `#{id}`") | error])
@@ -329,11 +322,11 @@ defmodule Mix.Tasks.Arke.SeedProject do
       handle_arke(t, project,  [%{parameter_error: link_parameter_error}|error])
 
     else
-      nil -> IO.inspect("primo errore arke")
+      nil ->
         handle_arke(t, project, [Error.create(:arke, "manager does not exists for: `#{id}`") | error])
-      %Unit{}=unit -> IO.inspect(unit,label: "secondo errore arke")
+      %Unit{}=unit ->
                  handle_arke(t, project, [Error.create(:arke, "Record already exists in db for: `#{id}`") | error])
-      {:error, create_error} -> IO.inspect({current.id, create_error}, label: "terzo errore arke")
+      {:error, create_error} ->
                                 handle_arke(t, project, [create_error | error])
     end
   end
@@ -344,18 +337,18 @@ defmodule Mix.Tasks.Arke.SeedProject do
          [%{id: id, label: label} = current | t],
          project,error
        ) do
-
+    new_data = Map.put(current,:__module__, Arke.System.BaseGroup)
     with nil <- QueryManager.get_by(id: id, project: project, arke_id: :group),
          %Unit{} = model <- ArkeManager.get(:group, project),
          {:ok, unit} <- QueryManager.create(project, model, current),
-         error_group <- add_arke_to_group(unit, Map.get(current, :arke_list, []), project) do
+         error_group <- add_arke_to_group(unit, project) do
       handle_group(t, project, error)
     else
-      nil -> IO.inspect("primo errore group")
+      nil ->
              handle_group(t, project, [Error.create(:arke, "manager does not exists for: `#{id}`") | error])
-      %Unit{}=unit -> IO.inspect(unit,label: "secondo errore group")
+      %Unit{}=unit ->
                       handle_group(t, project, [Error.create(:arke, "Record already exists in db for: `#{id}`") | error])
-      {:error, create_error} -> IO.inspect({current.id, create_error}, label: "terzo errore group")
+      {:error, create_error} ->
                                 handle_group(t, project, [create_error | error])
     end
   end
@@ -408,7 +401,8 @@ defmodule Mix.Tasks.Arke.SeedProject do
     handle_link(param_link, project, [])
   end
 
-  defp add_arke_to_group(arke_list, group, project) do
+  defp add_arke_to_group(group, project) do
+    arke_list = Map.get(group, :arke_list, [])
     group_link =
       Enum.reduce(arke_list, [], fn arke, acc ->
         [

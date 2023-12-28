@@ -163,7 +163,6 @@ defmodule Arke.Boundary.ArkeManager do
   end
 
   defp handle_init_p(id, nil, metadata) do
-    IO.inspect({id, metadata})
     nil
   end
 

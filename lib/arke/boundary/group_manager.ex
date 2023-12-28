@@ -18,8 +18,16 @@ defmodule Arke.Boundary.GroupManager do
   alias Arke.Utils.ErrorGenerator, as: Error
 
   manager_id(:group)
-  # set_registry_name(:group_registry)
-  # set_supervisor_name(:group_supervisor)
+
+  defp check_module(%{__module__: nil} = unit),
+       do: Unit.update(unit, __module__: Arke.System.BaseGroup)
+
+  defp check_module(unit), do: unit
+
+  def before_create(%{id: id, data: data, metadata: unit_metadata} = unit, project) do
+    unit = check_module(unit)
+    {unit, project}
+  end
 
   def get_arke_list(%{data: data, metadata: %{project: project}} = unit) do
     Enum.reduce(data.arke_list, [], fn %{id: arke_id, metadata: arke_metadata} = _,

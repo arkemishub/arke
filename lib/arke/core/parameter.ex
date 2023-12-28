@@ -54,6 +54,7 @@ defmodule Arke.Core.Parameter do
        Macro defining a shared struct of parameter used across Arkes
        """ && false
 
+
   defmacro base_parameters() do
     quote do
       group(:parameter)
@@ -69,32 +70,6 @@ defmodule Arke.Core.Parameter do
     end
   end
 
-  #  @doc """
-  #  Create new parameter by passing the type and the options to assign
-  #
-  #  ## Parameters
-  #    - opts => %{type: `ParameterType`, opts: [keyword: value] | %{map}} => opts like the `id` we want to give to the parameter we are creating.
-  #      {[type](#module-types): `ParameterType`} is required unless you want to create a generic parameter with no type
-  #
-  #
-  #  ## Examples
-  #      iex> Arke.Core.Parameter.new(%{type: :string, opts: [id: "test"]})
-  #
-  #  ## Return
-  #      %Arke.Core.Parameter.'ParameterType'{}
-  #
-  #  """
-  #  @spec new(arg1 :: %{type: atom(), opts: list(parameter_struct())}) :: parameter_struct()
-  #  def new(%{type: :string, opts: opts} = _), do: Parameter.String.new([{:type, :string} | opts])
-  #  def new(%{type: :atom, opts: opts} = _), do: Parameter.String.new([{:type, :string} | opts])
-  #  def new(%{type: :integer, opts: opts} = _), do: Parameter.Integer.new([{:type, :integer} | opts])
-  #  def new(%{type: :float, opts: opts} = _), do: Parameter.Float.new([{:type, :float} | opts])
-  #  def new(%{type: :boolean, opts: opts} = _), do: Parameter.Boolean.new([{:type, :boolean} | opts])
-  #  def new(%{type: :date, opts: opts} = _), do: Parameter.Date.new([{:type, :date} | opts])
-  #  def new(%{type: :time, opts: opts} = _), do: Parameter.Time.new([{:type, :time} | opts])
-  #  def new(%{type: :datetime, opts: opts} = _), do: Parameter.DateTime.new([{:type, :datetime} | opts])
-  #  def new(%{type: :dict, opts: opts} = _), do: Parameter.Dict.new([{:type, :dict} | opts])
-  #  def new(%{opts: opts} = _), do: Enum.into(opts, %{helper_text: ""})
 end
 
 defmodule Arke.Core.Parameter.String do
