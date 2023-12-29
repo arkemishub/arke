@@ -115,6 +115,7 @@ defmodule Arke.System do
       metadata = unquote(Macro.escape(metadata))
       caller = unquote(__CALLER__.module)
 
+      # todo: remove string to atom
       id =
         Keyword.get(
           opts,
@@ -131,7 +132,7 @@ defmodule Arke.System do
         Keyword.get(
           opts,
           :label,
-          id |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
+          id |> to_string |> String.replace("_", " ") |> String.capitalize()
         )
 
       unquote(base_parameters)

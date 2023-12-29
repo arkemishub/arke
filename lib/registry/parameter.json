@@ -180,7 +180,7 @@
     "required": false
   },
   {
-    "arke_or_group_id": null,
+    "arke_or_group_id": "arke",
     "connection_type": "link",
     "default_link": null,
     "type": "link",
@@ -243,7 +243,7 @@
     "is_primary": false,
     "label": "Arke or Group id",
     "multiple": false,
-    "nullable": true,
+    "nullable": false,
     "persistence": "arke_parameter",
     "required": true
   },
@@ -463,18 +463,6 @@
     "id": "default_binary",
     "is_primary": false,
     "label": "Default",
-    "nullable": true,
-    "persistence": "arke_parameter",
-    "required": false
-  },
-  {
-    "default_binary": null,
-    "type": "binary",
-    "format": "attribute",
-    "helper_text": "Binary",
-    "id": "binary",
-    "is_primary": false,
-    "label": "Binary",
     "nullable": true,
     "persistence": "arke_parameter",
     "required": false

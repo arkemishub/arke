@@ -59,7 +59,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
   def run(args) do
 
     case OptionParser.parse!(args, strict: @switches, aliases: @aliases) do
-      {[], opts}->
+      {[], _opts}->
         Mix.Tasks.Help.run(["arke.seed_project"])
                            {opts, []} ->
       persistence = parse_persistence!(opts[:persistence] || "arke_postgres")
@@ -89,7 +89,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
   defp parse_persistence!(ps) when ps in  @persistence_repo, do: ps
   defp parse_persistence!(ps), do: Mix.raise("Invalid persistence: `#{ps}`\nSupported persistence are: #{Enum.join(@persistence_repo, " | ")}")
 
-  defp check_file(arke_id, []), do: nil
+  defp check_file(_arke_id, []), do: nil
   defp check_file(arke_id, data) do
     {:ok, datetime} = Arke.DatetimeHandler.now(:datetime) |> Arke.DatetimeHandler.format("{ISO:Basic:Z}")
     dir_path = "log/arke_seed_project"
@@ -126,17 +126,17 @@ defmodule Mix.Tasks.Arke.SeedProject do
     check_format!(format)
     all = opts[:all] || false
 
-    # get core file to decode (arke)
+    # get core file to decode (arke) and append all other arke_deps registry files
     core_registry = arke_registry("arke", format)
     core_data = parse(core_registry)
-    core_parameter = Map.get(core_data,:parameter, [])
-    core_arke = Map.get(core_data,:arke, [])
-    core_group = Map.get(core_data,:group, [])
-    core_link = Map.get(core_data,:link, [])
 
-    #get all other arke_deps registry files
     arke_deps_registry = get_arke_deps_registry(format)
     arke_deps_data = parse(arke_deps_registry)
+    core_parameter = Map.get(core_data,:parameter, []) ++ Map.get(arke_deps_data, :parameter, [])
+    core_arke = Map.get(core_data,:arke, []) ++ Map.get(arke_deps_data, :arke, [])
+    core_group = Map.get(core_data,:group, []) ++ Map.get(arke_deps_data, :group, [])
+    core_link = Map.get(core_data,:link, []) ++ Map.get(arke_deps_data, :link, [])
+
 
 
     # todo: decidere chiave da mettere nei metadata così da identificare gli tutto ciò che viene creato e far si che da console non si possa cancellare
@@ -145,15 +145,19 @@ defmodule Mix.Tasks.Arke.SeedProject do
 
     file_list = Path.wildcard("./lib/registry/*.#{format}")
     raw_data = parse(file_list)
-    parameter_list = core_parameter ++ Map.get(raw_data, :parameter, []) ++ Map.get(arke_deps_data, :parameter, [])
-    arke_list = core_arke ++ Map.get(raw_data, :arke, []) ++ Map.get(arke_deps_data, :arke, [])
-    group_list = core_group ++ Map.get(raw_data, :group, []) ++ Map.get(arke_deps_data, :group, [])
-    link_list = core_link ++ Map.get(raw_data, :link, []) ++ Map.get(arke_deps_data, :link, [])
+    parameter_list = core_parameter ++ Map.get(raw_data, :parameter, [])
+    arke_list = core_arke ++ Map.get(raw_data, :arke, [])
+    group_list = core_group ++ Map.get(raw_data, :group, [])
+    link_list = core_link ++ Map.get(raw_data, :link, [])
 
     # start core manager before create everything
     error_parameter_manager = handle_manager(core_parameter,:arke_system,:parameter)
     error_arke_manager = handle_manager(core_arke,:arke_system,:arke)
     error_group_manager = handle_manager(core_group,:arke_system,:group)
+
+    check_file("system_parameter_manager",error_parameter_manager)
+    check_file("system_arke_manager",error_arke_manager)
+    check_file("system_group_manager",error_group_manager)
 
     input_project = String.to_atom(opts[:project]) || :arke_system
 
@@ -165,17 +169,21 @@ defmodule Mix.Tasks.Arke.SeedProject do
 
   defp write_data(input_project,project_list,_core_data,_parameter_list,_arke_list,_group_list,_link_list) when length(project_list) == 0, do: Mix.raise("No project found for `#{Enum.join(input_project, " | ")}`")
 
-  defp write_data(input_project,project_list,core_data,parameter_list,arke_list,group_list,link_list)  do
+  defp write_data(_input_project,project_list,core_data,parameter_list,arke_list,group_list,link_list)  do
     Enum.each(project_list, fn project ->
       unless to_string(project) == "arke_system" do
         error_parameter_manager = handle_manager(Map.get(core_data,:parameter, []),project,:parameter)
         error_arke_manager = handle_manager(Map.get(core_data,:arke, []),project,:arke)
         error_group_manager = handle_manager(Map.get(core_data,:group, []),project,:group)
+        check_file("#{project}_parameter_manager",error_parameter_manager)
+        check_file("#{project}_arke_manager",error_arke_manager)
+        check_file("#{project}_group_manager",error_group_manager)
       end
       error_parameter = handle_parameter(parameter_list, project,[])
       error_arke = handle_arke(arke_list, project,[])
       error_group = handle_group(group_list, project,[])
       error_link = handle_link(link_list, project,[])
+
 
       check_file("parameter",error_parameter)
       check_file("arke",error_arke)
@@ -187,7 +195,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
   defp arke_registry(package_name,format) do
     # Get arke's dependecies based on the env path.
     env_var = System.get_env()
-   core_registry_file = case Enum.find(env_var,fn  {k,_v}-> String.contains?(String.downcase(k), "ex_dep_#{package_name}_path") end) do
+    case Enum.find(env_var,fn  {k,_v}-> String.contains?(String.downcase(k), "ex_dep_#{package_name}_path") end) do
       {_package_name, local_path}  ->
         Path.wildcard("#{local_path}/lib/registry/*.#{format}")
       nil -> Path.wildcard("./**/arke*/**/registry/*.#{format}")
@@ -217,11 +225,11 @@ defmodule Mix.Tasks.Arke.SeedProject do
     end)
   end
 
-  defp handle_manager(_data,_project,_arke_id,error\\[])
+  defp handle_manager(_data,_project,_arke_id,_error\\[])
   defp handle_manager([data | t],project,:parameter,error)do
   {type, updated_data} = Map.pop(data,:type)
   updated_error = start_manager(updated_data,type,project,ParameterManager,nil)
-  handle_manager(t,project, :parameter,updated_error)
+  handle_manager(t,project, :parameter,updated_error ++ error)
   end
 
   defp handle_manager([data | t],project,:arke,error) do
@@ -232,17 +240,28 @@ defmodule Mix.Tasks.Arke.SeedProject do
     final_data = Map.replace(updated_data,:parameters,parse_arke_parameter(updated_data,project))
     module = get_module(final_data, "arke")
     updated_error = start_manager(final_data,"arke",project,ArkeManager, module)
-    handle_manager(t,project, :arke,updated_error)
+    handle_manager(t,project, :arke,updated_error ++ error)
   end
   defp handle_manager([data | t],project,:group,error)do
-    final_data=Map.put_new(data,:metadata,%{})
+    #todo: check if in arke_list we need also metadata besides the id
+    loaded_list = Enum.reduce(Map.get(data,:arke_list,[]),[], fn id,acc ->
+      case Arke.Boundary.ArkeManager.get(id, project) do
+        {:error, _msg} ->
+          [create_error("arke_list_group","no manager has been found for: `#{id}` in `#{project}`") | error]
+        arke ->
+          [arke | acc]
+      end
+
+    end)
+    final_data= Map.put_new(data,:metadata,%{})
+                |> Map.put(:arke_list,loaded_list)
     module = get_module(final_data, "group")
     updated_error = start_manager(final_data,"group",project,GroupManager,module)
-    handle_manager(t,project, :group,updated_error)
+    handle_manager(t,project, :group,updated_error ++ error)
   end
 
   defp handle_manager([],_project,_arke_id,error),do: error
-  defp start_manager(_data,_type,_project, _manager, _module,error\\[])
+  defp start_manager(_data,_type,_project, _manager, _module,_error\\[])
 
   defp start_manager(data,type,project, manager, module,error) do
     case Map.pop(data,:id,nil) do
@@ -260,7 +279,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
                                     ),
                                     project
                                   ) do
-                               %Unit{} = unit ->
+                               %Unit{} = _unit ->
                                  error
                                _ -> parse_error(create_error(:manager, "cannot start manager for: `#{id}`"), error)
                              end
@@ -297,7 +316,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
        do: handle_parameter([Map.put(current, :label, String.capitalize(id)) | t], project, error)
 
   defp handle_parameter(
-         [%{id: id, label: label, type:  type} = current | t],
+         [%{id: id, type:  type} = current | t],
          project,
          error
        ) do
@@ -312,14 +331,14 @@ defmodule Mix.Tasks.Arke.SeedProject do
       %Unit{} -> handle_parameter(t, project, parse_error(create_error(:parameter, "Record already exists in db for: `#{id}`") , error))
       {:error, err} ->
         handle_parameter(t, project, parse_error(err, error))
-        err ->
+        _err ->
                handle_parameter(t, project, parse_error(create_error(:parameter, "Something went wrong for: `#{id}`") ,error))
     end
 
 
   end
 
-  defp handle_parameter([current | t], project, error) do
+  defp handle_parameter([_current | t], project, error) do
     handle_parameter(t, project, parse_error(create_error(:parameter, "Missing parameter `id` or `type`") , error))
   end
 
@@ -329,7 +348,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
        do: handle_arke([Map.put(current, "label", String.capitalize(id)) | t], project, error)
 
   defp handle_arke(
-         [%{id: id, label: label} = current | t],
+         [%{id: id} = current | t],
          project,
          error
        ) do
@@ -349,37 +368,36 @@ defmodule Mix.Tasks.Arke.SeedProject do
     else
       nil ->
         handle_arke(t, project, parse_error(create_error(:arke, "manager does not exists for: `#{id}`"), error))
-      %Unit{}=unit ->
+      %Unit{}=_unit ->
                  handle_arke(t, project, parse_error(create_error(:arke, "Record already exists in db for: `#{id}`") , error))
       {:error, err} ->
                                 handle_arke(t, project, [err | error])
     end
   end
 
-  defp handle_arke([], project, error), do: error
+  defp handle_arke([], _project, error), do: error
 
   defp handle_group(
-         [%{id: id, label: label} = current | t],
+         [%{id: id} = current | t],
          project,error
        ) do
-    new_data = Map.put(current,:__module__, Arke.System.BaseGroup)
     with nil <- QueryManager.get_by(id: id, project: project, arke_id: :group),
          %Unit{} = model <- ArkeManager.get(:group, project),
          {:ok, unit} <- QueryManager.create(project, model, current),
          error_group <- add_arke_to_group(unit, project) do
-      handle_group(t, project, error)
+      handle_group(t, project, error ++ error_group)
     else
       nil ->
              handle_group(t, project, parse_error(create_error(:arke, "manager does not exists for: `#{id}`"), error))
-      %Unit{}=unit ->
+      %Unit{}=_unit ->
                       handle_group(t, project, parse_error(create_error(:arke, "Record already exists in db for: `#{id}`"),error))
       {:error, err} ->
                                 handle_group(t, project, [err | error])
     end
   end
 
-  defp handle_group([], project, error), do: error
-  defp handle_link(data,project, error \\ [])
+  defp handle_group([], _project, error), do: error
+  defp handle_link(_data,_project, _error \\ [])
   defp handle_link(
          [%{type: type, parent: parent, child: child} = current | t],
          project,
@@ -394,7 +412,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
         Map.get(current, :metadata, %{})
       ) do
 
-      {:ok, unit} -> handle_link(t, project, error)
+      {:ok, _unit} -> handle_link(t, project, error)
       {:error, link_error}  ->
         handle_link(
           t,
@@ -407,7 +425,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
   defp handle_link([current | t], project, error),
        do: handle_link(t, project, parse_error(create_error(:link, "invalid parameters for #{current}}"),error))
 
-  defp handle_link([], project, error), do: error
+  defp handle_link([], _project, error), do: error
 
   defp link_parameter(p_list, arke, project) do
     param_link =
@@ -477,7 +495,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
 
       arke_list ++ module_arke_list
     end)
-    Enum.find(arke_module_list,%{module: nil, arke_id: nil}, fn %{module: module, arke_id: arke_id} -> arke_id == String.to_atom(Map.get(data,:id)) end)[:module]
+    Enum.find(arke_module_list,%{module: nil, arke_id: nil}, fn %{module: _module, arke_id: arke_id} -> arke_id == String.to_atom(Map.get(data,:id)) end)[:module]
   end
   defp get_module_fn("arke"), do: :arke_from_attr
   defp get_module_fn("group"), do: :group_from_attr
