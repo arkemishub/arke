@@ -58,8 +58,7 @@ defmodule Arke.Core.Parameter do
   group id: "parameter" do
   end
 
-  def on_unit_create(_, %{metadata: %{project: project}} = unit) do
-    IO.inspect("on_unit_create123")
+  def on_unit_create(_arke, %{id: id, metadata: %{project: project}} = unit) do
     ParameterManager.create(unit)
     {:ok, unit}
   end
@@ -105,7 +104,6 @@ defmodule Arke.Core.Parameter.String do
   end
 
   def before_load(data, _persistence_fn) do
-    IO.puts("hello there123")
     args = Arke.System.BaseParameter.check_enum(:string, Map.to_list(data))
     {:ok, Enum.into(args, %{})}
   end

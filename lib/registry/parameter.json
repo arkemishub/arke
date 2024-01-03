@@ -468,6 +468,18 @@
     "required": false
   },
   {
+    "default_binary": null,
+    "type": "binary",
+    "format": "attribute",
+    "helper_text": "Binary",
+    "id": "binary",
+    "is_primary": false,
+    "label": "Binary",
+    "nullable": true,
+    "persistence": "arke_parameter",
+    "required": false
+  },
+  {
     "default_string": null,
     "type": "string",
     "format": "attribute",

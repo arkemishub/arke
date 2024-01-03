@@ -260,10 +260,12 @@ defmodule Arke.QueryManager do
     with %Unit{} = unit <- Unit.update(current_unit, args),
          {:ok, unit} <- Validator.validate(unit, :update, project),
          {:ok, unit} <- ArkeManager.call_func(arke, :before_update, [arke, unit]),
+         {:ok, unit} <- handle_group_call_func(arke, unit, :before_unit_update),
          {:ok, unit} <- handle_link_parameters_unit(arke, unit),
          {:ok, unit} <- persistence_fn.(project, unit),
          {:ok, unit} <- ArkeManager.call_func(arke, :on_update, [arke, current_unit, unit]),
          {:ok, unit} <- handle_link_parameters(unit, data),
+         {:ok, unit} <- handle_group_call_func(arke, unit, :on_unit_update),
          do: {:ok, unit},
          else: ({:error, errors} -> {:error, errors})
   end
@@ -287,8 +289,10 @@ defmodule Arke.QueryManager do
     persistence_fn = @persistence[:arke_postgres][:delete]
 
     with {:ok, unit} <- ArkeManager.call_func(arke, :before_delete, [arke, unit]),
+         {:ok, unit} <- handle_group_call_func(arke, unit, :before_unit_delete),
          {:ok, nil} <- persistence_fn.(project, unit),
          {:ok, _unit} <- ArkeManager.call_func(arke, :on_delete, [arke, unit]),
+         {:ok, unit} <- handle_group_call_func(arke, unit, :on_unit_delete),
          do: {:ok, nil},
          else: ({:error, errors} -> {:error, errors})
   end
