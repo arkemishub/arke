@@ -15,6 +15,7 @@
 defmodule Arke do
   alias Arke.Core.Unit
   alias Arke.Boundary.{ArkeManager, GroupManager, ParameterManager}
+  alias Arke.System.BaseParameter
 
   def init(), do: :ok
 
@@ -51,7 +52,8 @@ defmodule Arke do
   def handle_manager(_data,_project,_arke_id,_error\\[])
   def handle_manager([data | t],project,:parameter,error)do
     {type, updated_data} = Map.pop(data,:type)
-    updated_error = start_manager(updated_data,type,project,ParameterManager,nil)
+    final_data = BaseParameter.check_enum(type, updated_data) |> Enum.into(%{})
+    updated_error = start_manager(final_data,type,project,ParameterManager,nil)
     handle_manager(t,project, :parameter,updated_error ++ error)
   end
 

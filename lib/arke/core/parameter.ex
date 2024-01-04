@@ -41,7 +41,8 @@ defmodule Arke.Core.Parameter do
   ## Get list of attributes definable in opts during creation:
       iex> Arke.Core.Parameter.'ParameterType'.get_parameters()
   """
-  alias Arke.Core.Parameter
+  alias Arke.Boundary.ParameterManager
+
 
   @type parameter_struct() ::
           Parameter.Boolean.t()

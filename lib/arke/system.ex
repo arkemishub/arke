@@ -263,13 +263,14 @@ defmodule Arke.System.BaseParameter do
     %{type: type, opts: opts}
   end
 
+  def check_enum(type, opts) when is_binary(type), do: check_enum(String.to_atom(type),opts)
   def check_enum(type, opts) do
     enum_parameters = [:string, :integer, :float]
-
     case type in enum_parameters do
       true -> __enum_parameter__(opts, type)
       false -> opts
     end
+
   end
 
   defp parameter_option_common(opts, id) do
@@ -324,10 +325,12 @@ defmodule Arke.System.BaseParameter do
     Keyword.put_new(opts, key, default)
   end
 
+  defp __enum_parameter__(opts, type) when is_map(opts), do: __enum_parameter__(Map.to_list(opts),type)
   defp __enum_parameter__(opts, type) do
     case Keyword.has_key?(opts, :values) do
-      true -> __validate_values__(opts, opts[:values], type)
-      false -> opts
+      true ->   __validate_values__(opts, opts[:values], type)
+      false ->
+        opts
     end
   end
 
@@ -337,7 +340,9 @@ defmodule Arke.System.BaseParameter do
        when not is_nil(value),
        do: __validate_values__(opts, value, type)
 
+
   defp __validate_values__(opts, [h | _t] = values, type) when is_map(h) do
+
     condition =
       cond do
         type == :string ->
@@ -349,12 +354,11 @@ defmodule Arke.System.BaseParameter do
         type == :float ->
           fn l, v -> is_binary(l) and is_number(v) end
       end
-
     case Enum.all?(values, fn map ->
            Enum.map([:label, :value], fn key -> Map.has_key?(map, key) end)
          end) do
       true ->
-        __create_map_values__(__check_map__(values), opts, type, condition)
+       __create_map_values__(__check_map__(values), opts, type, condition)
 
       # FARE RAISE ECCEZIONE DA GESTIRE. CHIAVI DEVONO ESSERE TUTTE UGUALI
       _ ->
