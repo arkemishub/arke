@@ -87,7 +87,7 @@ defmodule Arke.System do
 
 
   ## Example
-      arke remote: true do
+      arke  do
         parameter :custom_parameter, :string, required: true, unique: true
         parameter :custom_parameter2, :string, required: true, values: ["value1", "value2"]
         parameter :custom_parameter3, :integer, required: true, values: [%{label: "option 1", value: 1},%{label: "option 2", value: 2}]
@@ -103,14 +103,12 @@ defmodule Arke.System do
     type = Keyword.get(opts, :type, "arke")
     active = Keyword.get(opts, :active, true)
     metadata = Keyword.get(opts, :metadata, %{})
-    remote = Keyword.get(opts, :remote, false)
 
     base_parameters = get_base_arke_parameters(type)
 
     quote do
       type = unquote(type)
       active = unquote(active)
-      remote = unquote(remote)
       opts = unquote(opts)
       metadata = unquote(Macro.escape(metadata))
       caller = unquote(__CALLER__.module)
@@ -142,9 +140,8 @@ defmodule Arke.System do
         id: id,
         data: %{label: label, active: active, type: type, parameters: @parameters},
         metadata: metadata,
-        remote: remote
       }
-      #      @arke Arke.Core.Arke.new(id: id, label: label, active: active, metadata: metadata, type: type, parameters: @parameters)
+
     end
   end
 

@@ -1,16 +1,5 @@
 {  "parameter": [
-  {
-    "default_boolean": false,
-    "type": "boolean",
-    "format": "attribute",
-    "helper_text": "Remote",
-    "id": "remote",
-    "is_primary": false,
-    "label": "Remote",
-    "nullable": true,
-    "persistence": "arke_parameter",
-    "required": false
-  },
+
   {
     "default_boolean": false,
     "type": "boolean",

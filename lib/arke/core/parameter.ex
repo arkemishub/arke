@@ -100,7 +100,7 @@ defmodule Arke.Core.Parameter.String do
   
   use Arke.System
 
-  arke id: "string", remote: true do
+  arke id: "string" do
   end
 
   def before_load(data, _persistence_fn) do
@@ -134,7 +134,7 @@ defmodule Arke.Core.Parameter.Integer do
   
   use Arke.System
 
-  arke id: "integer", remote: true do
+  arke id: "integer" do
   end
 
   def before_load(data, _persistence_fn) do
@@ -168,7 +168,7 @@ defmodule Arke.Core.Parameter.Float do
   
   use Arke.System
 
-  arke id: "float", remote: true do
+  arke id: "float" do
   end
 
   def before_load(data, _persistence_fn) do
@@ -198,7 +198,7 @@ defmodule Arke.Core.Parameter.Boolean do
   
   use Arke.System
 
-  arke id: "boolean", remote: true  do
+  arke id: "boolean"  do
   end
 end
 
@@ -222,7 +222,7 @@ defmodule Arke.Core.Parameter.Dict do
   
   use Arke.System
 
-  arke id: "dict", remote: true do
+  arke id: "dict" do
   end
 end
 
@@ -246,7 +246,7 @@ defmodule Arke.Core.Parameter.List do
   
   use Arke.System
 
-  arke id: "list", remote: true do
+  arke id: "list" do
   end
 end
 
@@ -278,7 +278,7 @@ defmodule Arke.Core.Parameter.Date do
   
   use Arke.System
 
-  arke id: "date", remote: true do
+  arke id: "date" do
   end
 end
 
@@ -309,7 +309,7 @@ defmodule Arke.Core.Parameter.Time do
   
   use Arke.System
 
-  arke id: "time", remote: true do
+  arke id: "time" do
   end
 
 end
@@ -344,7 +344,7 @@ defmodule Arke.Core.Parameter.DateTime do
   
   use Arke.System
 
-  arke id: "datetime", remote: true do
+  arke id: "datetime" do
   end
 end
 
@@ -368,7 +368,7 @@ defmodule Arke.Core.Parameter.Link do
   
   use Arke.System
 
-  arke  id: "link", remote: true do
+  arke  id: "link" do
   end
 
 end
@@ -386,7 +386,7 @@ defmodule Arke.Core.Parameter.Dynamic do
   
   use Arke.System
 
-  arke id: "dynamic", remote: true do
+  arke id: "dynamic" do
   end
 end
 
@@ -402,7 +402,7 @@ defmodule Arke.Core.Parameter.Binary do
   alias Arke.Boundary.ParameterManager
   use Arke.System
 
-  arke id: "binary", remote: true do
+  arke id: "binary" do
   end
 
 end

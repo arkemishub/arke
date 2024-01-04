@@ -13,12 +13,8 @@
 # limitations under the License.
 
 defmodule Arke do
-  alias Arke.Validator
   alias Arke.Core.Unit
   alias Arke.Boundary.{ArkeManager, GroupManager, ParameterManager}
-  alias Arke.Core.Parameter
-
-  # trovare il modo di prendere tutti i parametri (query
 
   def init(), do: :ok
 
@@ -52,8 +48,6 @@ defmodule Arke do
   defp get_module_fn("arke"), do: :arke_from_attr
   defp get_module_fn("group"), do: :group_from_attr
 
-  defp check_arke_module(_, arke_list, false), do: arke_list
-
   def handle_manager(_data,_project,_arke_id,_error\\[])
   def handle_manager([data | t],project,:parameter,error)do
     {type, updated_data} = Map.pop(data,:type)
@@ -76,7 +70,7 @@ defmodule Arke do
     #todo: check if in arke_list we need also metadata besides the id and if we have to merge the link_data.metadata with the arke.metadat
     loaded_list = Enum.reduce(Map.get(data,:arke_list,[]),[], fn arke,acc ->
       with %{id: id, metadata: _metadata}=link_data <- parse_group_member(arke),
-           %Unit{}= arke <- ArkeManager.get(id, project) do
+           %Unit{}= _arke_unit <- ArkeManager.get(id, project) do
           [link_data | acc]
         else
           _ ->
@@ -91,6 +85,7 @@ defmodule Arke do
     handle_manager(t,project, :group,updated_error ++ error)
   end
 
+  def handle_manager([],_project,_arke_id,error),do: error
 
   defp parse_group_member(member) when is_binary(member), do: %{id: String.to_atom(member), metadata: %{}}
   defp parse_group_member(member) when is_map(member) do
@@ -100,7 +95,6 @@ defmodule Arke do
     end
  end
 
-  def handle_manager([],_project,_arke_id,error),do: error
   defp start_manager(_data,_type,_project, _manager, _module,_error\\[])
 
   defp start_manager(data,type,project, manager, module,error) do
@@ -127,8 +121,7 @@ defmodule Arke do
 
   end
   defp parse_arke_parameter(data,project) do
-
-    base_parameters(Map.get(data,:parameters,[])) |> Enum.reduce([], fn param,acc ->
+    base_parameters(Map.get(data,:parameters,[]), Map.get(data,:type,"arke")) |> Enum.reduce([], fn param,acc ->
       # todo: fare controllo per cui se esce tbd (sarà poi nil) scrivere sul file che la chiave  id manca
       # controllare anche che il parameter manager torni qualcosa che esiste
       converted = Map.update(param,:id, "tbd", &String.to_atom(to_string(&1)))
@@ -140,7 +133,7 @@ defmodule Arke do
     end)
   end
 
-  defp base_parameters(arke_parameters) do
+  defp base_parameters(arke_parameters,"arke") do
     arke_parameters ++ [
       %{id: "id", metadata: %{required: true, persistence: "table_column"}},
       %{id: "arke_id", metadata: %{required: false, persistence: "table_column"}},
@@ -148,4 +141,6 @@ defmodule Arke do
       %{id: "inserted_at", metadata: %{required: false, persistence: "table_column"}},
       %{id: "updated_at", metadata: %{required: false, persistence: "table_column"}}]
   end
+  defp base_parameters(arke_parameters, _type), do: arke_parameters
 end
+

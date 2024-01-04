@@ -22,7 +22,7 @@ defmodule Arke.Core.Arke do
   alias Arke.Core.Parameter
   alias Arke.Boundary.ArkeManager
 
-  arke id: :arke, remote: true do
+  arke id: :arke do
     group(:arke_or_group)
 
     parameter(:label, :string, required: true)

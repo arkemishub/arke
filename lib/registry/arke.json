@@ -24,13 +24,6 @@
         }
       },
       {
-        "id": "remote",
-        "metadata": {
-          "required": true,
-          "default_boolean": false
-        }
-      },
-      {
         "id": "parameters",
         "metadata": {
           "multiple": true,
