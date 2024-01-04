@@ -967,13 +967,7 @@
           "required": true
         }
       },
-      {
-        "id": "binary",
-        "metadata": {
-          "required": true,
-          "only_runtime": true
-        }
-      },
+
       {
         "id": "path",
         "metadata": {
