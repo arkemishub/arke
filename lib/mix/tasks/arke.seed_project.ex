@@ -128,10 +128,10 @@ defmodule Mix.Tasks.Arke.SeedProject do
 
     # get core file to decode (arke) and append all other arke_deps registry files
     core_registry = arke_registry("arke", format)
-    core_data = parse(core_registry)
+    core_data = parse(core_registry,format)
 
     arke_deps_registry = get_arke_deps_registry(format)
-    arke_deps_data = parse(arke_deps_registry)
+    arke_deps_data = parse(arke_deps_registry,format)
     core_parameter = Map.get(core_data,:parameter, []) ++ Map.get(arke_deps_data, :parameter, [])
     core_arke = Map.get(core_data,:arke, []) ++ Map.get(arke_deps_data, :arke, [])
     core_group = Map.get(core_data,:group, []) ++ Map.get(arke_deps_data, :group, [])
@@ -144,7 +144,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
     # aggiungere blocchi try do rescue nei vari handle_parameter/arke/group/link e scrivere nei vari file
 
     file_list = Path.wildcard("./lib/registry/*.#{format}")
-    raw_data = parse(file_list)
+    raw_data = parse(file_list,format)
     parameter_list = core_parameter ++ Map.get(raw_data, :parameter, [])
     arke_list = core_arke ++ Map.get(raw_data, :arke, [])
     group_list = core_group ++ Map.get(raw_data, :group, [])
@@ -226,8 +226,8 @@ defmodule Mix.Tasks.Arke.SeedProject do
   end
 
 
-  defp parse(file_list,file_data \\ %{})
-  defp parse([filename | t], data) do
+  defp parse(file_list,format,file_data \\ %{})
+  defp parse([filename | t],"json"=format, data) do
     try do
      body = File.read!(filename)
      json = Jason.decode!(body, keys: :atoms)
@@ -235,7 +235,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
         Enum.reduce(@decode_keys, %{}, fn key, acc ->
           Map.put(acc, key, Map.get(data, key, []) ++ Map.get(json, key, []))
         end)
-      parse(t, new_data)
+      parse(t, format,new_data)
     rescue
     err in Jason.DecodeError ->
 
@@ -248,7 +248,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
   end
 
   # tutti i file parsati quindi proseguire
-  defp parse([], data), do: data
+  defp parse([],format, data), do: data
 
 
   defp handle_parameter([%{id: id, label:  nil} = current | t], project, error),
