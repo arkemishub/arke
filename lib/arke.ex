@@ -76,7 +76,8 @@ defmodule Arke do
           [link_data | acc]
         else
           _ ->
-            [%{context: :arke_list_group , message: "invalid arke in arke_list of: `#{data.id}` in `#{project}`"} | error]
+            IO.puts("#{IO.ANSI.red()}invalid arke in arke_list of: `#{data.id}` in `#{project}`#{IO.ANSI.reset()}")
+            acc
       end
 
     end)

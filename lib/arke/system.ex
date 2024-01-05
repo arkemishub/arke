@@ -330,7 +330,7 @@ defmodule Arke.System.BaseParameter do
     case Keyword.has_key?(opts, :values) do
       true ->   __validate_values__(opts, opts[:values], type)
       false ->
-        opts
+        Keyword.update(opts, :values, nil, fn _current_value -> nil end)
     end
   end
 

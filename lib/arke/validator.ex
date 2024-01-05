@@ -285,6 +285,7 @@ defmodule Arke.Validator do
          value
        ),
        do: errors ++ [{value, "#{label} must be a list of #{type}}"}]
+  defp check_values(errors, _parameter, _value), do: errors
 
   defp check_values_type(value, type) do
     condition =
