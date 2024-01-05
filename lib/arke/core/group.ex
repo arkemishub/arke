@@ -21,19 +21,7 @@ defmodule Arke.Core.Group do
   alias Arke.Boundary.GroupManager
   alias Arke.Core.Unit
 
-  arke remote: true do
-    group(:arke_or_group)
-
-    parameter(:label, :string, required: false)
-    parameter(:description, :string, required: false)
-
-    parameter(:arke_list, :link,
-      multiple: true,
-      arke_or_group_id: "arke",
-      connection_type: "group",
-      depth: 0,
-      default_link: []
-    )
+  arke do
   end
 
   def on_create(arke, unit) do

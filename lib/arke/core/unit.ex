@@ -175,7 +175,7 @@ defmodule Arke.Core.Unit do
 
   def update(%{data: data, arke_id: arke_id} = unit, args) do
     {id, args} = Map.pop(args, :id, unit.id)
-    {link, args} = Map.pop(args, :link, unit.link)
+    {link, args} = Map.pop(args, :link, Map.get(unit, :link, nil))
     {metadata, args} = Map.pop(args, :metadata, unit.metadata)
     # todo: remove arke_system default once every arke is set on db
     metadata = Map.put(metadata, :project, Map.get(unit.metadata, :project, :arke_system))

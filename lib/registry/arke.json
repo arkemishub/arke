@@ -24,13 +24,6 @@
         }
       },
       {
-        "id": "remote",
-        "metadata": {
-          "required": true,
-          "default_boolean": false
-        }
-      },
-      {
         "id": "parameters",
         "metadata": {
           "multiple": true,
@@ -514,7 +507,6 @@
   },
   {
     "id": "binary",
-    
       "label": "Binary",
 "parameters": [
       {
@@ -968,13 +960,7 @@
           "required": true
         }
       },
-      {
-        "id": "binary",
-        "metadata": {
-          "required": true,
-          "only_runtime": true
-        }
-      },
+
       {
         "id": "path",
         "metadata": {

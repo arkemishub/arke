@@ -1,16 +1,5 @@
 {  "parameter": [
-  {
-    "default_boolean": false,
-    "type": "boolean",
-    "format": "attribute",
-    "helper_text": "Remote",
-    "id": "remote",
-    "is_primary": false,
-    "label": "Remote",
-    "nullable": true,
-    "persistence": "arke_parameter",
-    "required": false
-  },
+
   {
     "default_boolean": false,
     "type": "boolean",
@@ -463,6 +452,18 @@
     "id": "default_binary",
     "is_primary": false,
     "label": "Default",
+    "nullable": true,
+    "persistence": "arke_parameter",
+    "required": false
+  },
+  {
+    "default_binary": null,
+    "type": "binary",
+    "format": "attribute",
+    "helper_text": "Binary",
+    "id": "binary",
+    "is_primary": false,
+    "label": "Binary",
     "nullable": true,
     "persistence": "arke_parameter",
     "required": false
