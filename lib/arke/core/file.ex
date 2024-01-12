@@ -34,7 +34,7 @@ defmodule Arke.Core.File do
     path = "arke_file/#{DateTime.to_string(DateTime.utc_now())}"
 
     unit_data = %{
-      binary: binary,
+      binary_data: binary,
       extension: extension,
       size: file_stat.size,
       provider: "gcloud",
@@ -56,7 +56,7 @@ defmodule Arke.Core.File do
     end
   end
 
-  def before_create(_, %{data: %{name: name, path: path, binary: binary}} = unit) do
+  def before_create(_, %{data: %{name: name, path: path, binary_data: binary}} = unit) do
     case Gcp.upload_file("#{path}/#{name}", binary) do
       {:ok, _object} -> {:ok, unit}
       {:error, error} -> {:error, error}
@@ -70,9 +70,9 @@ defmodule Arke.Core.File do
     end
   end
 
-  def before_update(_, %{binary: binary} = unit) when is_nil(binary), do: {:ok, unit}
+  def before_update(_, %{binary_data: binary} = unit) when is_nil(binary), do: {:ok, unit}
 
-  def before_update(_, %{data: %{name: name, path: path, binary: binary}} = unit) do
+  def before_update(_, %{data: %{name: name, path: path, binary_data: binary}} = unit) do
     case Gcp.upload_file("#{path}/#{name}", binary) do
       {:ok, _object} -> {:ok, unit}
       {:error, error} -> {:error, error}

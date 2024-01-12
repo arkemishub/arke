@@ -921,6 +921,66 @@
     ]
   },
   {
+    "id": "binary",
+    "label": "Binary",
+    "parameters": [
+      {
+        "id": "label",
+        "metadata": {
+          "required": true
+        }
+      },
+      {
+        "id": "format",
+        "metadata": {
+          "default_string": "attribute"
+        }
+      },
+      {
+        "id": "is_primary",
+        "metadata": {
+          "default_boolean": false
+        }
+      },
+      {
+        "id": "nullable",
+        "metadata": {
+          "default_boolean": true
+        }
+      },
+      {
+        "id": "required",
+        "metadata": {
+          "default_boolean": false
+        }
+      },
+      {
+        "id": "persistence",
+        "metadata": {
+          "default_string": "arke_parameter"
+        }
+      },
+      {
+        "id": "only_run_time",
+        "metadata": {
+          "default_boolean": false
+        }
+      },
+      {
+        "id": "helper_text",
+        "metadata": {
+          "required": false
+        }
+      },
+      {
+        "id": "default_binary",
+        "metadata": {
+          "default_binary": null
+        }
+      }
+    ]
+  },
+  {
     "id": "group",
     
       "label": "Group",
@@ -982,6 +1042,13 @@
         "id": "size",
         "metadata": {
           "required": false
+        }
+      },
+      {
+        "id": "binary_data",
+        "metadata": {
+          "required": true,
+          "only_runtime": true
         }
       },
       {
