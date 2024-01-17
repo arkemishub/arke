@@ -461,7 +461,7 @@
     "type": "binary",
     "format": "attribute",
     "helper_text": "Binary",
-    "id": "binary",
+    "id": "binary_data",
     "is_primary": false,
     "label": "Binary",
     "nullable": true,

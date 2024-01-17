@@ -243,6 +243,8 @@ defmodule Arke.Validator do
   defp check_by_type(errors, %{arke_id: :string} = parameter, value)
        when is_binary(value) or is_atom(value) or is_list(value) do
     errors
+    #todo: if multiple is true validate the values that must be the same type
+    # also update the insert in arke postgres
     |> check_max_length(parameter, value)
     |> check_min_length(parameter, value)
     |> check_values(parameter, value)
