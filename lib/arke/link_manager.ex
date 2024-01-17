@@ -40,14 +40,15 @@ defmodule Arke.LinkManager do
 
   def add_node(project, parent, child, type, metadata)
       when is_binary(parent) and is_binary(child) do
-    unit_parent = QueryManager.get_by(id: parent, project: project)
-    unit_child = QueryManager.get_by(id: child, project: project)
-
-    add_node(project, unit_parent, unit_child, type, metadata)
+    with %Unit{}=unit_parent <- QueryManager.get_by(id: parent, project: project),
+         %Unit{}=unit_child <- QueryManager.get_by(id: child, project: project) do
+      add_node(project, unit_parent, unit_child, type, metadata)
+      else
+      _ ->  Error.create(:link, "parent: `#{parent}` or child: `#{child}` not found")
+    end
   end
 
-  def add_node(_project, _parent, _child, _type, _metadata),
-    do: Error.create(:link, "invalid parameters")
+  def add_node(_project,  _parent, _child, _type, _metadata), do: Error.create(:link, "invalid parameters")
 
   def update_node(project, %Unit{} = parent, %Unit{} = child, type, metadata) do
     arke_link = ArkeManager.get(:arke_link, :arke_system)

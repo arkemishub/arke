@@ -183,7 +183,8 @@
     "multiple": false,
     "nullable": true,
     "persistence": "arke_parameter",
-    "required": false
+    "required": false,
+    "filter_keys": ["id","arke_id"]
   },
   {
     "arke_or_group_id": "arke",
@@ -200,7 +201,8 @@
     "multiple": true,
     "nullable": true,
     "persistence": "arke_parameter",
-    "required": false
+    "required": false,
+    "filter_keys": ["id","arke_id"]
   },
   {
     "connection_type": "link",
@@ -234,7 +236,9 @@
     "multiple": false,
     "nullable": false,
     "persistence": "arke_parameter",
-    "required": true
+    "required": true,
+    "filter_keys": ["id","arke_id"]
+
   },
   {
     "default_list": null,
@@ -829,7 +833,7 @@
     ]
   },
   {
-    "default_string": [],
+    "default_string": null,
     "type": "string",
     "format": "attribute",
     "helper_text": "Filter keys",

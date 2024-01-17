@@ -243,16 +243,17 @@ defmodule Arke.Validator do
   defp check_by_type(errors, %{arke_id: :string} = parameter, value)
        when is_binary(value) or is_atom(value) or is_list(value) do
     errors
-    #todo: if multiple is true validate the values that must be the same type
     # also update the insert in arke postgres
     |> check_max_length(parameter, value)
     |> check_min_length(parameter, value)
     |> check_values(parameter, value)
+    |> check_multiple(parameter, value)
   end
 
   defp check_by_type(errors, %{arke_id: :string} = parameter, _value),
     do: errors ++ [{parameter.data.label, "must be a string"}]
 
+  # --- start Enum ---
   defp check_values(errors, %{data: %{values: nil}} = _parameter, _value), do: errors
 
   defp check_values(
@@ -287,6 +288,7 @@ defmodule Arke.Validator do
          value
        ),
        do: errors ++ [{value, "#{label} must be a list of #{type}}"}]
+ defp check_values(errors,_parameter,_value), do: errors
 
   defp check_values_type(value, type) do
     condition =
@@ -298,6 +300,19 @@ defmodule Arke.Validator do
 
     Enum.all?(value, &condition.(&1))
   end
+  # --- end Enum ---
+  # --- start Multiple ---
+  defp check_multiple(errors, %{id: id, data: %{multiple: false}} = _parameter, value) when is_list(value), do: errors ++ [{"multiple values are not allowed for", id}]
+  defp check_multiple(errors, %{id: id, data: %{multiple: true}} = parameter, value) when not is_list(value), do: check_multiple(errors, parameter, [value])
+  defp check_multiple(errors, %{id: id, arke_id: type, data: %{ multiple: true}} = parameter, value) do
+    case check_values_type(value,type) do
+      true -> errors
+      false ->
+        errors ++ [{"[#{Enum.join(value,",")}]", "#{id} must be a list of #{type} "}]
+    end
+  end
+  defp check_multiple(errors,_parameter,_value), do: errors
+  # --- end Multiple ---
 
   defp check_whitespace(%{data: %{strip: true}} = parameter, value) when is_atom(value) do
     value
@@ -356,6 +371,7 @@ defmodule Arke.Validator do
     |> check_max(parameter, value)
     |> check_min(parameter, value)
     |> check_values(parameter, value)
+    |> check_multiple(parameter, value)
   end
 
   defp check_by_type(errors, %{arke_id: :integer, data: %{label: label}} = parameter, _value),
@@ -367,6 +383,7 @@ defmodule Arke.Validator do
     |> check_max(parameter, value)
     |> check_min(parameter, value)
     |> check_values(parameter, value)
+    |> check_multiple(parameter, value)
   end
 
   defp check_by_type(errors, %{arke_id: :float, data: %{label: label}} = parameter, _value),

@@ -16,19 +16,6 @@ defmodule Mix.Tasks.Arke.SeedProject do
   * `--persistence` - The persistence to use. One of:
       * `arke_postgres` - via https://github.com/elixir-ecto/postgrex (Default)
   """
-  #  parameter.json
-  # add to:  arke_list,default_link {
-  ##          "id": "filter_keys",
-  ##          "metadata": {
-  ##               "default_string": ["id","arke_id"]
-  ##          }
-  ##        },
-  #  add to:  arke_or_group_id {
-  ##          "id": "filter_keys",
-  ##          "metadata": {
-  ##               "default_string": ["id","label"]
-  ##          }
-  ##        },
 
   use Mix.Task
   alias Arke.QueryManager
@@ -269,7 +256,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
       nil ->  handle_parameter(t, project, parse_error(create_error(:parameter, "manager does not exists for: `#{id}`") , error))
       %Unit{} -> handle_parameter(t, project, parse_error(create_error(:parameter, "Record already exists in db for: `#{id}`") , error))
       {:error, err} ->
-        handle_parameter(t, project, parse_error(err, error))
+        handle_parameter(t, project, parse_error(err, error,id))
         _err ->
                handle_parameter(t, project, parse_error(create_error(:parameter, "Something went wrong for: `#{id}`") ,error))
     end
@@ -301,7 +288,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
       if length(link_parameter_error) == 0 do
         handle_arke(t, project,  error)
         else
-        handle_arke(t, project,  [%{"parameter_error_#{id}": link_parameter_error}|error])
+        handle_arke(t, project,  [%{"#{id}_parameter_association": link_parameter_error}|error])
       end
 
     else
@@ -361,8 +348,8 @@ defmodule Mix.Tasks.Arke.SeedProject do
     end
   end
 
-  defp handle_link([current | t], project, error),
-       do: handle_link(t, project, parse_error(create_error(:link, "invalid parameters for #{current}}"),error))
+  defp handle_link([current | t], project, error),do:
+       handle_link(t, project, parse_error(create_error(:link, "invalid parameters for #{current}}"),error))
 
   defp handle_link([], _project, error), do: error
 
@@ -409,4 +396,5 @@ defmodule Mix.Tasks.Arke.SeedProject do
 
   defp parse_error(error_message, error_accumulator) when is_list(error_message), do: error_message ++error_accumulator
   defp parse_error(error_message, error_accumulator), do: [error_message | error_accumulator]
+  defp parse_error(error_message, error_accumulator,id), do: [%{create: id, error: error_message} | error_accumulator]
 end
