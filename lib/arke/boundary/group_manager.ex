@@ -69,8 +69,11 @@ defmodule Arke.Boundary.GroupManager do
 
     Enum.reduce(group_keys, [], fn {g, _}, groups ->
       group = get(g, project)
-      arke_id in Enum.map(group.data.arke_list, fn a -> a.id end)
+      if arke_id in Enum.map(group.data.arke_list, fn a -> a.id end) do
       [group | groups]
+      else
+      groups
+      end
     end)
   end
 
