@@ -520,10 +520,9 @@ defmodule Arke.QueryManager do
     do: handle_filter(query, :group_id, :eq, value, negate)
 
   defp handle_filter(query, :group_id, :eq, value, negate) do
-    %{id: id, metadata: %{project: group_project}} = group = get_group(value, query.project)
-    # arke_list = GroupManager.get_arke_list(group)
+    %{id: id} = group = get_group(value, query.project)
     arke_list =
-      Enum.map(GroupManager.get_link(id, group_project, :arke_list), fn a ->
+      Enum.map(GroupManager.get_arke_list(group), fn a ->
         Atom.to_string(a.id)
       end)
 
