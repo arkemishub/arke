@@ -78,7 +78,6 @@ defmodule Arke.Core.Unit do
     {updated_at, opts} = Map.pop(opts, :updated_at, nil)
     {__module__, opts} = Map.pop(opts, :__module__, nil)
     {runtime_data, opts} = Map.pop(opts, :runtime_data, %{})
-
     with {:ok, opts} <- ArkeManager.call_func(arke, :before_load, [opts, persistence_fn]) do
       data = load_data(arke, %{}, opts)
       new(id, data, arke.id, link, metadata, inserted_at, updated_at, __module__, runtime_data)
@@ -178,7 +177,7 @@ defmodule Arke.Core.Unit do
     {link, args} = Map.pop(args, :link, unit.link)
     {metadata, args} = Map.pop(args, :metadata, unit.metadata)
     # todo: remove arke_system default once every arke is set on db
-    metadata = Map.put(metadata, :project, Map.get(unit.metadata, :project, :arke_system))
+    metadata = Map.put_new(metadata, :project, Map.get(metadata, :project, :arke_system))
     {inserted_at, args} = Map.pop(args, :inserted_at, unit.inserted_at)
     {updated_at, args} = Map.pop(args, :updated_at, unit.updated_at)
     {module, args} = Map.pop(args, :__module__, unit.__module__)
