@@ -69,7 +69,6 @@ defmodule Arke do
   end
 
   def handle_manager([data | t],project,:group,error)do
-    #todo: check if in arke_list we need also metadata besides the id and if we have to merge the link_data.metadata with the arke.metadat
     loaded_list = Enum.reduce(Map.get(data,:arke_list,[]),[], fn arke,acc ->
       with %{id: id, metadata: _metadata}=link_data <- parse_group_member(arke),
            %Unit{}= _arke_unit <- ArkeManager.get(id, project) do
@@ -80,10 +79,11 @@ defmodule Arke do
       end
 
     end)
-    final_data= Map.put_new(data,:metadata,%{})
-                |> Map.put(:arke_list,loaded_list)
+
+    final_data=  Map.put(data,:arke_list,loaded_list)
     module = get_module(final_data,"group")
     updated_error = start_manager(final_data,"group",project,GroupManager,module)
+
     handle_manager(t,project, :group,updated_error ++ error)
   end
 
@@ -102,13 +102,15 @@ defmodule Arke do
   defp start_manager(data,type,project, manager, module,error) do
     case Map.pop(data,:id,nil) do
       {nil, _updated_data} -> [%{context: :manager , message: "key id not found"} | error]
-      {id, updated_data} ->  case manager.create(
+      {id, updated_data} ->
+        {metadata,updated_data} = Map.pop(data,:metadata,%{project: project})
+        case manager.create(
                                     Unit.new(
                                       String.to_atom(id),
                                       updated_data,
                                       String.to_atom(type),
                                       nil,
-                                      %{},
+                                      metadata,
                                       nil,
                                       nil,
                                       module
