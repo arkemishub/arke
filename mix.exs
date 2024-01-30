@@ -33,7 +33,7 @@ defmodule Arke.MixProject do
   defp versioning do
     [
       tag_prefix: "v",
-      commit_msg: "chore: set version to v%s",
+      commit_msg: "v%s",
       annotation: "tag release-%s created with mix_version",
       annotate: true
     ]
