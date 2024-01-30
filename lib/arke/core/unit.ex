@@ -180,7 +180,7 @@ defmodule Arke.Core.Unit do
     # todo: remove arke_system default once every arke is set on db
     metadata = Map.put(metadata, :project, Map.get(unit.metadata, :project, :arke_system))
     {inserted_at, args} = Map.pop(args, :inserted_at, unit.inserted_at)
-    {updated_at, args} = Map.pop(args, :updated_at, unit.updated_at)
+    updated_at = Arke.DatetimeHandler.now(:datetime)
     {module, args} = Map.pop(args, :__module__, unit.__module__)
     {runtime_data, args} = Map.pop(args, :runtime_data, unit.runtime_data)
 
