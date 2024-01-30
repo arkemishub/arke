@@ -24,6 +24,7 @@ defmodule Arke.LinkManager do
   def add_node(project, %Unit{} = parent, %Unit{} = child, type \\ "link", metadata \\ %{}) do
     arke_link = ArkeManager.get(:arke_link, :arke_system)
 
+
     case check_link(project, parent, child, arke_link) do
       {_, nil} ->
         QueryManager.create(project, arke_link,
