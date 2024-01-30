@@ -25,7 +25,17 @@ defmodule Arke.MixProject do
       aliases: aliases(),
       deps: deps(),
       elixirc_paths: elixirc_paths(Mix.env()),
-      elixirc_options: [warnings_as_errors: false]
+      elixirc_options: [warnings_as_errors: false],
+      versioning: versioning()
+    ]
+  end
+
+  defp versioning do
+    [
+      tag_prefix: "v",
+      commit_msg: "v%s",
+      annotation: "tag release-%s created with mix_version",
+      annotate: true
     ]
   end
 
