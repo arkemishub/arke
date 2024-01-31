@@ -43,6 +43,7 @@ defmodule Arke.QueryManager do
   alias Arke.QueryManager
   alias Arke.Core.{Arke, Unit, Query, Parameter}
 
+
   @persistence Application.get_env(:arke, :persistence)
   @record_fields [:id, :data, :metadata, :inserted_at, :updated_at]
 
@@ -270,7 +271,7 @@ defmodule Arke.QueryManager do
   end
 
   defp update_at_on_update(unit) do
-    updated_at = Arke.DatetimeHandler.now(:datetime)
+    updated_at = NaiveDateTime.utc_now()
     {:ok, Unit.update(unit, updated_at: updated_at)}
   end
 
