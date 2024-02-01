@@ -43,6 +43,7 @@ defmodule Arke.QueryManager do
   alias Arke.QueryManager
   alias Arke.Core.{Arke, Unit, Query, Parameter}
 
+
   @persistence Application.get_env(:arke, :persistence)
   @record_fields [:id, :data, :metadata, :inserted_at, :updated_at]
 
@@ -258,6 +259,7 @@ defmodule Arke.QueryManager do
     arke = ArkeManager.get(arke_id, project)
 
     with %Unit{} = unit <- Unit.update(current_unit, args),
+         {:ok, unit} <- update_at_on_update(unit),
          {:ok, unit} <- Validator.validate(unit, :update, project),
          {:ok, unit} <- ArkeManager.call_func(arke, :before_update, [arke, unit]),
          {:ok, unit} <- handle_link_parameters_unit(arke, unit),
@@ -266,6 +268,11 @@ defmodule Arke.QueryManager do
          {:ok, unit} <- handle_link_parameters(unit, data),
          do: {:ok, unit},
          else: ({:error, errors} -> {:error, errors})
+  end
+
+  defp update_at_on_update(unit) do
+    updated_at = NaiveDateTime.utc_now()
+    {:ok, Unit.update(unit, updated_at: updated_at)}
   end
 
   @doc """
