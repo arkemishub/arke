@@ -19,7 +19,7 @@ defmodule Arke.Validator do
   alias Arke.Boundary.{ArkeManager, ParameterManager}
   alias Arke.QueryManager, as: QueryManager
   alias Arke.Utils.ErrorGenerator, as: Error
-  alias Arke.DatetimeHandler, as: DatetimeHandler
+  alias Arke.Utils.DatetimeHandler, as: DatetimeHandler
   alias Arke.Core.{Arke, Unit, Parameter}
 
   @type func_return() :: {:ok, Unit.t()} | Error.t()

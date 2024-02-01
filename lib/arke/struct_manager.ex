@@ -21,7 +21,7 @@ defmodule Arke.StructManager do
   alias Arke.Boundary.GroupManager
   alias Arke.Boundary.ArkeManager
   alias Arke.QueryManager
-  alias Arke.DatetimeHandler, as: DatetimeHandler
+  alias Arke.Utils.DatetimeHandler, as: DatetimeHandler
   alias Arke.Core.{Unit, Arke}
 
   @type parameter :: %{

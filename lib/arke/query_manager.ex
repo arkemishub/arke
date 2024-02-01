@@ -41,6 +41,7 @@ defmodule Arke.QueryManager do
   alias Arke.Validator
   alias Arke.LinkManager
   alias Arke.QueryManager
+  alias Arke.Utils.DatetimeHandler, as: DatetimeHandler
   alias Arke.Core.{Arke, Unit, Query, Parameter}
 
   @persistence Application.get_env(:arke, :persistence)
@@ -258,6 +259,7 @@ defmodule Arke.QueryManager do
     arke = ArkeManager.get(arke_id, project)
 
     with %Unit{} = unit <- Unit.update(current_unit, args),
+         {:ok, unit} <- update_at_on_update(unit),
          {:ok, unit} <- Validator.validate(unit, :update, project),
          {:ok, unit} <- ArkeManager.call_func(arke, :before_update, [arke, unit]),
          {:ok, unit} <- handle_group_call_func(arke, unit, :before_unit_update),
@@ -269,7 +271,10 @@ defmodule Arke.QueryManager do
          do: {:ok, unit},
          else: ({:error, errors} -> {:error, errors})
   end
-
+  defp update_at_on_update(unit) do
+    updated_at = DatetimeHandler.now(:datetime)
+    {:ok, Unit.update(unit, updated_at: updated_at)}
+  end
   @doc """
   Function to delete a given unit
   ## Parameters

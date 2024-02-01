@@ -78,7 +78,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
 
   defp check_file(_arke_id, []), do: nil
   defp check_file(arke_id, data) do
-    {:ok, datetime} = Arke.DatetimeHandler.now(:datetime) |> Arke.DatetimeHandler.format("{ISO:Basic:Z}")
+    {:ok, datetime} = Arke.Utils.DatetimeHandler.now(:datetime) |> Arke.Utils.DatetimeHandler.format("{ISO:Basic:Z}")
     dir_path = "log/arke_seed_project"
     path = "#{dir_path}/#{datetime}_#{to_string(arke_id)}.log"
 
