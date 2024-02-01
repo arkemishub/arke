@@ -61,6 +61,9 @@ defmodule Arke.Core.Unit do
 
   defp check_id(_), do: nil
 
+  defp check_metadata(metadata) when is_map(metadata) or is_nil(metadata), do: metadata
+  defp check_metadata(_), do: Error.create(:parameter_validation, "metadata must be a map")
+
   def load(arke, opts, persistence_fn \\ :get)
 
   def load(arke, opts, persistence_fn) when is_list(opts),
@@ -78,6 +81,7 @@ defmodule Arke.Core.Unit do
     {updated_at, opts} = Map.pop(opts, :updated_at, nil)
     {__module__, opts} = Map.pop(opts, :__module__, nil)
     {runtime_data, opts} = Map.pop(opts, :runtime_data, %{})
+
     with {:ok, opts} <- ArkeManager.call_func(arke, :before_load, [opts, persistence_fn]) do
       data = load_data(arke, %{}, opts)
       new(id, data, arke.id, link, metadata, inserted_at, updated_at, __module__, runtime_data)
@@ -176,19 +180,26 @@ defmodule Arke.Core.Unit do
     {id, args} = Map.pop(args, :id, unit.id)
     {link, args} = Map.pop(args, :link, unit.link)
     {metadata, args} = Map.pop(args, :metadata, unit.metadata)
-    # todo: remove arke_system default once every arke is set on db
-    metadata = Map.put_new(metadata, :project, Map.get(metadata, :project, :arke_system))
-    {inserted_at, args} = Map.pop(args, :inserted_at, unit.inserted_at)
-    updated_at = Arke.DatetimeHandler.now(:datetime)
-    {module, args} = Map.pop(args, :__module__, unit.__module__)
-    {runtime_data, args} = Map.pop(args, :runtime_data, unit.runtime_data)
 
-    data =
-      Enum.reduce(args, data, fn {key, val}, new_data ->
-        update_data(new_data, key, val)
-      end)
+    case check_metadata(metadata) do
+      {:error, msg} ->
+        {:error, msg}
 
-    new(id, data, arke_id, link, metadata, inserted_at, updated_at, module, runtime_data)
+      # todo: remove arke_system default once every arke is set on db
+      metadata ->
+        metadata = Map.put_new(metadata, :project, Map.get(metadata, :project, :arke_system))
+        {inserted_at, args} = Map.pop(args, :inserted_at, unit.inserted_at)
+        updated_at = Arke.DatetimeHandler.now(:datetime)
+        {module, args} = Map.pop(args, :__module__, unit.__module__)
+        {runtime_data, args} = Map.pop(args, :runtime_data, unit.runtime_data)
+
+        data =
+          Enum.reduce(args, data, fn {key, val}, new_data ->
+            update_data(new_data, key, val)
+          end)
+
+        new(id, data, arke_id, link, metadata, inserted_at, updated_at, module, runtime_data)
+    end
   end
 
   defp update_data(data, key, value) when is_atom(key), do: Map.put(data, key, value)
