@@ -77,14 +77,32 @@ defmodule Arke.Core.Unit do
     {id, opts} = Map.pop(opts, :id, nil)
     {link, opts} = get_link(opts)
     {metadata, opts} = Map.pop(opts, :metadata, arke.metadata)
-    {inserted_at, opts} = Map.pop(opts, :inserted_at, nil)
-    {updated_at, opts} = Map.pop(opts, :updated_at, nil)
-    {__module__, opts} = Map.pop(opts, :__module__, nil)
-    {runtime_data, opts} = Map.pop(opts, :runtime_data, %{})
 
-    with {:ok, opts} <- ArkeManager.call_func(arke, :before_load, [opts, persistence_fn]) do
-      data = load_data(arke, %{}, opts)
-      new(id, data, arke.id, link, metadata, inserted_at, updated_at, __module__, runtime_data)
+    case check_metadata(metadata) do
+      {:error, msg} ->
+        {:error, msg}
+
+      metadata ->
+        {inserted_at, opts} = Map.pop(opts, :inserted_at, nil)
+        {updated_at, opts} = Map.pop(opts, :updated_at, nil)
+        {__module__, opts} = Map.pop(opts, :__module__, nil)
+        {runtime_data, opts} = Map.pop(opts, :runtime_data, %{})
+
+        with {:ok, opts} <- ArkeManager.call_func(arke, :before_load, [opts, persistence_fn]) do
+          data = load_data(arke, %{}, opts)
+
+          new(
+            id,
+            data,
+            arke.id,
+            link,
+            metadata,
+            inserted_at,
+            updated_at,
+            __module__,
+            runtime_data
+          )
+        end
     end
   end
 
