@@ -103,7 +103,7 @@ defmodule Arke.StructManager do
 
     {:ok, new_unit} = ArkeManager.call_func(arke, :before_struct_encode, [arke, unit])
 
-    data = get_parsed_data(new_unit.data, arke, opts) |> Map.merge(base_data)
+    data = get_raw_data(new_unit) |> get_parsed_data(arke, opts) |> Map.merge(base_data)
 
     {:ok, data} = ArkeManager.call_func(arke, :on_struct_encode, [arke, new_unit, data, opts])
 
@@ -151,6 +151,14 @@ defmodule Arke.StructManager do
   defp updates_id_list(id_list, id) when is_nil(id), do: id_list
   defp updates_id_list(id_list, id) when is_list(id), do: id_list ++ id
   defp updates_id_list(id_list, id), do: [id | id_list]
+
+  defp get_raw_data(%{link: nil} = unit), do: unit.data
+
+  defp get_raw_data(%{link: link} = unit) do
+    Map.put(unit.data, :link, link)
+  end
+
+  defp get_raw_data(unit), do: unit.data
 
   defp get_parsed_data(data, arke, opts \\ [])
   defp get_parsed_data(nil, arke, _), do: %{}
