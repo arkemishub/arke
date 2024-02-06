@@ -1,7 +1,7 @@
 defmodule Arke.MixProject do
   use Mix.Project
 
-  @version "0.1.25"
+  @version "0.1.31"
   @scm_url "https://github.com/arkemishub/arke"
   @site_url "https://arkehub.com"
 
@@ -25,7 +25,17 @@ defmodule Arke.MixProject do
       aliases: aliases(),
       deps: deps(),
       elixirc_paths: elixirc_paths(Mix.env()),
-      elixirc_options: [warnings_as_errors: false]
+      elixirc_options: [warnings_as_errors: false],
+      versioning: versioning()
+    ]
+  end
+
+  defp versioning do
+    [
+      tag_prefix: "v",
+      commit_msg: "v%s",
+      annotation: "tag release-%s created with mix_version",
+      annotate: true
     ]
   end
 
@@ -48,7 +58,9 @@ defmodule Arke.MixProject do
       {:timex, "~> 3.7.11"},
       {:google_api_storage, "~> 0.34.0"},
       {:goth, "~> 1.3.0"},
-      {:httpoison, "~> 2.0"}
+      {:httpoison, "~> 2.0"},
+      {:calendar, "~> 1.0.0"},
+      {:xlsxir, "~> 1.6"}
     ]
   end
 
