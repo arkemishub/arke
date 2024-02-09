@@ -76,10 +76,10 @@ defmodule Mix.Tasks.Arke.SeedProject do
   defp parse_persistence!(ps) when ps in  @persistence_repo, do: ps
   defp parse_persistence!(ps), do: Mix.raise("Invalid persistence: `#{ps}`\nSupported persistence are: #{Enum.join(@persistence_repo, " | ")}")
 
-  defp check_file(_arke_id, []), do: nil
-  defp check_file(arke_id, data) do
+  defp check_file(_arke_id,project, []), do: nil
+  defp check_file(arke_id,project, data) do
     {:ok, datetime} = Arke.Utils.DatetimeHandler.now(:datetime) |> Arke.Utils.DatetimeHandler.format("{ISO:Basic:Z}")
-    dir_path = "log/arke_seed_project"
+    dir_path = "log/arke_seed_project/#{project}"
     path = "#{dir_path}/#{datetime}_#{to_string(arke_id)}.log"
 
     File.mkdir("log")
@@ -128,7 +128,19 @@ defmodule Mix.Tasks.Arke.SeedProject do
 
     # todo: decidere chiave da mettere nei metadata così da identificare gli tutto ciò che viene creato e far si che da console non si possa cancellare
     # i put andranno modificati di conseguenza in modo da rendere qeusta chiave non modificabile e fissa
-    # aggiungere blocchi try do rescue nei vari handle_parameter/arke/group/link e scrivere nei vari file
+
+    # start core manager before create everything
+    error_parameter_manager = Arke.handle_manager(core_parameter,:arke_system,:parameter)
+    error_arke_manager = Arke.handle_manager(core_arke,:arke_system,:arke)
+    error_group_manager = Arke.handle_manager(core_group,:arke_system,:group)
+
+    check_file("parameter_manager","arke_system",error_parameter_manager)
+    check_file("arke_manager","arke_system",error_arke_manager)
+    check_file("group_manager","arke_system",error_group_manager)
+
+    input_project = String.to_atom(opts[:project]) || :arke_system
+
+    project_list = get_project(input_project, all)
 
     file_list = Path.wildcard("./lib/registry/*.#{format}")
     raw_data = parse(file_list,format)
@@ -136,19 +148,6 @@ defmodule Mix.Tasks.Arke.SeedProject do
     arke_list = core_arke ++ Map.get(raw_data, :arke, [])
     group_list = core_group ++ Map.get(raw_data, :group, [])
     link_list = core_link ++ Map.get(raw_data, :link, [])
-
-    # start core manager before create everything
-    error_parameter_manager = Arke.handle_manager(core_parameter,:arke_system,:parameter)
-    error_arke_manager = Arke.handle_manager(core_arke,:arke_system,:arke)
-    error_group_manager = Arke.handle_manager(core_group,:arke_system,:group)
-
-    check_file("system_parameter_manager",error_parameter_manager)
-    check_file("system_arke_manager",error_arke_manager)
-    check_file("system_group_manager",error_group_manager)
-
-    input_project = String.to_atom(opts[:project]) || :arke_system
-
-    project_list = get_project(input_project, all)
 
     write_data(input_project,project_list,core_data,parameter_list,arke_list,group_list,link_list)
 
@@ -158,24 +157,40 @@ defmodule Mix.Tasks.Arke.SeedProject do
 
   defp write_data(_input_project,project_list,core_data,parameter_list,arke_list,group_list,link_list)  do
     Enum.each(project_list, fn project ->
-      unless to_string(project) == "arke_system" do
-        error_parameter_manager = Arke.handle_manager(Map.get(core_data,:parameter, []),project,:parameter)
-        error_arke_manager = Arke.handle_manager(Map.get(core_data,:arke, []),project,:arke)
-        error_group_manager = Arke.handle_manager(Map.get(core_data,:group, []),project,:group)
-        check_file("#{project}_parameter_manager",error_parameter_manager)
-        check_file("#{project}_arke_manager",error_arke_manager)
-        check_file("#{project}_group_manager",error_group_manager)
+
+      # if project is arke_system create only the core data
+      if to_string(project) == "arke_system" do
+
+        error_parameter = handle_parameter(Map.get(core_data,:parameter, []), project,[])
+        error_arke = handle_arke(Map.get(core_data,:arke, []), project,[])
+        error_group = handle_group(Map.get(core_data,:group, []), project,[])
+        error_link = handle_link(Map.get(core_data,:link, []), project,[])
+
+        check_file("parameter","arke_system",error_parameter)
+        check_file("arke","arke_system",error_arke)
+        check_file("group","arke_system",error_group)
+        check_file("link","arke_system",error_link)
+
+        else
+        project_key = to_string(project)
+          error_parameter_manager = Arke.handle_manager(Map.get(core_data,:parameter, []),project,:parameter)
+          error_arke_manager = Arke.handle_manager(Map.get(core_data,:arke, []),project,:arke)
+          error_group_manager = Arke.handle_manager(Map.get(core_data,:group, []),project,:group)
+          check_file("parameter_manager",project_key,error_parameter_manager)
+          check_file("arke_manager",project_key,error_arke_manager)
+          check_file("group_manager",project_key,error_group_manager)
+
+          error_parameter = handle_parameter(parameter_list, project,[])
+          error_arke = handle_arke(arke_list, project,[])
+          error_group = handle_group(group_list, project,[])
+          error_link = handle_link(link_list, project,[])
+
+
+          check_file("parameter",project_key,error_parameter)
+          check_file("arke",project_key,error_arke)
+          check_file("group",project_key,error_group)
+          check_file("link",project_key,error_link)
       end
-      error_parameter = handle_parameter(parameter_list, project,[])
-      error_arke = handle_arke(arke_list, project,[])
-      error_group = handle_group(group_list, project,[])
-      error_link = handle_link(link_list, project,[])
-
-
-      check_file("parameter",error_parameter)
-      check_file("arke",error_arke)
-      check_file("group",error_group)
-      check_file("link",error_link)
 
     end)
     end
