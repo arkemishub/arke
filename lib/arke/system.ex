@@ -334,7 +334,7 @@ defmodule Arke.System.BaseParameter do
     end
   end
 
-  defp __validate_values__(opts, nil, _), do: Keyword.delete(opts, :values)
+  defp __validate_values__(opts, nil, _), do: opts
 
   defp __validate_values__(opts, %{"value" => value, "datetime" => _} = values, type)
        when not is_nil(value),
