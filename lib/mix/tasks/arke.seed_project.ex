@@ -82,16 +82,9 @@ defmodule Mix.Tasks.Arke.SeedProject do
     dir_path = "log/arke_seed_project/#{project}"
     path = "#{dir_path}/#{datetime}_#{to_string(arke_id)}.log"
 
-    File.mkdir("log")
+    File.mkdir_p!(dir_path)
+    write_log_to_file(path, data)
 
-    case File.exists?(dir_path) do
-      true ->
-        write_log_to_file(path, data)
-
-      false ->
-        File.mkdir!(dir_path)
-        write_log_to_file(path, data)
-    end
   end
 
   defp write_log_to_file(path, data) do
