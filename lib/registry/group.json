@@ -3,7 +3,7 @@
     "id": "parameter",
     "label": "Parameter",
     "description": "Parameter Group",
-    "arke_list": ["string","integer","float","list","dict","date","datetime","time","boolean","dynamic","binary"]
+    "arke_list": ["string","integer","float","list","dict","date","datetime","time","boolean","dynamic","binary","link"]
   },
   {
     "id": "arke_or_group",
