@@ -827,7 +827,7 @@
       {
         "id": "default_link",
         "metadata": {
-          "default_link": null
+          "default_boolean": null
         }
       },
       {
@@ -843,12 +843,6 @@
         }
       },
       {
-        "id": "arke_or_group_id",
-        "metadata": {
-          "default_string": "arke"
-        }
-      },
-      {
         "id": "filter_keys",
         "metadata": {
           "multiple": true,
@@ -858,13 +852,6 @@
           ]
         }
       },
-      {
-        "id": "multiple",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-
       {
         "id": "direction",
         "metadata": {
