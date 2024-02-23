@@ -62,6 +62,7 @@ defmodule Arke do
     updated_data = Map.merge(flatten_data,other)
                    |> Map.put(:type,Map.get(data,:type,"arke"))
                    |> Map.put_new(:active,true)
+
     final_data = Map.replace(updated_data,:parameters,parse_arke_parameter(updated_data,project))
     module = get_module(final_data,"arke")
     updated_error = start_manager(final_data,"arke",project,ArkeManager, module)
@@ -103,7 +104,7 @@ defmodule Arke do
     case Map.pop(data,:id,nil) do
       {nil, _updated_data} -> [%{context: :manager , message: "key id not found"} | error]
       {id, updated_data} ->
-        {metadata,updated_data} = Map.pop(data,:metadata,%{project: project})
+        {metadata,updated_data} = Map.pop(updated_data,:metadata,%{project: project})
         case manager.create(
                                     Unit.new(
                                       String.to_atom(id),
@@ -126,12 +127,12 @@ defmodule Arke do
   end
   defp parse_arke_parameter(data,project) do
     base_parameters(Map.get(data,:parameters,[]), Map.get(data,:type,"arke")) |> Enum.reduce([], fn param,acc ->
-      # todo: fare controllo per cui se esce tbd (sarà poi nil) scrivere sul file che la chiave  id manca
       # controllare anche che il parameter manager torni qualcosa che esiste
       converted = Map.update(param,:id, "tbd", &String.to_atom(to_string(&1)))
       id = converted[:id]
       case ParameterManager.get(id,project) do
-        %Unit{} = arke ->  [ Map.put(converted,:arke, arke.arke_id) | acc]
+        %Unit{} = arke ->
+          [ Map.put(converted,:arke, arke.arke_id) | acc]
         _ -> acc
       end
     end)

@@ -78,6 +78,7 @@ defmodule Arke.Core.Unit do
     {link, opts} = get_link(opts)
     {metadata, opts} = Map.pop(opts, :metadata, arke.metadata)
 
+
     case check_metadata(metadata) do
       {:error, msg} ->
         {:error, msg}
@@ -89,8 +90,8 @@ defmodule Arke.Core.Unit do
         {runtime_data, opts} = Map.pop(opts, :runtime_data, %{})
 
         with {:ok, opts} <- ArkeManager.call_func(arke, :before_load, [opts, persistence_fn]) do
-          data = load_data(arke, %{}, opts)
 
+          data = load_data(arke, %{}, opts)
           new(
             id,
             data,
@@ -198,6 +199,7 @@ defmodule Arke.Core.Unit do
     {id, args} = Map.pop(args, :id, unit.id)
     {link, args} = Map.pop(args, :link, Map.get(unit, :link, nil))
     {metadata, args} = Map.pop(args, :metadata, unit.metadata)
+
 
     case check_metadata(metadata) do
       {:error, msg} ->

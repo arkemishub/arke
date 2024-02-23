@@ -33,6 +33,8 @@ defmodule Arke.Core.File do
     {:ok, binary} = File.read(path)
     path = "arke_file/#{DateTime.to_string(DateTime.utc_now())}"
 
+
+
     unit_data = %{
       binary_data: binary,
       extension: extension,
@@ -41,7 +43,6 @@ defmodule Arke.Core.File do
       path: path,
       name: filename
     }
-
     {:ok, unit_data}
   end
 
@@ -50,9 +51,14 @@ defmodule Arke.Core.File do
   def on_struct_encode(arke, unit, data, opts) do
     load_files = Keyword.get(opts, :load_files, false)
 
-    case load_files do
+
+    with true <- load_files,
+      {:ok,signed_url} <- get_signed_url(unit) do
+     {:ok, Map.put(data, :signed_url,signed_url )}
+    else
       false -> {:ok, data}
-      true -> {:ok, Map.put(data, :signed_url, get_signed_url(unit))}
+      {:error,msg} -> Logger.warn("error while loading the image: #{msg}")
+                      {:ok,data}
     end
   end
 
@@ -80,7 +86,9 @@ defmodule Arke.Core.File do
   end
 
   def get_signed_url(%{data: data} = unit) do
-    {:ok, signed_url} = Gcp.get_bucket_file_signed_url("#{data.path}/#{data.name}")
-    signed_url
+    case Gcp.get_bucket_file_signed_url("#{data.path}/#{data.name}") do
+    {:ok, signed_url} -> {:ok,signed_url}
+    {:error,msg} -> {:error,msg}
+    end
   end
 end
