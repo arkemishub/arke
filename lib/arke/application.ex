@@ -18,13 +18,15 @@ defmodule Arke.Application do
   @moduledoc false
 
   use Application
-
   @impl true
   def start(_type, _args) do
+    topologies = Application.get_env(:libcluster, :topologies)
     children = [
       {Arke.Boundary.ParameterManager, [name: Arke.Boundary.ParameterManager]},
       {Arke.Boundary.ArkeManager, [name: Arke.Boundary.ArkeManager]},
       {Arke.Boundary.GroupManager, [name: Arke.Boundary.GroupManager]},
+      {Cluster.Supervisor, [topologies, [name: Arke.ClusterSupervisor]]},
+      {NodeRegistry, "arke_#{postfix()}"}
       # Starts a worker by calling: ArkeMonorepo.Worker.start_link(arg)
       # {ArkeMonorepo.Worker, arg}
     ]
@@ -37,5 +39,13 @@ defmodule Arke.Application do
     Arke.init()
 
     link
+  end
+
+  defp postfix() do
+    System.get_env("POSTFIX") || random_string()
+  end
+
+  defp random_string() do
+    :crypto.strong_rand_bytes(5) |> Base.encode32()
   end
 end
