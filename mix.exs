@@ -62,7 +62,6 @@ defmodule Arke.MixProject do
       {:calendar, "~> 1.0.0"},
       {:xlsxir, "~> 1.6"},
       {:libcluster, "~> 3.3"},
-      {:node_registry, "~> 0.1.1"},
     ]
   end
 
