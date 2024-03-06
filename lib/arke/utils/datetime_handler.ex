@@ -67,9 +67,13 @@ defmodule Arke.Utils.DatetimeHandler do
     end
   end
 
+  def now(:datetime), do: Timex.set(Timex.now(), microsecond: 0)
+  def now(:date), do: Timex.now() |> Timex.to_date()
+  def now(:time), do: Time.utc_now() |> Time.truncate(:second)
+
+
   # ----- DATETIME -----
 
-  def now(:datetime), do: Timex.set(Timex.now(), microsecond: 0)
   def from_unix(s, unit \\ :second), do: Timex.from_unix(s, unit)
   def parse_datetime(value, only_value \\ false)
   def parse_datetime(value, true) when is_nil(value), do: value
@@ -98,7 +102,6 @@ defmodule Arke.Utils.DatetimeHandler do
   def shift_datetime(opts), do: Timex.shift(now(:datetime), opts)
 
   # ----- DATE -----
-  def now(:date), do: Timex.now() |> Timex.to_date()
   def parse_date(value, only_value \\ false)
   def parse_date(value, true) when is_nil(value), do: nil
   def parse_date(value, _only_value) when is_nil(value), do: {:ok, nil}
@@ -123,7 +126,6 @@ defmodule Arke.Utils.DatetimeHandler do
 
   # ----- TIME -----
 
-  def now(:time), do: Time.utc_now() |> Time.truncate(:second)
   def parse_time(value, only_value \\ false)
   def parse_time(value, true) when is_nil(value), do: nil
   def parse_time(value, _only_value) when is_nil(value), do: {:ok, nil}

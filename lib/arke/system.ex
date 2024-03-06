@@ -336,7 +336,7 @@ defmodule Arke.System.BaseParameter do
 
   defp __validate_values__(opts, nil, _), do: opts
 
-  defp __validate_values__(opts, %{"value" => value, "datetime" => _} = values, type)
+  defp __validate_values__(opts, %{"value" => value, "datetime" => _} = _values, type)
        when not is_nil(value),
        do: __validate_values__(opts, value, type)
 
@@ -377,12 +377,9 @@ defmodule Arke.System.BaseParameter do
     __values_from_list__(values, opts, condition)
   end
 
-  # FARE RAISE ECCEZIONE DA GESTIRE
-  defp __validate_values__(opts, _, _),
-    do: Keyword.update(opts, :values, nil, fn _current_value -> nil end)
 
   # CONVERT ALL STRINGS KEY TO ATOMS (string are received from API)
-  defp __check_map__([%{"label" => _l, "value" => _v} | h] = values) do
+  defp __check_map__([%{"label" => _l, "value" => _v} | _h] = values) do
     Enum.map(
       values,
       &Enum.into(&1, %{}, fn {key, val} -> {String.to_existing_atom(key), val} end)
