@@ -128,7 +128,7 @@ defmodule Arke.Core.Unit do
     value =
       get_data_value(Map.get(opts, parameter_id, nil))
       |> get_default_value(parameter)
-      |> parse_value(parameter_type)
+      |> parse_value(parameter)
 
     Map.put_new(data, parameter_id, value)
   end
@@ -313,27 +313,27 @@ defmodule Arke.Core.Unit do
           value :: String.t() | boolean() | number() | list() | %{} | Date.t(),
           String.t()
         ) :: String.t() | boolean() | number() | list() | %{}
-  defp parse_value(value, :atom) when is_binary(value), do: String.to_existing_atom(value)
+  defp parse_value(value, %{arke_id: :atom}) when is_binary(value), do: String.to_existing_atom(value)
 
-  defp parse_value(value, :date) do
+  defp parse_value(value, %{arke_id: :date}) do
     with {:ok, date} <- DatetimeHandler.parse_date(value),
          do: date,
          else: ({:error, msg} -> to_string(msg))
   end
 
-  defp parse_value(value, :time) do
+  defp parse_value(value, %{arke_id: :time}) do
     with {:ok, time} <- DatetimeHandler.parse_time(value),
          do: time,
          else: ({:error, msg} -> to_string(msg))
   end
 
-  defp parse_value(value, :datetime) do
+  defp parse_value(value, %{arke_id: :datetime}) do
     with {:ok, datetime} <- DatetimeHandler.parse_datetime(value),
          do: datetime,
          else: ({:error, msg} -> to_string(msg))
   end
 
-  defp parse_value(value, :boolean) do
+  defp parse_value(value, %{arke_id: :boolean}) do
     case value do
       "true" -> true
       "True" -> true
@@ -345,6 +345,12 @@ defmodule Arke.Core.Unit do
       0 -> true
       _ -> value
     end
+  end
+
+  defp parse_value(value, %{arke_id: :link, data: %{multiple: true}}) when is_binary(value) do
+    cleaned_string = String.trim_leading(String.trim_trailing(value, "]"), "[")
+    list_result = cleaned_string |> String.split(~r/,/, trim: true)
+    cleaned_list = list_result |> Enum.map(&String.replace(&1, ~r/^['"]|['"]$/, ""))
   end
 
   defp parse_value(value, _), do: value
