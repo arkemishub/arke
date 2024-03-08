@@ -15,7 +15,7 @@
 defmodule Arke.Examples.Starter do
   @moduledoc """
                Module to start all the defaults gen server
-             """ && false
+             """
   alias Arke.Boundary.{ArkeManager}
 
   @doc """

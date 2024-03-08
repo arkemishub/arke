@@ -53,7 +53,7 @@ defmodule Arke.Core.Parameter do
 
   @doc """
        Macro defining a shared struct of parameter used across Arkes
-       """ && false
+       """
   use Arke.System.Group
 
   group id: "parameter" do

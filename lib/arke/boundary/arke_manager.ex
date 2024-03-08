@@ -15,7 +15,7 @@
 defmodule Arke.Boundary.ArkeManager do
   @moduledoc """
              This module manage the gen servers for the element specified in `Arke.Core.Arke`
-             """ && false
+             """
 
   alias Arke.Utils.ErrorGenerator, as: Error
   use Arke.Boundary.UnitManager
