@@ -54,7 +54,6 @@ defmodule Arke.Validator do
         Enum.filter(ArkeManager.get_parameters(arke), fn %{data: %{persistence: persistence}} ->
           persistence == "arke_parameter"
         end)
-
       res =
         Enum.reduce(unit_parameters, {unit, errors}, fn p, {new_unit, errors} = _res ->
           {value, err} = validate_parameter(arke, p, Unit.get_value(data, p.id), project)
@@ -136,7 +135,7 @@ defmodule Arke.Validator do
 
   def validate_parameter(arke, parameter, value, project) when is_atom(parameter) do
     parameter = get_parameter(arke, parameter, project)
-    check_parameter(parameter, value, project)
+    check_parameter(parameter, value, project,arke)
   end
 
   defp get_parameter(nil, parameter_id, project),
@@ -145,11 +144,11 @@ defmodule Arke.Validator do
   defp get_parameter(arke, parameter_id, project),
     do: ArkeManager.get_parameter(arke, parameter_id)
 
-  def validate_parameter(_arke, parameter, value, project) do
-    check_parameter(parameter, value, project)
+  def validate_parameter(arke, parameter, value, project) do
+    check_parameter(parameter, value, project,arke)
   end
 
-  defp check_parameter(parameter, value, project) do
+  defp check_parameter(parameter, value, project,arke) do
     value = get_default_value(parameter, value)
     value = parse_value(parameter, value)
     value = check_whitespace(parameter, value)
@@ -158,7 +157,7 @@ defmodule Arke.Validator do
       []
       |> check_required_parameter(parameter, value)
       |> check_by_type(parameter, value)
-      |> check_duplicate(parameter, value, project)
+      |> check_duplicate(parameter, value, project,arke)
 
     {value, errors}
   end
@@ -223,13 +222,13 @@ defmodule Arke.Validator do
 
   defp check_required_parameter(errors, _parameter, _value), do: errors
 
-  defp check_duplicate(errors, %{id: id, data: %{unique: true}} = _parameter, value, project) do
-    with nil <- QueryManager.get_by(%{id => value, :project => project}),
+  defp check_duplicate(errors, %{id: id, data: %{unique: true}} = parameter, value, project,arke) do
+    with nil <- QueryManager.get_by(%{id => value, :project => project, :arke_id => arke.id}),
          do: errors,
          else: (_ -> errors ++ [{"duplicate values are not allowed for", id}])
   end
 
-  defp check_duplicate(errors, _parameter, _value, _project), do: errors
+  defp check_duplicate(errors, _parameter, _value, _project,_arke), do: errors
 
   defp check_by_type(errors, _parameter, value) when is_nil(value), do: errors
 
