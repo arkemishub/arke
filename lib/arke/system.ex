@@ -53,6 +53,86 @@ defmodule Arke.System do
       def after_get_struct(arke, unit, struct), do: struct
       def after_get_struct(arke, struct), do: struct
 
+      def import(%{runtime_data: %{conn: %{method: "POST"}=conn}, metadata: %{project: project}} = arke) do
+        member = ArkeAuth.Guardian.Plug.current_resource(conn)
+        mode = Map.get(conn.body_params, "mode", "default")
+
+        case Map.get(conn.body_params, "file", nil) do
+          nil -> {:error, "file is required", 400}
+          file -> import_units(arke, project, member, file, mode)
+        end
+      end
+
+      defp import_units(arke, project, member, file, mode) do
+        [{:ok, ref}] = Xlsxir.multi_extract(file.path)
+        all_units = get_all_units_for_import(project)
+
+        file_as_list = Xlsxir.get_list(ref)
+        header = get_header_for_import(project, arke, file_as_list)
+        rows = file_as_list |> List.delete_at(0)
+
+        {correct_units, error_units} = Enum.with_index(rows) |> Enum.reduce({[], []}, fn {row, index}, {correct_units, error_units} ->
+          case Enum.filter(row, & !is_nil(&1)) do
+            [] -> {correct_units, error_units}
+            _ -> case load_units(project, arke, header, row, all_units, mode) do
+                   {:error, args, errors} ->
+                     m = Enum.reduce(header, %{}, fn {h, index}, acc ->
+                       acc = Map.put(acc, h, Enum.at(row, index))
+                     end) |> Map.put(:errors, errors)
+                     {correct_units, [m | error_units]}
+                   {:ok, unit_args} -> {[unit_args | correct_units], error_units}
+                 end
+          end
+        end)
+
+        existing_units = get_existing_units_for_import(project, arke, header, correct_units)
+        units_args = Enum.reduce(correct_units, [], fn u, units_args ->
+          case check_existing_units_for_import(project, arke, header, u, existing_units) do
+            true -> units_args
+            false -> [u | units_args]
+          end
+        end)
+
+        Enum.map(Stream.chunk_every(units_args, 5000) |> Enum.to_list(), fn chunk ->
+          ArkePostgres.Repo.insert_all("arke_unit", chunk, prefix: Atom.to_string(project))
+        end)
+
+        res = %{
+          count_inserted: length(units_args),
+          count_existing: length(existing_units),
+          count_error: length(error_units),
+          error_units: error_units
+        }
+        {:ok, res, 201}
+      end
+
+      defp get_header_for_import(project, arke, file_as_list) do
+        Enum.reduce(Enum.with_index(Enum.at(file_as_list, 0)), [], fn {cell, index}, acc ->
+          case Arke.Boundary.ArkeManager.get_parameter(arke, project, cell) do
+            nil -> acc
+            parameter -> [{Atom.to_string(parameter.id), index} | acc]
+          end
+        end)
+      end
+      defp get_all_units_for_import(project), do: []
+
+      defp load_units(project, arke, header, row, _, "default") do
+        args = Enum.reduce(header, [], fn {parameter_id, index}, acc ->
+          acc = Keyword.put(acc, String.to_existing_atom(parameter_id), Enum.at(row, index))
+        end)
+
+        with %Arke.Core.Unit{} = unit <- Arke.Core.Unit.load(arke, args, :create),
+             {:ok, unit} <- Arke.Validator.validate(unit, :create, project),
+             do: {:ok, args},
+             else: ({:error, errors} -> {:error, args, errors})
+      end
+      defp get_existing_units_for_import(project, arke, header, units_args), do: []
+      defp check_existing_units_for_import(project, arke, header, units_args, existing_units), do: true
+      defp get_import_value(header, row, column) do
+        index = Enum.find(header, fn {k, v} -> k == column end) |> elem(1)
+        Enum.at(row, index)
+      end
+
       defoverridable on_load: 2,
                      before_load: 2,
                      on_validate: 2,
@@ -66,7 +146,16 @@ defmodule Arke.System do
                      on_delete: 2,
                      before_delete: 2,
                      after_get_struct: 2,
-                     after_get_struct: 3
+                     after_get_struct: 3,
+
+                    # Import
+                      import: 1,
+                     import_units: 5,
+                      get_header_for_import: 3,
+                     get_all_units_for_import: 1,
+                      load_units: 6,
+                     get_existing_units_for_import: 4,
+                      check_existing_units_for_import: 5
     end
   end
 
