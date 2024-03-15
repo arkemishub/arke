@@ -229,6 +229,41 @@ defmodule Arke.Core.Unit do
 
   defp update_data(data, _key, _value), do: data
 
+  def as_args(arke, unit) do
+    [
+      id: handle_id(unit.id),
+      arke_id: Atom.to_string(unit.arke_id),
+      data: encode_unit_data(arke, unit.data),
+      metadata: %{},
+      inserted_at: NaiveDateTime.utc_now(),
+      updated_at: NaiveDateTime.utc_now()
+    ]
+  end
+
+  defp handle_id(id) when is_nil(id), do: UUID.uuid1()
+  defp handle_id(id) when is_atom(id), do: Atom.to_string(id)
+  defp handle_id(id) when is_binary(id), do: id
+  # TODO handle error
+  defp handle_id(id), do: id
+
+  def encode_unit_data(arke, data) do
+    Enum.reduce(data, %{}, fn {key, value}, new_map ->
+      parameter = ArkeManager.get_parameter(arke, key)
+      update_encoded_unit_data(parameter, new_map, value)
+    end)
+  end
+
+  defp update_encoded_unit_data(%{data: %{only_runtime: true}}, data, _), do: data
+
+  defp update_encoded_unit_data(%{id: id}, data, value),
+       do:
+         Map.put_new(data, Atom.to_string(id), %{
+           :value => value,
+           :datetime => Arke.DatetimeHandler.now(:datetime)
+         })
+
+  defp update_encoded_unit_data(_, data, _), do: data
+
   # Handle parameters
   @doc """
   Get the Unit data as a keyword list
