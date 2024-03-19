@@ -19,7 +19,7 @@ defmodule Arke.Validator do
   alias Arke.Boundary.{ArkeManager, ParameterManager}
   alias Arke.QueryManager, as: QueryManager
   alias Arke.Utils.ErrorGenerator, as: Error
-  alias Arke.DatetimeHandler, as: DatetimeHandler
+  alias Arke.Utils.DatetimeHandler, as: DatetimeHandler
   alias Arke.Core.{Arke, Unit, Parameter}
 
   @type func_return() :: {:ok, Unit.t()} | Error.t()
@@ -54,7 +54,6 @@ defmodule Arke.Validator do
         Enum.filter(ArkeManager.get_parameters(arke), fn %{data: %{persistence: persistence}} ->
           persistence == "arke_parameter"
         end)
-
       res =
         Enum.reduce(unit_parameters, {unit, errors}, fn p, {new_unit, errors} = _res ->
           {value, err} = validate_parameter(arke, p, Unit.get_value(data, p.id), project)
@@ -136,7 +135,7 @@ defmodule Arke.Validator do
 
   def validate_parameter(arke, parameter, value, project) when is_atom(parameter) do
     parameter = get_parameter(arke, parameter, project)
-    check_parameter(parameter, value, project)
+    check_parameter(parameter, value, project,arke)
   end
 
   defp get_parameter(nil, parameter_id, project),
@@ -145,11 +144,11 @@ defmodule Arke.Validator do
   defp get_parameter(arke, parameter_id, project),
     do: ArkeManager.get_parameter(arke, parameter_id)
 
-  def validate_parameter(_arke, parameter, value, project) do
-    check_parameter(parameter, value, project)
+  def validate_parameter(arke, parameter, value, project) do
+    check_parameter(parameter, value, project,arke)
   end
 
-  defp check_parameter(parameter, value, project) do
+  defp check_parameter(parameter, value, project,arke) do
     value = get_default_value(parameter, value)
     value = parse_value(parameter, value)
     value = check_whitespace(parameter, value)
@@ -158,7 +157,7 @@ defmodule Arke.Validator do
       []
       |> check_required_parameter(parameter, value)
       |> check_by_type(parameter, value)
-      |> check_duplicate(parameter, value, project)
+      |> check_duplicate(parameter, value, project,arke)
 
     {value, errors}
   end
@@ -223,13 +222,16 @@ defmodule Arke.Validator do
 
   defp check_required_parameter(errors, _parameter, _value), do: errors
 
-  defp check_duplicate(errors, %{id: id, data: %{unique: true}} = _parameter, value, project) do
-    with nil <- QueryManager.get_by(%{id => value, :project => project}),
+  defp check_duplicate(errors, %{id: id, data: %{unique: true}} = _parameter, nil, project),
+       do: errors ++ [{"value must not be null for", id}]
+
+  defp check_duplicate(errors, %{id: id, data: %{unique: true}} = parameter, value, project,arke) do
+    with nil <- QueryManager.get_by(%{id => value, :project => project, :arke_id => arke.id}),
          do: errors,
          else: (_ -> errors ++ [{"duplicate values are not allowed for", id}])
   end
 
-  defp check_duplicate(errors, _parameter, _value, _project), do: errors
+  defp check_duplicate(errors, _parameter, _value, _project,_arke), do: errors
 
   defp check_by_type(errors, _parameter, value) when is_nil(value), do: errors
 
@@ -243,14 +245,17 @@ defmodule Arke.Validator do
   defp check_by_type(errors, %{arke_id: :string} = parameter, value)
        when is_binary(value) or is_atom(value) or is_list(value) do
     errors
+    # also update the insert in arke postgres
     |> check_max_length(parameter, value)
     |> check_min_length(parameter, value)
     |> check_values(parameter, value)
+    |> check_multiple(parameter, value)
   end
 
   defp check_by_type(errors, %{arke_id: :string} = parameter, _value),
     do: errors ++ [{parameter.data.label, "must be a string"}]
 
+  # --- start Enum ---
   defp check_values(errors, %{data: %{values: nil}} = _parameter, _value), do: errors
 
   defp check_values(
@@ -285,6 +290,7 @@ defmodule Arke.Validator do
          value
        ),
        do: errors ++ [{value, "#{label} must be a list of #{type}}"}]
+ defp check_values(errors,_parameter,_value), do: errors
 
   defp check_values_type(value, type) do
     condition =
@@ -296,6 +302,19 @@ defmodule Arke.Validator do
 
     Enum.all?(value, &condition.(&1))
   end
+  # --- end Enum ---
+  # --- start Multiple ---
+  defp check_multiple(errors, %{id: id, data: %{multiple: false}} = _parameter, value) when is_list(value), do: errors ++ [{"multiple values are not allowed for", id}]
+  defp check_multiple(errors, %{id: id, data: %{multiple: true}} = parameter, value) when not is_list(value), do: check_multiple(errors, parameter, [value])
+  defp check_multiple(errors, %{id: id, arke_id: type, data: %{ multiple: true}} = parameter, value) do
+    case check_values_type(value,type) do
+      true -> errors
+      false ->
+        errors ++ [{"[#{Enum.join(value,",")}]", "#{id} must be a list of #{type} "}]
+    end
+  end
+  defp check_multiple(errors,_parameter,_value), do: errors
+  # --- end Multiple ---
 
   defp check_whitespace(%{data: %{strip: true}} = parameter, value) when is_atom(value) do
     value
@@ -354,6 +373,7 @@ defmodule Arke.Validator do
     |> check_max(parameter, value)
     |> check_min(parameter, value)
     |> check_values(parameter, value)
+    |> check_multiple(parameter, value)
   end
 
   defp check_by_type(errors, %{arke_id: :integer, data: %{label: label}} = parameter, _value),
@@ -365,6 +385,7 @@ defmodule Arke.Validator do
     |> check_max(parameter, value)
     |> check_min(parameter, value)
     |> check_values(parameter, value)
+    |> check_multiple(parameter, value)
   end
 
   defp check_by_type(errors, %{arke_id: :float, data: %{label: label}} = parameter, _value),

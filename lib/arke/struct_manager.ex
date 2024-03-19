@@ -21,7 +21,7 @@ defmodule Arke.StructManager do
   alias Arke.Boundary.GroupManager
   alias Arke.Boundary.ArkeManager
   alias Arke.QueryManager
-  alias Arke.DatetimeHandler, as: DatetimeHandler
+  alias Arke.Utils.DatetimeHandler, as: DatetimeHandler
   alias Arke.Core.{Unit, Arke}
 
   @type parameter :: %{
@@ -114,7 +114,6 @@ defmodule Arke.StructManager do
   defp handle_load_link(_, _, false, _opts), do: []
 
   defp handle_load_link(unit, project, true, opts) do
-    # IO.inspect("query done for link load")
 
     get_link_id_list(unit)
     |> get_link_units(project, opts)

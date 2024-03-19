@@ -60,7 +60,8 @@ defmodule Arke.MixProject do
       {:goth, "~> 1.3.0"},
       {:httpoison, "~> 2.0"},
       {:calendar, "~> 1.0.0"},
-      {:xlsxir, "~> 1.6"}
+      {:xlsxir, "~> 1.6"},
+      {:libcluster, "~> 3.3"},
     ]
   end
 
