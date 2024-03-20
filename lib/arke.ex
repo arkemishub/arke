@@ -130,9 +130,17 @@ defmodule Arke do
       # controllare anche che il parameter manager torni qualcosa che esiste
       converted = Map.update(param,:id, "tbd", &String.to_atom(to_string(&1)))
       id = converted[:id]
+
+
       case ParameterManager.get(id,project) do
         %Unit{} = arke ->
-          [ Map.put(converted,:arke, arke.arke_id) | acc]
+        type = arke.arke_id
+          final_data = Map.update(converted,:metadata,%{}, &(
+            BaseParameter.check_enum(type, &1) |>
+              Enum.into(%{}))
+          )
+          |> Map.put(:arke, type)
+          [ final_data | acc]
         _ -> acc
       end
     end)

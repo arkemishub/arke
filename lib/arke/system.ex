@@ -267,7 +267,8 @@ defmodule Arke.System.BaseParameter do
   def check_enum(type, opts) do
     enum_parameters = [:string, :integer, :float]
     case type in enum_parameters do
-      true -> __enum_parameter__(opts, type)
+      true ->
+        __enum_parameter__(opts, type)
       false -> opts
     end
 
@@ -325,8 +326,8 @@ defmodule Arke.System.BaseParameter do
     Keyword.put_new(opts, key, default)
   end
 
-  defp __enum_parameter__(opts, type) when is_map(opts), do: __enum_parameter__(Map.to_list(opts),type)
-  defp __enum_parameter__(opts, type) do
+  def __enum_parameter__(opts, type) when is_map(opts), do: __enum_parameter__(Map.to_list(opts),type)
+  def __enum_parameter__(opts, type) do
     case Keyword.has_key?(opts, :values) do
       true ->   __validate_values__(opts, opts[:values], type)
       false ->

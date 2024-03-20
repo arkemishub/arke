@@ -260,12 +260,11 @@ defmodule Arke.Validator do
 
   defp check_values(
          errors,
-         %{arke_id: type, data: %{values: values, label: label}} = parameter,
+         %{arke_id: type, data: %{values: values, label: label,multiple: true}} = parameter,
          value
        )
        when is_list(value) do
     admitted_values = Enum.map(values, fn %{label: _l, value: v} -> v end)
-
     with true <- check_values_type(value, type) do
       with [] <- value -- admitted_values do
         errors
