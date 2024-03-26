@@ -19,15 +19,7 @@ defmodule Arke.Core.Link do
   alias Arke.LinkManager
   alias Arke.Boundary.{ArkeManager, GroupManager}
 
-  arke id: :arke_link, label: "Arke Link", type: "table" do
-    parameter(:parent_id, :string, is_primary: true, required: true, persistence: "table_column")
-    parameter(:child_id, :string, is_primary: true, required: true, persistence: "table_column")
-    parameter(:type, :string, required: true, persistence: "table_column")
-
-    parameter(:metadata, :dict,
-      default_dict: %{},
-      persistence: "table_column"
-    )
+  arke id: :arke_link do
   end
 
   def on_create(

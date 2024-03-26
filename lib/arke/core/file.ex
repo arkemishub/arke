@@ -21,13 +21,7 @@ defmodule Arke.Core.File do
   alias Arke.Utils.Gcp
   alias Arke.Boundary.ArkeManager
 
-  arke id: :arke_file, label: "Arke file" do
-    parameter(:name, :string, required: true)
-    parameter(:path, :string, required: true)
-    parameter(:provider, :string, values: ["local", "gcloud", "aws"], default: "gcloud")
-    parameter(:size, :float, required: false)
-    parameter(:extension, :string, required: false)
-    parameter(:binary, :bynary, required: true, only_runtime: true)
+  arke id: :arke_file do
   end
 
   def before_load(
@@ -39,15 +33,16 @@ defmodule Arke.Core.File do
     {:ok, binary} = File.read(path)
     path = "arke_file/#{DateTime.to_string(DateTime.utc_now())}"
 
+
+
     unit_data = %{
-      binary: binary,
+      binary_data: binary,
       extension: extension,
       size: file_stat.size,
       provider: "gcloud",
       path: path,
       name: filename
     }
-
     {:ok, unit_data}
   end
 
@@ -56,13 +51,18 @@ defmodule Arke.Core.File do
   def on_struct_encode(arke, unit, data, opts) do
     load_files = Keyword.get(opts, :load_files, false)
 
-    case load_files do
+
+    with true <- load_files,
+      {:ok,signed_url} <- get_signed_url(unit) do
+     {:ok, Map.put(data, :signed_url,signed_url )}
+    else
       false -> {:ok, data}
-      true -> {:ok, Map.put(data, :signed_url, get_signed_url(unit))}
+      {:error,msg} -> Logger.warn("error while loading the image: #{msg}")
+                      {:ok,data}
     end
   end
 
-  def before_create(_, %{data: %{name: name, path: path, binary: binary}} = unit) do
+  def before_create(_, %{data: %{name: name, path: path, binary_data: binary}} = unit) do
     case Gcp.upload_file("#{path}/#{name}", binary) do
       {:ok, _object} -> {:ok, unit}
       {:error, error} -> {:error, error}
@@ -76,9 +76,9 @@ defmodule Arke.Core.File do
     end
   end
 
-  def before_update(_, %{binary: binary} = unit) when is_nil(binary), do: {:ok, unit}
+  def before_update(_, %{binary_data: binary} = unit) when is_nil(binary), do: {:ok, unit}
 
-  def before_update(_, %{data: %{name: name, path: path, binary: binary}} = unit) do
+  def before_update(_, %{data: %{name: name, path: path, binary_data: binary}} = unit) do
     case Gcp.upload_file("#{path}/#{name}", binary) do
       {:ok, _object} -> {:ok, unit}
       {:error, error} -> {:error, error}
@@ -86,91 +86,9 @@ defmodule Arke.Core.File do
   end
 
   def get_signed_url(%{data: data} = unit) do
-    {:ok, signed_url} = Gcp.get_bucket_file_signed_url("#{data.path}/#{data.name}")
-    signed_url
+    case Gcp.get_bucket_file_signed_url("#{data.path}/#{data.name}") do
+    {:ok, signed_url} -> {:ok,signed_url}
+    {:error,msg} -> {:error,msg}
+    end
   end
-
-  # def test() do
-  #   {:ok, token} = Goth.Token.fetch([])
-  #   conn = GoogleApi.Storage.V1.Connection.new(token.token)
-
-  #   # Call the Storage V1 API (for example) to list buckets
-  #   {:ok, response} = GoogleApi.Storage.V1.Api.Buckets.storage_buckets_list(conn, "arkemis-lab")
-
-  #   # Print the response
-  #   Enum.each(response.items, &IO.puts(&1.id))
-  # end
-
-  # @spec upload_file :: none
-  # def upload_file() do
-  #   # Authenticate.
-  #   {:ok, token} = Goth.Token.fetch([])
-  #   conn = GoogleApi.Storage.V1.Connection.new(token.token)
-
-  #   # Make the API request.
-  #   {:ok, object} =
-  #     GoogleApi.Storage.V1.Api.Objects.storage_objects_insert_iodata(
-  #       conn,
-  #       "arke_demo",
-  #       "multipart",
-  #       %{name: "file.txt"},
-  #       "Hello " <> "Dorian aa" <> "!"
-  #     )
-
-  #   # Print the object.
-  #   IO.puts("Uploaded #{object.name} to #{object.selfLink}")
-  # end
-
-  # def get() do
-  #   {:ok, token} = Goth.Token.fetch([])
-  #   conn = GoogleApi.Storage.V1.Connection.new(token.token)
-
-  #   # Make the API request.
-  #   {:ok, object} =
-  #     GoogleApi.Storage.V1.Api.Objects.storage_objects_get(
-  #       conn,
-  #       "arke_demo",
-  #       "file.txt"
-  #     )
-  # end
-
-  # def get_url() do
-  #   service_account = "arke-storage@arkemis-lab.iam.gserviceaccount.com"
-  #   bucket = "arke_demo"
-  #   object = "file.txt"
-
-  #   get_signed_url(service_account, bucket, object)
-  # end
-
-  # def compose_signed_url(gcp_service_account, bucket, object) do
-  #   %Tesla.Client{pre: [{Tesla.Middleware.Headers, :call, [auth_headers]}]} = get_connection()
-  #   headers = [{"Content-Type", "application/json"}] ++ auth_headers
-
-  #   url =
-  #     "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/#{gcp_service_account}:signBlob"
-
-  #   expires = DateTime.utc_now() |> DateTime.to_unix() |> Kernel.+(1 * 3600)
-  #   resource = "/#{bucket}/#{object}"
-  #   signature = ["GET", "", "", expires, resource] |> Enum.join("\n") |> Base.encode64()
-  #   body = %{"payload" => signature} |> Poison.encode!()
-  #   IO.inspect(HTTPoison.post(url, body, headers))
-  #   {:ok, %{status_code: 200, body: result}} = HTTPoison.post(url, body, headers)
-
-  #   %{"signedBlob" => signed_blob} = Poison.decode!(result)
-
-  #   qs =
-  #     %{
-  #       "GoogleAccessId" => gcp_service_account,
-  #       "Expires" => expires,
-  #       "Signature" => signed_blob
-  #     }
-  #     |> URI.encode_query()
-
-  #   Enum.join(["https://storage.googleapis.com#{resource}", "?", qs])
-  # end
-
-  # defp get_connection() do
-  #   {:ok, token} = Goth.Token.fetch([])
-  #   conn = GoogleApi.Storage.V1.Connection.new(token.token)
-  # end
 end

@@ -15,7 +15,7 @@
 defmodule Arke.Examples.Starter do
   @moduledoc """
                Module to start all the defaults gen server
-             """ && false
+             """
   alias Arke.Boundary.{ArkeManager}
 
   @doc """
@@ -79,69 +79,4 @@ defmodule Arke.Examples.Starter do
     end)
   end
 
-  # defp schemas() do
-  #   schemas = [
-  #     {
-  #       :default,
-  #       [id: :arke_schema, label: "Arke Schema", type: :table],
-  #       [
-  #         [id: :id, label: "ID", type: :string, is_primary: true, metadata: %{required: true}],
-  #         [id: :label, label: "Label", type: :string, metadata: %{required: true}],
-  #         [id: :active, label: "Active", type: :boolean, metadata: %{default: true}],
-  #         [id: :metadata, label: "Metadata", type: :map, metadata: %{default: %{}}],
-  #         [id: :type, label: "Type", type: :string, metadata: %{default: :string}],
-  #         [id: :inserted_at, label: "Inserted at", type: :datetime, metadata: %{default: DatetimeHandler.now(:datetime)}],
-  #         [id: :updated_at, label: "Updated at", type: :datetime, metadata: %{default: DatetimeHandler.now(:datetime)}],
-  #       ]
-  #     },
-  #     {
-  #       :default,
-  #       [id: :arke_field, label: "Arke Field", type: :table],
-  #       [
-  #         [id: :id, label: "ID", type: :string, is_primary: true],
-  #         [id: :label, label: "Label", type: :string],
-  #         [id: :type, label: "Type", type: :string],
-  #         [id: :metadata, label: "Metadata", type: :map],
-  #         [id: :format, label: "Format", type: :string],
-  #         [id: :is_primary, label: "Is Primary", type: :boolean],
-  #         [id: :inserted_at, label: "Inserted at", type: :datetime],
-  #         [id: :updated_at, label: "Updated at", type: :datetime],
-  #       ]
-  #     },
-  #     {
-  #       :default,
-  #       [id: :arke_schema_field, label: "Arke Schema Field", type: :table],
-  #       [
-  #         [id: :arke_schema_id, label: "Arke schema id", type: :string, is_primary: true],
-  #         [id: :arke_field_id, label: "Arke field id", type: :string, is_primary: true],
-  #         [id: :metadata, label: "Metadata", type: :map],
-  #       ]
-  #     },
-  #     {
-  #       :default,
-  #       [id: :arke_record, label: "Arke Record", type: :table],
-  #       [
-  #         [id: :id, label: "ID", type: :string, is_primary: true],
-  #         [id: :arke_schema_id, label: "Arke schema id", type: :string],
-  #         [id: :data, label: "Data", type: :map],
-  #         [id: :metadata, label: "Metadata", type: :map],
-  #         [id: :inserted_at, label: "Inserted at", type: :datetime],
-  #         [id: :updated_at, label: "Updated at", type: :datetime],
-  #       ]
-  #     },
-  #     {
-  #       :test,
-  #       [id: :arke_schema, label: "Arke Schema", type: :arke_unit],
-  #       [
-  #         [id: :id, label: "ID", type: :string, is_primary: true],
-  #         [id: :label, label: "Label", type: :string],
-  #         [id: :active, label: "Active", type: :boolean],
-  #         [id: :metadata, label: "Metadata", type: :map],
-  #         [id: :type, label: "Type", type: :string],
-  #         [id: :inserted_at, label: "Inserted at", type: :datetime],
-  #         [id: :updated_at, label: "Updated at", type: :datetime],
-  #       ]
-  #     },
-  #   ]
-  # end
 end

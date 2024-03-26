@@ -16,6 +16,7 @@ defmodule Arke.Boundary.UnitManager do
   defmacro __using__(_) do
     quote do
       use GenServer
+      require Logger
       alias Arke.Core.Unit
       alias Arke.Utils.ErrorGenerator, as: Error
       @compile {:parse_transform, :ms_transform}
@@ -30,7 +31,7 @@ defmodule Arke.Boundary.UnitManager do
       def arke_list(), do: Keyword.get(__MODULE__.__info__(:attributes), :arke_list, [])
       def group_list(), do: Keyword.get(__MODULE__.__info__(:attributes), :arke_list, [])
 
-      def manager_id,
+      def manager_id(),
         do: Keyword.get(__MODULE__.__info__(:attributes), :manager_id, []) |> List.first()
 
       # client
@@ -41,7 +42,7 @@ defmodule Arke.Boundary.UnitManager do
       # server
       @impl true
       def init(arg) do
-        :ets.new(manager_id, [:set, :named_table, :public, read_concurrency: true])
+        :ets.new(manager_id(), [:set, :named_table, :public, read_concurrency: true])
         # do not block the init
         {:ok, arg}
       end
@@ -52,7 +53,7 @@ defmodule Arke.Boundary.UnitManager do
             {unit_id, project_id}
           end)
 
-        :ets.select(manager_id, fun)
+        :ets.select(manager_id(), fun)
       end
 
       def get(unit_id, _) when is_nil(unit_id), do: nil
@@ -64,12 +65,12 @@ defmodule Arke.Boundary.UnitManager do
       end
 
       def get(unit_id, project) do
-        case :ets.lookup(manager_id, {unit_id, project}) do
+        case :ets.lookup(manager_id(), {unit_id, project}) do
           [{_, unit}] ->
             unit
 
           [] ->
-            case :ets.lookup(manager_id, {unit_id, :arke_system}) do
+            case :ets.lookup(manager_id(), {unit_id, :arke_system}) do
               [{_, unit}] -> unit
               [] -> nil
             end
@@ -84,7 +85,7 @@ defmodule Arke.Boundary.UnitManager do
             {:error, "#{unit_id} doesn't exist in project: #{project}"}
 
           _ ->
-            :ets.delete(manager_id, {unit_id, project})
+            :ets.delete(manager_id(), {unit_id, project})
             :ok
         end
       end
@@ -99,7 +100,9 @@ defmodule Arke.Boundary.UnitManager do
       def create(unit, project, opts) do
         {manager, opts} = Keyword.pop(opts, :manager, __MODULE__)
         {unit, project} = before_create(unit, project)
-        GenServer.call(manager, {:create, unit, project})
+        current_node_create = GenServer.call(manager, {:create, unit, project})
+        call_nodes_manager(manager,:create,[unit,project])
+        current_node_create
       end
 
       def before_create(unit, project), do: {unit, project}
@@ -109,7 +112,9 @@ defmodule Arke.Boundary.UnitManager do
 
       def update(unit_id, project, new_unit) do
         unit = get(unit_id, project)
-        GenServer.call(__MODULE__, {:update, new_unit, project})
+        current_node_update = GenServer.call(__MODULE__, {:update, new_unit, project})
+        call_nodes_manager(__MODULE__,:update,[new_unit,project])
+        current_node_update
       end
 
       def call_func(%{id: id, metadata: %{project: project}} = unit, func, opts),
@@ -121,8 +126,9 @@ defmodule Arke.Boundary.UnitManager do
       defp exec_call_func(unit, func, opts) when is_nil(unit),
         do: get(:arke, :arke_system) |> exec_call_func(func, opts)
 
-      defp exec_call_func(%{__module__: module} = unit, func, opts) when is_nil(module),
-        do: {:error, "No Module"}
+      defp exec_call_func(%{__module__: module} = unit, func, opts) when is_nil(module), do:
+           {:error, "No Module"}
+
 
       defp exec_call_func(
              %{id: id, metadata: %{project: project}, __module__: module} = unit,
@@ -166,7 +172,10 @@ defmodule Arke.Boundary.UnitManager do
 
         case get(unit_id, project) do
           nil -> {:error, "#{unit_id} doesn't exist in project: #{project}"}
-          unit -> GenServer.call(manager, {:add_link, unit, parameter_id, child_id, metadata})
+          unit ->
+            current_node_update = GenServer.call(manager, {:add_link, unit, parameter_id, child_id, metadata})
+            call_nodes_manager(manager,:add_link,[unit, parameter_id, child_id, metadata])
+            current_node_update
         end
       end
 
@@ -180,7 +189,10 @@ defmodule Arke.Boundary.UnitManager do
 
         case get(unit_id, project) do
           nil -> {:error, "#{unit_id} doesn't exist in project: #{project}"}
-          unit -> GenServer.call(manager, {:remove_link, unit, parameter_id, child_id})
+          unit ->
+            current_node_update = GenServer.call(manager, {:remove_link, unit, parameter_id, child_id})
+            call_nodes_manager(manager,:remove_link,[unit, parameter_id, child_id])
+            current_node_update
         end
       end
 
@@ -191,13 +203,13 @@ defmodule Arke.Boundary.UnitManager do
       # Update Unit
       def handle_call({:create, %{metadata: metadata} = unit, project}, _from, state) do
         unit = Unit.update(unit, metadata: Map.put(metadata, :project, project))
-        :ets.insert(manager_id, {{unit.id, project}, unit})
+        :ets.insert(manager_id(), {{unit.id, project}, unit})
         {:reply, unit, state}
       end
 
       # Update Unit
       def handle_call({:update, new_unit, project}, _from, state) do
-        :ets.insert(manager_id, {{new_unit.id, project}, new_unit})
+        :ets.insert(manager_id(), {{new_unit.id, project}, new_unit})
         {:reply, new_unit, state}
       end
 
@@ -217,13 +229,26 @@ defmodule Arke.Boundary.UnitManager do
           ])
 
         unit = Unit.update(unit, opts)
-        :ets.insert(manager_id, {{unit.id, project}, unit})
+        :ets.insert(manager_id(), {{unit.id, project}, unit})
 
         {:reply, unit, state}
       end
 
       defp link_init(project, parameter_id, child_id, metadata),
         do: %{id: child_id, metadata: metadata}
+
+      # Update all nodes manager
+      defp call_nodes_manager(manager,func_name,opts) do
+        tuple_data = Enum.reduce(opts,{func_name},fn opt,acc -> Tuple.append(acc,opt) end)
+        {right_nodes, bad_nodes} = :rpc.multicall(Node.list(),GenServer,:call,[manager, tuple_data])
+        if length(bad_nodes)>0 do
+          Enum.each(bad_nodes, fn unit ->
+            Logger.warning("Something went wrong during multi node update for unit: `#{unit.id}`")
+          end)
+
+        end
+        {right_nodes,bad_nodes}
+      end
 
       # Remove link
       def handle_call(
@@ -240,7 +265,7 @@ defmodule Arke.Boundary.UnitManager do
           )
 
         unit = Unit.update(unit, opts)
-        :ets.insert(manager_id, {{unit.id, project}, unit})
+        :ets.insert(manager_id(), {{unit.id, project}, unit})
         {:reply, unit, state}
       end
 
