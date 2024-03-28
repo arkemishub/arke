@@ -64,12 +64,15 @@ defmodule Arke.System do
       end
 
       defp import_units(arke, project, member, file, mode) do
-        [{:ok, ref}] = Xlsxir.multi_extract(file.path)
+        {:ok, ref} = Enum.at(Xlsxir.multi_extract(file.path), 0)
         all_units = get_all_units_for_import(project)
 
         file_as_list = Xlsxir.get_list(ref)
-        header = get_header_for_import(project, arke, file_as_list)
+
+        header_file = Enum.at(file_as_list, 0)
         rows = file_as_list |> List.delete_at(0)
+
+        header = get_header_for_import(project, arke, header_file) |> parse_haeder_for_import(header_file)
 
         {correct_units, error_units} = Enum.with_index(rows) |> Enum.reduce({[], []}, fn {row, index}, {correct_units, error_units} ->
           case Enum.filter(row, & !is_nil(&1)) do
@@ -77,8 +80,8 @@ defmodule Arke.System do
             _ -> case load_units(project, arke, header, row, all_units, mode) do
                    {:error, args, errors} ->
                      m = Enum.reduce(header, %{}, fn {h, index}, acc ->
-                       acc = Map.put(acc, h, Enum.at(row, index))
-                     end) |> Map.put(:errors, errors)
+                       acc = Map.put(acc, h, parse_cell(Enum.at(row, index)))
+                     end) |> Map.put("errors", errors)
                      {correct_units, [m | error_units]}
                    {:ok, unit_args} -> {[unit_args | correct_units], error_units}
                  end
@@ -86,34 +89,59 @@ defmodule Arke.System do
         end)
 
         existing_units = get_existing_units_for_import(project, arke, header, correct_units)
-        units_args = Enum.reduce(correct_units, [], fn u, units_args ->
-          case check_existing_units_for_import(project, arke, header, u, existing_units) do
-            true -> units_args
-            false -> [u | units_args]
-          end
-        end)
+#        units_args =  Enum.reduce(correct_units, [], fn u, units_args ->
+#          case check_existing_units_for_import(project, arke, header, u, existing_units) do
+#            true -> units_args
+#            false -> [u | units_args]
+#          end
+#        end)
+        units_args = Enum.filter(correct_units, fn u -> check_existing_units_for_import(project, arke, header, u, existing_units) == false end)
+        if length(units_args) > 0 do
+          Enum.map(Stream.chunk_every(units_args, 5000) |> Enum.to_list(), fn chunk ->
+            ArkePostgres.Repo.insert_all("arke_unit", chunk, prefix: Atom.to_string(project))
+          end)
+        end
 
-        Enum.map(Stream.chunk_every(units_args, 5000) |> Enum.to_list(), fn chunk ->
-          ArkePostgres.Repo.insert_all("arke_unit", chunk, prefix: Atom.to_string(project))
-        end)
+        count_inserted =  length(units_args)
+        count_existing =  length(existing_units)
+        count_error =  length(error_units)
+        total_count =  count_inserted + count_error + count_existing
 
         res = %{
-          count_inserted: length(units_args),
-          count_existing: length(existing_units),
-          count_error: length(error_units),
+          count_inserted: count_inserted,
+          count_existing: count_existing,
+          count_error: count_error,
+          total_count: total_count,
           error_units: error_units
         }
         {:ok, res, 201}
       end
 
-      defp get_header_for_import(project, arke, file_as_list) do
-        Enum.reduce(Enum.with_index(Enum.at(file_as_list, 0)), [], fn {cell, index}, acc ->
+      defp parse_cell(value) when is_tuple(value), do: Kernel.inspect(value)
+      defp parse_cell(value), do: value
+
+      defp get_header_for_import(project, arke, header_file) do
+        Enum.reduce(Enum.with_index(header_file), [], fn {cell, index}, acc ->
           case Arke.Boundary.ArkeManager.get_parameter(arke, project, cell) do
             nil -> acc
-            parameter -> [{Atom.to_string(parameter.id), index} | acc]
+            parameter -> [Atom.to_string(parameter.id) | acc]
           end
         end)
       end
+      defp parse_haeder_for_import(header, header_file) do
+        Enum.reduce(Enum.with_index(header_file), [], fn {cell, index}, acc ->
+          case cell do
+            nil -> acc
+            "" -> acc
+            cell ->
+              case cell in header do
+                nil -> acc
+                parameter -> [{cell, index} | acc]
+              end
+          end
+        end)
+      end
+
       defp get_all_units_for_import(project), do: []
 
       defp load_units(project, arke, header, row, _, "default") do
