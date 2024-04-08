@@ -55,7 +55,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
         |> Enum.each(&Application.ensure_all_started/1)
 
         repo_module = Application.get_env(:arke, :persistence)[String.to_atom(persistence)][:repo]
-
+        Mix.shell().info("--- Starting repo --- ")
         case start_repo(repo_module) do
           {:ok, pid} ->
             opts |> parse_file()
@@ -81,6 +81,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
     {:ok, datetime} = Arke.Utils.DatetimeHandler.now(:datetime) |> Arke.Utils.DatetimeHandler.format("{ISO:Basic:Z}")
     dir_path = "log/arke_seed_project/#{project}"
     path = "#{dir_path}/#{datetime}_#{to_string(arke_id)}.log"
+    Mix.shell().info("--- Writing errors to #{path} --- ")
 
     File.mkdir_p!(dir_path)
     write_log_to_file(path, data)
@@ -101,7 +102,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
   end
 
   defp parse_file(opts)  do
-
+    Mix.shell().info("--- Parsing registry files --- ")
     format = opts[:format] || "json"
     check_format!(format)
     all = opts[:all] || false
@@ -112,6 +113,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
 
     arke_deps_registry = get_arke_deps_registry(format)
     arke_deps_data = parse(arke_deps_registry,format)
+    Mix.shell().info("--- Get core data ---")
     core_parameter = Map.get(core_data,:parameter, []) ++ Map.get(arke_deps_data, :parameter, [])
     core_arke = Map.get(core_data,:arke, []) ++ Map.get(arke_deps_data, :arke, [])
     core_group = Map.get(core_data,:group, []) ++ Map.get(arke_deps_data, :group, [])
@@ -119,6 +121,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
 
 
     # start core manager before create everything
+    Mix.shell().info("--- Starting core managers --- ")
     error_parameter_manager = Arke.handle_manager(core_parameter,:arke_system,:parameter)
     error_arke_manager = Arke.handle_manager(core_arke,:arke_system,:arke)
     error_group_manager = Arke.handle_manager(core_group,:arke_system,:group)
@@ -152,6 +155,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
     project_key= to_string(input_project)
     # if the project is arke_system the managers have already been started so skip
       unless project_key =="arke_system" do
+        Mix.shell().info("--- Parsing registry files --- ")
         error_parameter_manager = Arke.handle_manager(Map.get(core_data,:parameter, []),input_project,:parameter)
         error_arke_manager = Arke.handle_manager(Map.get(core_data,:arke, []),input_project,:arke)
         error_group_manager = Arke.handle_manager(Map.get(core_data,:group, []),input_project,:group)
@@ -236,7 +240,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
          project,
          error
        ) do
-
+    Mix.shell().info("--- Creating parameter #{id} --- ")
     with nil <- QueryManager.get_by(id: id, project: project, arke_id: type),
          %Unit{} = model <- ArkeManager.get(String.to_atom(type), project),
          {:ok, _unit} <- QueryManager.create(project, model, current) do
@@ -268,6 +272,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
          project,
          error
        ) do
+    Mix.shell().info("--- Creating arke #{id} --- ")
     {parameter,new_data} = Map.pop(current, :parameters, [])
 
     #aggiungere try do block
@@ -297,6 +302,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
          [%{id: id} = current | t],
          project,error
        ) do
+    Mix.shell().info("--- Creating group #{id} --- ")
     with nil <- QueryManager.get_by(id: id, project: project, arke_id: :group),
          %Unit{} = model <- ArkeManager.get(:group, project),
          {:ok, unit} <- QueryManager.create(project, model, current),
@@ -319,7 +325,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
          project,
          error
        ) do
-
+    Mix.shell().info("--- Creating link from #{parent} to #{child} --- ")
     case LinkManager.add_node(
         project,
         parent,
@@ -344,6 +350,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
   defp handle_link([], _project, error), do: error
 
   defp link_parameter(p_list, arke, project) do
+    Mix.shell().info("--- Adding parameters to arke #{arke.id} --- ")
     param_link =
       Enum.reduce(p_list, [], fn parameter, acc ->
         [
@@ -361,6 +368,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
   end
 
   defp add_arke_to_group(group, project) do
+    Mix.shell().info("--- Adding arkes to group #{group.id} --- ")
     arke_list = Map.get(group, :arke_list, [])
     group_link =
       Enum.reduce(arke_list, [], fn arke, acc ->
