@@ -177,6 +177,7 @@ defmodule Mix.Tasks.Arke.SeedProject do
     # Get arke's dependecies based on the env path.
     env_var = System.get_env()
     case Enum.find(env_var,fn  {k,_v}-> String.contains?(String.downcase(k), "ex_dep_#{package_name}_path") end) do
+      {_package_name, ""} -> Path.wildcard("./**/arke*/**/registry/*.#{format}")
       {_package_name, local_path}  ->
         Path.wildcard("#{local_path}/lib/registry/*.#{format}")
       nil -> Path.wildcard("./**/arke*/**/registry/*.#{format}")
