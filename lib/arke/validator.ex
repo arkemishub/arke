@@ -169,8 +169,7 @@ defmodule Arke.Validator do
        when not is_integer(value) and not is_nil(value) do
     case Integer.parse(value) do
       :error -> value
-      {v, ""} -> v
-      {v, e} -> value
+      {v, _e} -> v
     end
   end
 
@@ -178,12 +177,11 @@ defmodule Arke.Validator do
        when not is_number(value) and not is_nil(value) do
     case Float.parse(value) do
       :error -> value
-      {v, ""} -> v
-      {v, e} -> value
+      {v, _e} -> v
     end
   end
 
-  defp parse_value(_, value), do: value
+  defp parse_value(_p, value), do: value
 
   defp handle_default_value(%{arke_id: :string, data: %{default_string: default_string}} = _),
     do: default_string
@@ -339,7 +337,9 @@ defmodule Arke.Validator do
          %{data: %{label: label, max_length: max_length}} = parameter,
          value
        ) do
-    if String.length(value) > max_length do
+    # todo: used to parse override in metadata which can be written as string
+    max = parse_value(%{arke_id: :integer, data: %{multiple: false}},max_length)
+    if String.length(value) > max do
       errors ++ [{label, "max length is #{max_length}"}]
     else
       errors
@@ -355,7 +355,9 @@ defmodule Arke.Validator do
          %{data: %{label: label, min_length: min_length}} = parameter,
          value
        ) do
-    if String.length(value) < min_length do
+    # todo: used to parse override in metadata which can be written as string
+    min = parse_value(%{arke_id: :integer, data: %{multiple: false}},min_length)
+    if String.length(value) < min do
       errors ++ [{label, "min length is #{min_length}"}]
     else
       errors
@@ -403,7 +405,8 @@ defmodule Arke.Validator do
   defp check_max(errors, %{data: %{max: max}} = parameter, _) when is_nil(max), do: errors
 
   defp check_max(errors, %{data: %{max: max, label: label}} = parameter, value) do
-    if value > max do
+    parsed_max = parse_value(parameter,max)
+    if value > parsed_max do
       errors ++ [{label, "max is #{max}"}]
     else
       errors
@@ -413,7 +416,8 @@ defmodule Arke.Validator do
   defp check_min(errors, %{data: %{min: min}} = parameter, _) when is_nil(min), do: errors
 
   defp check_min(errors, %{data: %{min: min, label: label}} = parameter, value) do
-    if value < min do
+    parsed_min = parse_value(parameter,min)
+    if value < parsed_min do
       errors ++ [{label, "min is #{min}"}]
     else
       errors

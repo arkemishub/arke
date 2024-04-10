@@ -212,22 +212,19 @@ defmodule Arke.Core.Unit do
         {updated_at, args} = Map.pop(args, :updated_at, unit.updated_at)
         {module, args} = Map.pop(args, :__module__, unit.__module__)
         {runtime_data, args} = Map.pop(args, :runtime_data, unit.runtime_data)
-
-        data =
-          Enum.reduce(args, data, fn {key, val}, new_data ->
-            update_data(new_data, key, val)
-          end)
-
+        data =update_data(unit,args,metadata.project)
         new(id, data, arke_id, link, metadata, inserted_at, updated_at, module, runtime_data)
     end
   end
 
-  defp update_data(data, key, value) when is_atom(key), do: Map.put(data, key, value)
-
-  defp update_data(data, key, value) when is_binary(key),
-    do: Map.put(data, String.to_existing_atom(key), value)
-
-  defp update_data(data, _key, _value), do: data
+  defp update_data(%Arke.Core.Unit{}=unit,new_data,project) do
+    arke = ArkeManager.get(unit.arke_id,project)
+    parsed_data = Enum.reduce(new_data, %{}, fn {parameter_id,value},final_unit_data ->
+      new_value = parse_value(value,ArkeManager.get_parameter(arke,project,parameter_id))
+      Map.put(final_unit_data,parameter_id,new_value)
+    end)
+    Map.merge(unit.data,parsed_data, fn _k, udata,pdata -> pdata end)
+  end
 
   def as_args(arke, unit) do
     [
@@ -285,20 +282,6 @@ defmodule Arke.Core.Unit do
   def data_as_klist(%{arke: _arke, data: data} = _unit) do
     Enum.map(data, fn {key, value} -> {String.to_existing_atom(key), value} end)
   end
-
-  # defp add_parameters(%{arke: arke, data: data, link: link} = _unit, args) do
-  #   data =
-  #     Enum.reduce(arke.parameters, data, fn parameter, new_struct ->
-  #       value = get_value(args, parameter.id) |> parse_value(parameter.type)
-  #       add_parameter(new_struct, parameter, value)
-  #     end)
-
-  #   __struct__(arke: arke, data: data, link: link)
-  # end
-
-  # defp add_parameter(data, parameter, value) do
-  #   Map.put_new(data, parameter.id, value)
-  # end
 
   @doc """
   Get the value for the given data based on a key to search. Return the value to be assigned in the `generate` function
@@ -369,15 +352,11 @@ defmodule Arke.Core.Unit do
   end
 
   defp parse_value(value, %{arke_id: :boolean}) do
-    case value do
+    case String.downcase(to_string(value)) do
       "true" -> true
-      "True" -> true
       "1" -> true
-      1 -> true
       "false" -> false
-      "False" -> false
       "0" -> false
-      0 -> true
       _ -> value
     end
   end
@@ -388,6 +367,20 @@ defmodule Arke.Core.Unit do
     cleaned_list = list_result |> Enum.map(&String.replace(&1, ~r/^['"]|['"]$/, ""))
   end
 
+  defp parse_value(value, %{arke_id: :integer}) when is_binary(value) do
+    case Integer.parse(value) do
+      {number,_rest} -> number
+      :error -> {:error,msg} = Error.create(:validation,"invalid integer")
+      msg
+    end
+  end
+  defp parse_value(value, %{arke_id: :float}) when is_binary(value) do
+    case Float.parse(value) do
+      {number,_rest} -> number
+      :error -> {:error,msg} = Error.create(:validation,"invalid float")
+      msg
+    end
+  end
   defp parse_value(value, _), do: value
 
   defp get_data_value(%{"datetime" => datetime, "value" => value} = _), do: value

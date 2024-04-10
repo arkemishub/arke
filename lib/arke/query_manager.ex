@@ -260,7 +260,6 @@ defmodule Arke.QueryManager do
   def update(%{arke_id: arke_id, metadata: %{project: project}, data: data} = current_unit, args) do
     persistence_fn = @persistence[:arke_postgres][:update]
     arke = ArkeManager.get(arke_id, project)
-
     with %Unit{} = unit <- Unit.update(current_unit, args),
          {:ok, unit} <- update_at_on_update(unit),
          {:ok, unit} <- Validator.validate(unit, :update, project),
