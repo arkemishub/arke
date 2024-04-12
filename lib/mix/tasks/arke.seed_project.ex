@@ -108,10 +108,10 @@ defmodule Mix.Tasks.Arke.SeedProject do
     all = opts[:all] || false
 
     # get core file to decode (arke) and append all other arke_deps registry files
-    core_registry = arke_registry("arke", format)
+    core_registry = arke_registry("arke", format,"all")
     core_data = parse(core_registry,format)
 
-    arke_deps_registry = get_arke_deps_registry(format)
+    arke_deps_registry = get_arke_deps_registry(format,"all")
     arke_deps_data = parse(arke_deps_registry,format)
     Mix.shell().info("--- Get core data ---")
     core_parameter = Map.get(core_data,:parameter, []) ++ Map.get(arke_deps_data, :parameter, [])
@@ -134,17 +134,18 @@ defmodule Mix.Tasks.Arke.SeedProject do
 
     project_list = get_project(input_project, all)
 
-    file_list = Path.wildcard("./lib/registry/*.#{format}")
-    raw_data = parse(file_list,format)
-    parameter_list =  Map.get(raw_data, :parameter, [])
-    arke_list = Map.get(raw_data, :arke, [])
-    group_list =  Map.get(raw_data, :group, [])
-    link_list = Map.get(raw_data, :link, [])
-
     Enum.each(project_list, fn project ->
              if to_string(project) == "arke_system" do
                write_data(project,core_data,core_parameter,core_arke,core_group,core_link)
              else
+               file_list = Path.wildcard("./lib/registry/*.#{format}")
+               shared_file_list = get_arke_deps_registry(format,"shared")
+
+               raw_data = parse(shared_file_list++file_list,format)
+               parameter_list =  Map.get(raw_data, :parameter, [])
+               arke_list = Map.get(raw_data, :arke, [])
+               group_list =  Map.get(raw_data, :group, [])
+               link_list = Map.get(raw_data, :link, [])
                write_data(project,core_data,parameter_list,arke_list,group_list,link_list)
              end
     end)
@@ -173,17 +174,21 @@ defmodule Mix.Tasks.Arke.SeedProject do
         check_file("link",project_key,error_link)
       end
 
-  defp arke_registry(package_name,format) do
+  defp arke_registry(package_name,format,type) do
     # Get arke's dependecies based on the env path.
     env_var = System.get_env()
+    folder_path = get_folder(type,format)
     case Enum.find(env_var,fn  {k,_v}-> String.contains?(String.downcase(k), "ex_dep_#{package_name}_path") end) do
-      {_package_name, ""} -> Path.wildcard("./**/arke*/**/registry/*.#{format}")
+      {_package_name, ""} -> Path.wildcard("./**/arke*/**/registry/#{folder_path}")
       {_package_name, local_path}  ->
-        Path.wildcard("#{local_path}/lib/registry/*.#{format}")
-      nil -> Path.wildcard("./**/arke*/**/registry/*.#{format}")
+        Path.wildcard("#{local_path}/lib/registry/#{folder_path}")
+      nil -> Path.wildcard("./**/arke*/**/registry/#{folder_path}")
     end
 
   end
+  defp get_folder("shared",format),do: "shared/*.#{format}"
+  defp get_folder("system",format),do: "system/*.#{format}"
+  defp get_folder("all",format),do: "**/*.#{format}"
 
   defp get_project(_input_project, true) do
     QueryManager.filter_by(arke_id: :arke_project, project: :arke_system)
@@ -197,11 +202,11 @@ defmodule Mix.Tasks.Arke.SeedProject do
   defp check_format!(format), do: Mix.raise("Invalid format: `#{format}`\nSupported format are: #{Enum.join(@supported_format, " | ")}")
 
   # get all the registry file for all the arke_deps except arke itself which is used alone
-  defp get_arke_deps_registry(format) do
+  defp get_arke_deps_registry(format,type) do
     Enum.reduce(Mix.Project.config() |> Keyword.get(:deps, []),[], fn tuple,acc ->
       name = List.first(Tuple.to_list(tuple))
       if name != :arke and String.contains?(to_string(name),"arke") do
-        arke_registry(to_string(name),format) ++ acc
+        arke_registry(to_string(name),format,type) ++ acc
       else acc
       end
     end)

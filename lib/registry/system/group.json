@@ -9,6 +9,6 @@
     "id": "arke_or_group",
     "label": "Arke or Group",
     "description": "Arke or Group",
-    "arke_list": []
+    "arke_list": ["arke","group"]
   }
 ]}
