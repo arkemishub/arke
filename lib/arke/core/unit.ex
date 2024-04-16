@@ -78,7 +78,6 @@ defmodule Arke.Core.Unit do
     {link, opts} = get_link(opts)
     {metadata, opts} = Map.pop(opts, :metadata, arke.metadata)
 
-
     case check_metadata(metadata) do
       {:error, msg} ->
         {:error, msg}
@@ -90,8 +89,8 @@ defmodule Arke.Core.Unit do
         {runtime_data, opts} = Map.pop(opts, :runtime_data, %{})
 
         with {:ok, opts} <- ArkeManager.call_func(arke, :before_load, [opts, persistence_fn]) do
-
           data = load_data(arke, %{}, opts)
+
           new(
             id,
             data,
@@ -200,7 +199,6 @@ defmodule Arke.Core.Unit do
     {link, args} = Map.pop(args, :link, Map.get(unit, :link, nil))
     {metadata, args} = Map.pop(args, :metadata, unit.metadata)
 
-
     case check_metadata(metadata) do
       {:error, msg} ->
         {:error, msg}
@@ -212,18 +210,21 @@ defmodule Arke.Core.Unit do
         {updated_at, args} = Map.pop(args, :updated_at, unit.updated_at)
         {module, args} = Map.pop(args, :__module__, unit.__module__)
         {runtime_data, args} = Map.pop(args, :runtime_data, unit.runtime_data)
-        data =update_data(unit,args,metadata.project)
+        data = update_data(unit, args, metadata.project)
         new(id, data, arke_id, link, metadata, inserted_at, updated_at, module, runtime_data)
     end
   end
 
-  defp update_data(%Arke.Core.Unit{}=unit,new_data,project) do
-    arke = ArkeManager.get(unit.arke_id,project)
-    parsed_data = Enum.reduce(new_data, %{}, fn {parameter_id,value},final_unit_data ->
-      new_value = parse_value(value,ArkeManager.get_parameter(arke,project,parameter_id))
-      Map.put(final_unit_data,parameter_id,new_value)
-    end)
-    Map.merge(unit.data,parsed_data, fn _k, udata,pdata -> pdata end)
+  defp update_data(%Arke.Core.Unit{} = unit, new_data, project) do
+    arke = ArkeManager.get(unit.arke_id, project)
+
+    parsed_data =
+      Enum.reduce(new_data, %{}, fn {parameter_id, value}, final_unit_data ->
+        new_value = parse_value(value, ArkeManager.get_parameter(arke, project, parameter_id))
+        Map.put(final_unit_data, parameter_id, new_value)
+      end)
+
+    Map.merge(unit.data, parsed_data, fn _k, udata, pdata -> pdata end)
   end
 
   def as_args(arke, unit) do
@@ -253,11 +254,11 @@ defmodule Arke.Core.Unit do
   defp update_encoded_unit_data(%{data: %{only_runtime: true}}, data, _), do: data
 
   defp update_encoded_unit_data(%{id: id}, data, value),
-       do:
-         Map.put_new(data, Atom.to_string(id), %{
-           :value => value,
-           :datetime => Arke.DatetimeHandler.now(:datetime)
-         })
+    do:
+      Map.put_new(data, Atom.to_string(id), %{
+        :value => value,
+        :datetime => DatetimeHandler.now(:datetime)
+      })
 
   defp update_encoded_unit_data(_, data, _), do: data
 
@@ -331,7 +332,8 @@ defmodule Arke.Core.Unit do
           value :: String.t() | boolean() | number() | list() | %{} | Date.t(),
           String.t()
         ) :: String.t() | boolean() | number() | list() | %{}
-  defp parse_value(value, %{arke_id: :atom}) when is_binary(value), do: String.to_existing_atom(value)
+  defp parse_value(value, %{arke_id: :atom}) when is_binary(value),
+    do: String.to_existing_atom(value)
 
   defp parse_value(value, %{arke_id: :date}) do
     with {:ok, date} <- DatetimeHandler.parse_date(value),
@@ -369,18 +371,26 @@ defmodule Arke.Core.Unit do
 
   defp parse_value(value, %{arke_id: :integer}) when is_binary(value) do
     case Integer.parse(value) do
-      {number,_rest} -> number
-      :error -> {:error,msg} = Error.create(:validation,"invalid integer")
-      msg
+      {number, _rest} ->
+        number
+
+      :error ->
+        {:error, msg} = Error.create(:validation, "invalid integer")
+        msg
     end
   end
+
   defp parse_value(value, %{arke_id: :float}) when is_binary(value) do
     case Float.parse(value) do
-      {number,_rest} -> number
-      :error -> {:error,msg} = Error.create(:validation,"invalid float")
-      msg
+      {number, _rest} ->
+        number
+
+      :error ->
+        {:error, msg} = Error.create(:validation, "invalid float")
+        msg
     end
   end
+
   defp parse_value(value, _), do: value
 
   defp get_data_value(%{"datetime" => datetime, "value" => value} = _), do: value
