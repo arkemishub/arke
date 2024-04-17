@@ -1,1 +1,50 @@
-{"arke": []}
+{"arke": [{
+  "id": "arke_file",
+
+  "label": "Arke File",
+  "parameters": [
+    {
+      "id": "name",
+      "metadata": {
+        "required": true
+      }
+    },
+    {
+      "id": "path",
+      "metadata": {
+        "required": true
+      }
+    },
+    {
+      "id": "provider",
+      "metadata": {
+        "values": [
+          "local",
+          "gcloud",
+          "aws"
+        ],
+        "default": "gcloud"
+      }
+    },
+    {
+      "id": "size",
+      "metadata": {
+        "required": false
+      }
+    },
+    {
+      "id": "binary_data",
+      "metadata": {
+        "required": true,
+        "only_runtime": true
+      }
+    },
+    {
+      "id": "extension",
+      "metadata": {
+        "required": false
+      }
+    }
+  ]
+}
+]}
