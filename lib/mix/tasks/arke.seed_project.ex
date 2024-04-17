@@ -139,9 +139,10 @@ defmodule Mix.Tasks.Arke.SeedProject do
                write_data(project,core_data,core_parameter,core_arke,core_group,core_link)
              else
                file_list = Path.wildcard("./lib/registry/*.#{format}")
-               shared_file_list = get_arke_deps_registry(format,"shared")
+               shared_arke_list = arke_registry("arke", format,"shared")
+               shared_arke_deps_list = get_arke_deps_registry(format,"shared")
 
-               raw_data = parse(shared_file_list++file_list,format)
+               raw_data = parse(shared_arke_list++shared_arke_deps_list++file_list,format)
                parameter_list =  Map.get(raw_data, :parameter, [])
                arke_list = Map.get(raw_data, :arke, [])
                group_list =  Map.get(raw_data, :group, [])
