@@ -1,6 +1,6 @@
 # Arke
 
-![Arke](https://user-images.githubusercontent.com/81776297/233303068-e112f6ec-98d8-426e-ab40-b887efe20db6.png)
+![Arke](https://github.com/arkemishub/arke/assets/81776297/7a04d11b-5cd0-4349-8621-d19cf0274585)
 
 ## Installation
 
