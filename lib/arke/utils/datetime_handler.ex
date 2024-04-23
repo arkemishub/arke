@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-defmodule Arke.DatetimeHandler do
+defmodule Arke.Utils.DatetimeHandler do
   use Timex
 
   @datetime_msg "must be %DateTime{} | %NaiveDatetime{} | ~N[YYYY-MM-DDTHH:MM:SS] | ~N[YYYY-MM-DD HH:MM:SS] | ~U[YYYY-MM-DD HH:MM:SS]  format"
@@ -67,9 +67,13 @@ defmodule Arke.DatetimeHandler do
     end
   end
 
+  def now(:datetime), do: Timex.set(Timex.now(), microsecond: 0)
+  def now(:date), do: Timex.now() |> Timex.to_date()
+  def now(:time), do: Time.utc_now() |> Time.truncate(:second)
+
+
   # ----- DATETIME -----
 
-  def now(:datetime), do: Timex.set(Timex.now(), microsecond: 0)
   def from_unix(s, unit \\ :second), do: Timex.from_unix(s, unit)
   def parse_datetime(value, only_value \\ false)
   def parse_datetime(value, true) when is_nil(value), do: value
@@ -85,6 +89,8 @@ defmodule Arke.DatetimeHandler do
       {:error, _} -> {:error, @datetime_msg}
     end
   end
+  def format(value, format \\ "{ISO:Extended}"), do:  Timex.format(value,format)
+  def format!(value, format \\ "{ISO:Extended}"), do:  Timex.format!(value,format)
 
   def shift_datetime(datetime, opts) do
     case parse_datetime(datetime) do
@@ -96,7 +102,6 @@ defmodule Arke.DatetimeHandler do
   def shift_datetime(opts), do: Timex.shift(now(:datetime), opts)
 
   # ----- DATE -----
-  def now(:date), do: Timex.now() |> Timex.to_date()
   def parse_date(value, only_value \\ false)
   def parse_date(value, true) when is_nil(value), do: nil
   def parse_date(value, _only_value) when is_nil(value), do: {:ok, nil}
@@ -121,7 +126,6 @@ defmodule Arke.DatetimeHandler do
 
   # ----- TIME -----
 
-  def now(:time), do: Time.utc_now() |> Time.truncate(:second)
   def parse_time(value, only_value \\ false)
   def parse_time(value, true) when is_nil(value), do: nil
   def parse_time(value, _only_value) when is_nil(value), do: {:ok, nil}

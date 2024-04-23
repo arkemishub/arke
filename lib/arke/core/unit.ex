@@ -17,7 +17,7 @@ defmodule Arke.Core.Unit do
     Struct which defines a Unit
         {arke_struct} = Unit
   """
-  alias Arke.DatetimeHandler, as: DatetimeHandler
+  alias Arke.Utils.DatetimeHandler, as: DatetimeHandler
   alias Arke.Boundary.ArkeManager
   alias Arke.Utils.ErrorGenerator, as: Error
 
@@ -127,7 +127,7 @@ defmodule Arke.Core.Unit do
     value =
       get_data_value(Map.get(opts, parameter_id, nil))
       |> get_default_value(parameter)
-      |> parse_value(parameter_type)
+      |> parse_value(parameter)
 
     Map.put_new(data, parameter_id, value)
   end
@@ -196,7 +196,7 @@ defmodule Arke.Core.Unit do
 
   def update(%{data: data, arke_id: arke_id} = unit, args) do
     {id, args} = Map.pop(args, :id, unit.id)
-    {link, args} = Map.pop(args, :link, unit.link)
+    {link, args} = Map.pop(args, :link, Map.get(unit, :link, nil))
     {metadata, args} = Map.pop(args, :metadata, unit.metadata)
 
     case check_metadata(metadata) do
@@ -210,22 +210,57 @@ defmodule Arke.Core.Unit do
         {updated_at, args} = Map.pop(args, :updated_at, unit.updated_at)
         {module, args} = Map.pop(args, :__module__, unit.__module__)
         {runtime_data, args} = Map.pop(args, :runtime_data, unit.runtime_data)
-
-        data =
-          Enum.reduce(args, data, fn {key, val}, new_data ->
-            update_data(new_data, key, val)
-          end)
-
+        data = update_data(unit, args, metadata.project)
         new(id, data, arke_id, link, metadata, inserted_at, updated_at, module, runtime_data)
     end
   end
 
-  defp update_data(data, key, value) when is_atom(key), do: Map.put(data, key, value)
+  defp update_data(%Arke.Core.Unit{} = unit, new_data, project) do
+    arke = ArkeManager.get(unit.arke_id, project)
 
-  defp update_data(data, key, value) when is_binary(key),
-    do: Map.put(data, String.to_existing_atom(key), value)
+    parsed_data =
+      Enum.reduce(new_data, %{}, fn {parameter_id, value}, final_unit_data ->
+        new_value = parse_value(value, ArkeManager.get_parameter(arke, project, parameter_id))
+        Map.put(final_unit_data, parameter_id, new_value)
+      end)
 
-  defp update_data(data, _key, _value), do: data
+    Map.merge(unit.data, parsed_data, fn _k, udata, pdata -> pdata end)
+  end
+
+  def as_args(arke, unit) do
+    [
+      id: handle_id(unit.id),
+      arke_id: Atom.to_string(unit.arke_id),
+      data: encode_unit_data(arke, unit.data),
+      metadata: %{},
+      inserted_at: NaiveDateTime.utc_now(),
+      updated_at: NaiveDateTime.utc_now()
+    ]
+  end
+
+  defp handle_id(id) when is_nil(id), do: UUID.uuid1()
+  defp handle_id(id) when is_atom(id), do: Atom.to_string(id)
+  defp handle_id(id) when is_binary(id), do: id
+  # TODO handle error
+  defp handle_id(id), do: id
+
+  def encode_unit_data(arke, data) do
+    Enum.reduce(data, %{}, fn {key, value}, new_map ->
+      parameter = ArkeManager.get_parameter(arke, key)
+      update_encoded_unit_data(parameter, new_map, value)
+    end)
+  end
+
+  defp update_encoded_unit_data(%{data: %{only_runtime: true}}, data, _), do: data
+
+  defp update_encoded_unit_data(%{id: id}, data, value),
+    do:
+      Map.put_new(data, Atom.to_string(id), %{
+        :value => value,
+        :datetime => DatetimeHandler.now(:datetime)
+      })
+
+  defp update_encoded_unit_data(_, data, _), do: data
 
   def as_args(arke, unit) do
     [
@@ -284,20 +319,6 @@ defmodule Arke.Core.Unit do
     Enum.map(data, fn {key, value} -> {String.to_existing_atom(key), value} end)
   end
 
-  # defp add_parameters(%{arke: arke, data: data, link: link} = _unit, args) do
-  #   data =
-  #     Enum.reduce(arke.parameters, data, fn parameter, new_struct ->
-  #       value = get_value(args, parameter.id) |> parse_value(parameter.type)
-  #       add_parameter(new_struct, parameter, value)
-  #     end)
-
-  #   __struct__(arke: arke, data: data, link: link)
-  # end
-
-  # defp add_parameter(data, parameter, value) do
-  #   Map.put_new(data, parameter.id, value)
-  # end
-
   @doc """
   Get the value for the given data based on a key to search. Return the value to be assigned in the `generate` function
 
@@ -346,37 +367,64 @@ defmodule Arke.Core.Unit do
           value :: String.t() | boolean() | number() | list() | %{} | Date.t(),
           String.t()
         ) :: String.t() | boolean() | number() | list() | %{}
-  defp parse_value(value, :atom) when is_binary(value), do: String.to_existing_atom(value)
+  defp parse_value(value, %{arke_id: :atom}) when is_binary(value),
+    do: String.to_existing_atom(value)
 
-  defp parse_value(value, :date) do
+  defp parse_value("null", %{arke_id: :string}), do: nil
+
+  defp parse_value(value, %{arke_id: :date}) do
     with {:ok, date} <- DatetimeHandler.parse_date(value),
          do: date,
          else: ({:error, msg} -> to_string(msg))
   end
 
-  defp parse_value(value, :time) do
+  defp parse_value(value, %{arke_id: :time}) do
     with {:ok, time} <- DatetimeHandler.parse_time(value),
          do: time,
          else: ({:error, msg} -> to_string(msg))
   end
 
-  defp parse_value(value, :datetime) do
+  defp parse_value(value, %{arke_id: :datetime}) do
     with {:ok, datetime} <- DatetimeHandler.parse_datetime(value),
          do: datetime,
          else: ({:error, msg} -> to_string(msg))
   end
 
-  defp parse_value(value, :boolean) do
-    case value do
+  defp parse_value(value, %{arke_id: :boolean}) do
+    case String.downcase(to_string(value)) do
       "true" -> true
-      "True" -> true
       "1" -> true
-      1 -> true
       "false" -> false
-      "False" -> false
       "0" -> false
-      0 -> true
       _ -> value
+    end
+  end
+
+  defp parse_value(value, %{arke_id: :link, data: %{multiple: true}}) when is_binary(value) do
+    cleaned_string = String.trim_leading(String.trim_trailing(value, "]"), "[")
+    list_result = cleaned_string |> String.split(~r/,/, trim: true)
+    cleaned_list = list_result |> Enum.map(&String.replace(&1, ~r/^['"]|['"]$/, ""))
+  end
+
+  defp parse_value(value, %{arke_id: :integer}) when is_binary(value) do
+    case Integer.parse(value) do
+      {number, _rest} ->
+        number
+
+      :error ->
+        {:error, msg} = Error.create(:validation, "invalid integer")
+        msg
+    end
+  end
+
+  defp parse_value(value, %{arke_id: :float}) when is_binary(value) do
+    case Float.parse(value) do
+      {number, _rest} ->
+        number
+
+      :error ->
+        {:error, msg} = Error.create(:validation, "invalid float")
+        msg
     end
   end
 

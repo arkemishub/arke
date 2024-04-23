@@ -89,12 +89,6 @@ defmodule Arke.System do
         end)
 
         existing_units = get_existing_units_for_import(project, arke, header, correct_units)
-#        units_args =  Enum.reduce(correct_units, [], fn u, units_args ->
-#          case check_existing_units_for_import(project, arke, header, u, existing_units) do
-#            true -> units_args
-#            false -> [u | units_args]
-#          end
-#        end)
         units_args = Enum.filter(correct_units, fn u -> check_existing_units_for_import(project, arke, header, u, existing_units) == false end)
         if length(units_args) > 0 do
           Enum.map(Stream.chunk_every(units_args, 5000) |> Enum.to_list(), fn chunk ->
@@ -204,7 +198,7 @@ defmodule Arke.System do
 
 
   ## Example
-      arke do
+      arke  do
         parameter :custom_parameter, :string, required: true, unique: true
         parameter :custom_parameter2, :string, required: true, values: ["value1", "value2"]
         parameter :custom_parameter3, :integer, required: true, values: [%{label: "option 1", value: 1},%{label: "option 2", value: 2}]
@@ -220,18 +214,17 @@ defmodule Arke.System do
     type = Keyword.get(opts, :type, "arke")
     active = Keyword.get(opts, :active, true)
     metadata = Keyword.get(opts, :metadata, %{})
-    remote = Keyword.get(opts, :remote, false)
 
     base_parameters = get_base_arke_parameters(type)
 
     quote do
       type = unquote(type)
       active = unquote(active)
-      remote = unquote(remote)
       opts = unquote(opts)
       metadata = unquote(Macro.escape(metadata))
       caller = unquote(__CALLER__.module)
 
+      # todo: remove string to atom
       id =
         Keyword.get(
           opts,
@@ -248,7 +241,7 @@ defmodule Arke.System do
         Keyword.get(
           opts,
           :label,
-          id |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
+          id |> to_string |> String.replace("_", " ") |> String.capitalize()
         )
 
       unquote(base_parameters)
@@ -258,9 +251,8 @@ defmodule Arke.System do
         id: id,
         data: %{label: label, active: active, type: type, parameters: @parameters},
         metadata: metadata,
-        remote: remote
       }
-      #      @arke Arke.Core.Arke.new(id: id, label: label, active: active, metadata: metadata, type: type, parameters: @parameters)
+
     end
   end
 
@@ -275,20 +267,6 @@ defmodule Arke.System do
   end
 
   defp get_base_arke_parameters(_type), do: nil
-
-  #  @spec __arke_info__(caller :: caller(), options :: list()) :: [id: atom() | String.t(), label: String.t(), active: boolean(), metadata: map(), type: atom()]
-  #  defp __arke_info__(caller, options) do
-  #
-  #    id = Keyword.get(options, :id, caller |> to_string |> String.split(".") |> List.last |> Macro.underscore |> String.to_atom)
-  #    label = Keyword.get(options, :label, id |> Atom.to_string |> String.replace("_", " ") |> String.capitalize)
-  #    [
-  #      id: id,
-  #      label: label,
-  #      active: Keyword.get(options, :active, true),
-  #      metadata: Keyword.get(options, :metadata, %{}),
-  #      type: Keyword.get(options, :type, :arke)
-  #    ]
-  #  end
 
   ######################################################################################################################
   # END ARKE MACRO #####################################################################################################
@@ -382,13 +360,15 @@ defmodule Arke.System.BaseParameter do
     %{type: type, opts: opts}
   end
 
+  def check_enum(type, opts) when is_binary(type), do: check_enum(String.to_atom(type),opts)
   def check_enum(type, opts) do
     enum_parameters = [:string, :integer, :float]
-
     case type in enum_parameters do
-      true -> __enum_parameter__(opts, type)
+      true ->
+        __enum_parameter__(opts, type)
       false -> opts
     end
+
   end
 
   defp parameter_option_common(opts, id) do
@@ -443,20 +423,24 @@ defmodule Arke.System.BaseParameter do
     Keyword.put_new(opts, key, default)
   end
 
-  defp __enum_parameter__(opts, type) do
+  def __enum_parameter__(opts, type) when is_map(opts), do: __enum_parameter__(Map.to_list(opts),type)
+  def __enum_parameter__(opts, type) do
     case Keyword.has_key?(opts, :values) do
-      true -> __validate_values__(opts, opts[:values], type)
-      false -> opts
+      true ->   __validate_values__(opts, opts[:values], type)
+      false ->
+        opts
     end
   end
 
-  defp __validate_values__(opts, nil, _), do: Keyword.delete(opts, :values)
+  defp __validate_values__(opts, nil, _), do: opts
 
-  defp __validate_values__(opts, %{"value" => value, "datetime" => _} = values, type)
+  defp __validate_values__(opts, %{"value" => value, "datetime" => _} = _values, type)
        when not is_nil(value),
        do: __validate_values__(opts, value, type)
 
+
   defp __validate_values__(opts, [h | _t] = values, type) when is_map(h) do
+
     condition =
       cond do
         type == :string ->
@@ -468,12 +452,11 @@ defmodule Arke.System.BaseParameter do
         type == :float ->
           fn l, v -> is_binary(l) and is_number(v) end
       end
-
     case Enum.all?(values, fn map ->
            Enum.map([:label, :value], fn key -> Map.has_key?(map, key) end)
          end) do
       true ->
-        __create_map_values__(__check_map__(values), opts, type, condition)
+       __create_map_values__(__check_map__(values), opts, type, condition)
 
       # FARE RAISE ECCEZIONE DA GESTIRE. CHIAVI DEVONO ESSERE TUTTE UGUALI
       _ ->
@@ -492,12 +475,9 @@ defmodule Arke.System.BaseParameter do
     __values_from_list__(values, opts, condition)
   end
 
-  # FARE RAISE ECCEZIONE DA GESTIRE
-  defp __validate_values__(opts, _, _),
-    do: Keyword.update(opts, :values, nil, fn _current_value -> nil end)
 
   # CONVERT ALL STRINGS KEY TO ATOMS (string are received from API)
-  defp __check_map__([%{"label" => _l, "value" => _v} | h] = values) do
+  defp __check_map__([%{"label" => _l, "value" => _v} | _h] = values) do
     Enum.map(
       values,
       &Enum.into(&1, %{}, fn {key, val} -> {String.to_existing_atom(key), val} end)

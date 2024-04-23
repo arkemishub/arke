@@ -41,6 +41,7 @@ defmodule Arke.QueryManager do
   alias Arke.Validator
   alias Arke.LinkManager
   alias Arke.QueryManager
+  alias Arke.Utils.DatetimeHandler, as: DatetimeHandler
   alias Arke.Core.{Arke, Unit, Query, Parameter}
 
 
@@ -165,6 +166,7 @@ defmodule Arke.QueryManager do
     {errors, link_units} =
       Enum.filter(ArkeManager.get_parameters(arke), fn p -> p.arke_id == :link end)
       |> Enum.reduce({[], []}, fn p, {errors, link_units} ->
+
         arke = ArkeManager.get(String.to_existing_atom(p.data.arke_or_group_id), project)
 
         case handle_create_on_link_parameters_unit(
@@ -223,7 +225,8 @@ defmodule Arke.QueryManager do
   defp handle_create_on_link_parameters_unit(_, _, parameter, _, value),
     do: {:ok, parameter, value}
 
-  defp handle_group_call_func(arke, unit, func) do
+  def handle_group_call_func(arke, unit, func) do
+
     GroupManager.get_groups_by_arke(arke)
     |> Enum.reduce_while(unit, fn group, new_unit ->
       with {:ok, new_unit} <- GroupManager.call_func(group, func, [arke, new_unit]),
@@ -233,8 +236,8 @@ defmodule Arke.QueryManager do
     |> check_group_manager_functions_errors()
   end
 
-  defp check_group_manager_functions_errors({:error, errors} = _), do: {:error, errors}
-  defp check_group_manager_functions_errors(unit), do: {:ok, unit}
+  def check_group_manager_functions_errors({:error, errors} = _), do: {:error, errors}
+  def check_group_manager_functions_errors(unit), do: {:ok, unit}
 
   @doc """
   Function to update an element
@@ -257,24 +260,23 @@ defmodule Arke.QueryManager do
   def update(%{arke_id: arke_id, metadata: %{project: project}, data: data} = current_unit, args) do
     persistence_fn = @persistence[:arke_postgres][:update]
     arke = ArkeManager.get(arke_id, project)
-
     with %Unit{} = unit <- Unit.update(current_unit, args),
          {:ok, unit} <- update_at_on_update(unit),
          {:ok, unit} <- Validator.validate(unit, :update, project),
          {:ok, unit} <- ArkeManager.call_func(arke, :before_update, [arke, unit]),
+         {:ok, unit} <- handle_group_call_func(arke, unit, :before_unit_update),
          {:ok, unit} <- handle_link_parameters_unit(arke, unit),
          {:ok, unit} <- persistence_fn.(project, unit),
          {:ok, unit} <- ArkeManager.call_func(arke, :on_update, [arke, current_unit, unit]),
          {:ok, unit} <- handle_link_parameters(unit, data),
+         {:ok, unit} <- handle_group_call_func(arke, unit, :on_unit_update),
          do: {:ok, unit},
          else: ({:error, errors} -> {:error, errors})
   end
-
   defp update_at_on_update(unit) do
-    updated_at = NaiveDateTime.utc_now()
+    updated_at = DatetimeHandler.now(:datetime)
     {:ok, Unit.update(unit, updated_at: updated_at)}
   end
-
   @doc """
   Function to delete a given unit
   ## Parameters
@@ -294,6 +296,7 @@ defmodule Arke.QueryManager do
     persistence_fn = @persistence[:arke_postgres][:delete]
 
     with {:ok, unit} <- ArkeManager.call_func(arke, :before_delete, [arke, unit]),
+         {:ok, unit} <- handle_group_call_func(arke, unit, :before_unit_delete),
          {:ok, nil} <- persistence_fn.(project, unit),
          {:ok, unit} <- handle_group_call_func(arke, unit, :on_unit_delete),
          {:ok, _unit} <- ArkeManager.call_func(arke, :on_delete, [arke, unit]),
@@ -524,10 +527,9 @@ defmodule Arke.QueryManager do
     do: handle_filter(query, :group_id, :eq, value, negate)
 
   defp handle_filter(query, :group_id, :eq, value, negate) do
-    %{id: id, metadata: %{project: group_project}} = group = get_group(value, query.project)
-    # arke_list = GroupManager.get_arke_list(group)
+    %{id: id} = group = get_group(value, query.project)
     arke_list =
-      Enum.map(GroupManager.get_link(id, group_project, :arke_list), fn a ->
+      Enum.map(GroupManager.get_arke_list(group), fn a ->
         Atom.to_string(a.id)
       end)
 
@@ -736,7 +738,6 @@ defmodule Arke.QueryManager do
     end)
 
     Enum.each(nodes_to_add, fn n ->
-      IO.inspect({unit.id, parameter, n, :add, false})
       update_parameter_link(unit, parameter, n, :add, false)
     end)
 

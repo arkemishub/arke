@@ -87,9 +87,11 @@ defmodule Arke.Utils.Gcp do
           |> URI.encode_query()
 
         {:ok, Enum.join(["https://storage.googleapis.com#{resource}", "?", qs])}
+        {:ok,%{status_code: 403}=err} ->
+           {:error,"Forbidden resource"}
       {:ok, e} ->
         IO.inspect(e)
-        {:error, "error on signed url"}
+        {:error,"error on signed url"}
     end
   end
 

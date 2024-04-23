@@ -23,22 +23,6 @@ defmodule Arke.Core.Arke do
   alias Arke.Boundary.ArkeManager
 
   arke id: :arke do
-    group(:arke_or_group)
-
-    parameter(:label, :string, required: true)
-    parameter(:active, :boolean, required: false, default_boolean: true)
-    parameter(:type, :string, required: true, default_string: "arke")
-    parameter(:remote, :boolean, required: true, default_boolean: false)
-
-    parameter(:parameters, :link,
-      multiple: true,
-      arke_or_group_id: "parameter",
-      connection_type: "parameter",
-      direction: "child",
-      filter_keys: ["arke_id", "id", "label"],
-      depth: 0,
-      default_link: []
-    )
   end
 
   def on_create(arke, unit) do
