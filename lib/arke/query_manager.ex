@@ -209,10 +209,6 @@ defmodule Arke.QueryManager do
        do: {:ok, parameter, value}
 
   defp handle_create_on_link_parameters_unit(project, unit, parameter, arke, value)
-       when is_binary(value),
-       do: {:ok, parameter, value}
-
-  defp handle_create_on_link_parameters_unit(project, unit, parameter, arke, value)
        when is_map(value) do
     value = Map.put(value, :runtime_data, %{link: unit, link_parameter: parameter})
 
