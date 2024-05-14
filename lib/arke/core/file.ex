@@ -25,7 +25,7 @@ defmodule Arke.Core.File do
   end
 
   def before_load(
-        %{path: path, content_type: content_type, filename: filename} = _,
+        %{path: path, content_type: content_type, filename: filename} = _unit,
         :create
       ) do
     {:ok, file_stat} = File.stat(path)
@@ -51,9 +51,8 @@ defmodule Arke.Core.File do
   def on_struct_encode(arke, unit, data, opts) do
     load_files = Keyword.get(opts, :load_files, false)
 
-
     with true <- load_files,
-      {:ok,signed_url} <- get_signed_url(unit) do
+      {:ok,signed_url} <- get_url(unit) do
      {:ok, Map.put(data, :signed_url,signed_url )}
     else
       false -> {:ok, data}
@@ -62,12 +61,15 @@ defmodule Arke.Core.File do
     end
   end
 
-  def before_create(_, %{data: %{name: name, path: path, binary_data: binary}} = unit) do
-    case Gcp.upload_file("#{path}/#{name}", binary) do
-      {:ok, _object} -> {:ok, unit}
+  def before_create(_, %{data: %{name: name, path: path, binary_data: binary},runtime_data: runtime_data} = unit) do
+    is_public_file = is_public?(runtime_data)
+    new_unit =  Map.update(unit,:data, unit.data, fn udata -> Map.put(udata,:public,is_public_file) end)
+    case Gcp.upload_file("#{path}/#{name}", binary,public: is_public_file) do
+      {:ok, _object} -> {:ok, new_unit}
       {:error, error} -> {:error, error}
     end
   end
+
 
   def before_delete(_, %{data: %{name: name, path: path}} = unit) do
     case Gcp.delete_file("#{path}/#{name}") do
@@ -85,10 +87,15 @@ defmodule Arke.Core.File do
     end
   end
 
+  def get_url(%{data: %{public: true}} = unit), do:  Gcp.get_public_url(unit)
+  def get_url(unit), do: get_signed_url(unit)
+
   def get_signed_url(%{data: data} = unit) do
     case Gcp.get_bucket_file_signed_url("#{data.path}/#{data.name}") do
     {:ok, signed_url} -> {:ok,signed_url}
     {:error,msg} -> {:error,msg}
     end
   end
+  defp is_public?(%{link_parameter: %{data: %{public: true}}}), do: true
+  defp is_public?(_runtime_data), do: false
 end

@@ -13,23 +13,26 @@
 # limitations under the License.
 
 defmodule Arke.Utils.Gcp do
+  alias Arke.Utils.ErrorGenerator, as: Error
   @storage Application.get_env(:arke, :storage)
   @service_account @storage[:gcp][:service_account]
   @default_bucket @storage[:gcp][:default_bucket]
 
   def upload_file(file_name, file_data, opts \\ []) do
     bucket = opts[:bucket] || System.get_env("DEFAULT_BUCKET")
+    optional_metadata = if opts[:public], do: [predefinedAcl: "publicread"], else: []
     conn = get_connection()
-
     {:ok, object} =
       GoogleApi.Storage.V1.Api.Objects.storage_objects_insert_iodata(
         conn,
         bucket,
         "multipart",
         %{name: file_name},
-        file_data
+        file_data,
+        optional_metadata
       )
   end
+
 
   def get_file(file_path, opts \\ []) do
     bucket = opts[:bucket] || System.get_env("DEFAULT_BUCKET")
@@ -42,6 +45,12 @@ defmodule Arke.Utils.Gcp do
     )
   end
 
+  def get_public_url(%{data: %{name: name, path: path,extension: ext}}=unit,opts \\ []) do
+    bucket = opts[:bucket] || System.get_env("DEFAULT_BUCKET")
+    {:ok, "https://storage.googleapis.com/#{bucket}/#{path}/#{name}"}
+  end
+  def get_public_url(_unit,_opts), do: Error.create(:storage,"invalid unit")
+
   def delete_file(file_path, opts \\ []) do
     bucket = opts[:bucket] || System.get_env("DEFAULT_BUCKET")
     conn = get_connection()
@@ -52,14 +61,6 @@ defmodule Arke.Utils.Gcp do
       file_path
     )
   end
-
-  # def get_url() do
-  #   service_account = "arke-storage@arkemis-lab.iam.gserviceaccount.com"
-  #   bucket = "arke_demo"
-  #   object = "file.txt"
-
-  #   get_signed_url(service_account, bucket, object)
-  # end
 
   def get_bucket_file_signed_url(file_path, opts \\ []) do
     gcp_service_account = opts[:service_account] || System.get_env("STORAGE_SERVICE_ACCOUNT")
@@ -99,4 +100,5 @@ defmodule Arke.Utils.Gcp do
     {:ok, token} = Goth.Token.fetch([])
     GoogleApi.Storage.V1.Connection.new(token.token)
   end
+
 end
