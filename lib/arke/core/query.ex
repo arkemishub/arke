@@ -23,9 +23,9 @@ defmodule Arke.Core.Query do
   defmodule LinkFilter do
     @moduledoc """
       Base struct of a LinkFilter:
-      - unit => %Arke.Core.`{arke_struct}`{} => the `arke_struct` of the unit which we want to filter on. See `Arke.Struct`
-      - depth => integer => how many results we want to have at max
-      - direction => "child" | "parent" => the direction the query will use to search,
+      - unit => the starting unit for the query
+      - depth =>  how many lookups or lookdowns the recursive query must do
+      - direction => the direction the query will use to search,
       - type => the name of the connection we want to look at \n
       It is used to define a common filter struct which will be applied on an arke_link Query
     """
@@ -62,21 +62,13 @@ defmodule Arke.Core.Query do
     Create a new BaseParameter
 
     ## Parameters
-      - parameter => %Arke.Core.Parameter.`ParameterType` => refer to `Arke.Core.Parameter`
+      - parameter => Parameter on which the base filter will be applied
       - operator => refer to [operators](#module-operators)
-      - value => any => the value that the query will search for
-      - negate => boolean => used to figure out whether the condition is to be denied \n
-
-    ## Example
-        iex> filter = Arke.Core.Query.BaseFilter.new(parameter: "name", operator: "eq", value: "John", negate: false)
-        ...> Arke.Core.Query.BaseFilter.new(person, :default)
-
-    ## Return
-        %Arke.Core.Query.BaseFilter{}
-
+      - value => the value that the query will search for
+      - negate =>  used to figure out whether the condition is to be denied \n
     """
     @spec new(
-            parameter :: Arke.Core.Parameter.ParameterType,
+            parameter :: Arke.Core.Parameter.t(),
             operator :: atom(),
             value :: any,
             negate :: boolean
@@ -110,8 +102,8 @@ defmodule Arke.Core.Query do
   defmodule Order do
     @moduledoc """
       Base struct Order:
-      - parameter => %Arke.Core.Parameter.`ParameterType` => refer to `Arke.Core.Parameter`
-      - direction => "child" | "parent" => the direction the query will use to search \n
+      - parameter => Parameter on which the order will be applied
+      - direction => the direction the query will use to search \n
       It is used to define the return order of a Query
     """
     defstruct ~w[parameter direction]a
@@ -124,14 +116,6 @@ defmodule Arke.Core.Query do
   ## Parameters
     - arke => %Arke.Core.`{arke_struct}`{} => the `arke_struct` of the unit which we want to filter on. See `Arke.Struct`
     - project => :atom =>  identify the `Arke.Core.Project`
-
-  ## Example
-      iex> person = Arke.Core.Arke.new(id: "person", label: "Person")
-      ...> Arke.Core.Query.new(person, :default)
-
-  ## Return
-      %Arke.Core.Query{}
-
   """
   @spec new(arke :: %Arke.Core.Arke{}, project :: atom()) :: Arke.Core.Query.t()
   def new(arke, project),
@@ -146,28 +130,19 @@ defmodule Arke.Core.Query do
     }
 
   @doc """
-  Add a new link filter
+  Add a new link filter in order to make a recursive query in the topology table.
   ## Parameters
     - query => refer to `new/1`
-    - unit => %Arke.Core.`{arke_struct}`{} => the `arke_struct` of the unit which we want to filter on. See `Arke.Struct`
-    - depth => integer => how many results we want to have at max
-    - direction => "child" | "parent" => the direction the query will use to search
+    - unit => the starting unit for the query
+    - depth =>  how many lookups or lookdowns the recursive query must do
+    - direction => the direction the query will use to search
     - type => the name of the link we want to look at
-
-  ## Example
-
-      iex> person = Arke.Core.Arke.new(id: :person, label: "Person")
-      ...> query = Arke.Core.Query.new(person, :arke_system)
-      ...> Arke.Core.Query.add_link_filter(query, person, 0, "child", "link")
-
-  ## Return
-      %Arke.Core.Query{... link: %Arke.Core.Query.LinkFilter{} ... }
   """
   @spec add_link_filter(
           query :: Arke.Core.Query.t(),
           unit :: Arke.Core.Unit.t(),
           depth :: integer(),
-          direction :: atom(),
+          direction :: :child | :parent,
           connection_type :: String.t()
         ) :: Arke.Core.Query.t()
   def add_link_filter(query, unit, depth, direction, type) do
@@ -180,16 +155,6 @@ defmodule Arke.Core.Query do
   ## Parameters
     - query => refer to `new/1`
     - filter => refer to `Arke.Core.Query.BaseFilter`
-
-  ## Example
-      iex> person = Arke.Core.Arke.new(id: :person, label: "Person")
-      ...> query = Arke.Core.Query.new(person, :arke_system)
-      ...> parameter = Arke.Boundary.ParameterManager.get(:id,:arke_system)
-      ...> filter = Arke.Core.Query.new_filter(parameter,:eq, "name", false)
-      ...> Arke.Core.Query.add_filter(query, filter)
-
-  ## Return
-      %Arke.Core.Query{... filters: [ %Arke.Core.Query.Filter{} ] ... }
   """
   def add_filter(query, filter) do
     %{query | filters: [filter | query.filters]}
@@ -204,16 +169,6 @@ defmodule Arke.Core.Query do
     - operator
     - value
     - negate
-
-  ## Example
-      iex> person = Arke.Core.Arke.new(id: :person, label: "Person")
-      ...> query = Arke.Core.Query.new(person, :arke_system)
-      ...> parameter = Arke.Boundary.ParameterManager.get(:id,:arke_system)
-      ...> base_filter = Arke.Core.Query.new_base_filter(parameter, :eq, "name", false)
-      ...> Arke.Core.Query.add_filter(query, :and, false, base_filter)
-
-  ## Return
-       %Arke.Core.Query{... filters: [ %Arke.Core.Query.Filter{} ] ... }
   """
   def add_filter(query, parameter, operator, value, negate) do
     %{query | filters: [new_filter(parameter, operator, value, negate) | query.filters]}
@@ -224,19 +179,16 @@ defmodule Arke.Core.Query do
 
   ## Parameters
     - query => refer to `new/1`
-    - logic => :and | :or => the logic of the filter
-    - negate => boolean => used to figure out whether the condition is to be denied
-    - base_filters
-
-  ## Example
-      iex> person = Arke.new(id: :person, label: "Person")
-      ...> query = Arke.Core.Query.new(person, :arke_system)
-      ...> parameter = Arke.Core.ParameterManager.get(:id,:arke_system)
-      ...> Arke.Core.Query.add_filter(query, parameter, :eq, "name", false)
-
-  ## Return
-       %Arke.Core.Query{... filters: [ %Arke.Core.Query.Filter{} ] ... }
+    - logic => the logic of the filter
+    - negate => used to figure out whether the condition is to be denied
+    - base_filters  => One or a list of `Arke.Core.Query.BaseFilter`
   """
+  @spec add_filter(
+          query :: Arke.Core.Query.t(),
+          logic :: :and | :or,
+          negate :: boolean,
+          base_filters :: Arke.Core.Query.BaseFilter.t() | [Arke.Core.Query.BaseFilter.t()]
+        ) :: Arke.Core.Query.t()
   def add_filter(query, logic, negate, base_filters) do
     %{query | filters: [new_filter(logic, negate, base_filters) | query.filters]}
   end
@@ -244,18 +196,17 @@ defmodule Arke.Core.Query do
   @doc """
   Create a new filter
   ## Parameters
-    - parameter => %Arke.Core.Parameter.`ParameterType` => refer to `Arke.Core.Parameter`
+    - parameter => Parameter to filter
     - operator => refer to [operators](#module-operators)
-    - value => any => the value that the query will search for
-    - negate => boolean => used to figure out whether the condition is to be denied
-
-  ## Example
-      iex> parameter = Arke.Boundary.ParameterManager.get(:id,:arke_system)
-      ...> Arke.Core.Query.new_filter(parameter,:eq, "name", false)
-
-  ## Return
-      %Arke.Core.Query.Filter{base_filters: [ %Arke.Core.Query.BaseFilter{} ]}
+    - value => the value that the query will search for
+    - negate => used to figure out whether the condition is to be denied
   """
+  @spec new_filter(
+          parameter :: Arke.Core.Parameter.t(),
+          operator :: Arke.Core.QueryManager.operator(),
+          value :: any,
+          negate :: boolean()
+        ):: Arke.Core.Query.Filter.t()
   def new_filter(parameter, operator, value, negate) do
     %Filter{
       logic: :and,
@@ -267,17 +218,15 @@ defmodule Arke.Core.Query do
   @doc """
   Create a new filter
   ## Parameters
-    - logic => :and | :or => the logic of the filter
-    - negate => boolean => used to figure out whether the condition is to be denied
+    - logic => the logic of the filter
+    - negate => used to figure out whether the condition is to be denied
     - base_filters => refer to `Arke.Core.Query.BaseFilter`
-
-  ## Example
-      iex> base_filter = Arke.Core.Query.new_base_filter(parameter, :eq, "name", false)
-      ...> Arke.Core.Query.new_filter(:and, false, base_filter)
-
-  ## Return
-      %Arke.Core.Query.Filter{base_filters: [ %Arke.Core.Query.BaseFilter{} ]}
   """
+  @spec new_filter(
+          logic :: :and | :or,
+          negate :: boolean(),
+          base_filters :: Arke.Core.Query.BaseFilter.t() | [Arke.Core.Query.BaseFilter.t()]
+        ):: Arke.Core.Query.Filter.t()
   def new_filter(logic, negate, base_filters) do
     %Filter{base_filters: parse_base_filters(base_filters), logic: logic, negate: negate}
   end
@@ -286,22 +235,18 @@ defmodule Arke.Core.Query do
   Create a new base filter
 
   ## Parameters
-    - parameter => %Arke.Core.Parameter.`ParameterType` => refer to `Arke.Core.Parameter`
+    - parameter => Parameter to filter
     - operator => refer to [operators](#module-operators)
-    - value => any => the value that the query will search for
-    - negate => boolean => used to figure out whether the condition is to be denied
-
-  ## Example
-      iex> parameter = Arke.Boundary.ParameterManager.get(:id,:arke_system)
-      ...> Arke.Core.Query.new_base_filter(parameter, :eq, "name", false)
-
-  ## Return
-      %Arke.Core.Query.BaseFilter{}
+    - value =>  the value that the query will search for
+    - negate => used to figure out whether the condition is to be denied
 
   """
-  # TODO: standardize parameter
-  #  if it is a string convert it to existing atom and get it from paramater manager
-  #  if it is an atom get it from paramater manaager
+  @spec new_base_filter(
+  parameter :: Arke.Core.Parameter.t(),
+  operator :: Arke.Core.QueryManager.operator(),
+  value :: any,
+  negate :: boolean()
+  ) :: Arke.Core.Query.BaseFilter.t()
   def new_base_filter(parameter, operator, value, negate) do
     BaseFilter.new(parameter, operator, value, negate)
   end
@@ -313,19 +258,15 @@ defmodule Arke.Core.Query do
   Get the query result ordered by specific criteria
 
   ## Parameters
-    - query => refer to refer to `new/1`
-    - parameter => %Arke.Core.Parameter.`ParameterType` => refer to `Arke.Core.Parameter`
-    - direction => "child" | "parent" => the direction the query will use to search
-
-  ## Example
-      iex> person = Arke.Core.Arke.new(id: "person", label: "Person")
-      ...> query = Arke.Core.Query.new(person, :arke_system)
-      ...> parameter = Arke.Boundary.ParameterManager.get(:id,:arke_system)
-      ...> Arke.Core.Query.add_order(query, parameter, :asc)
-
-  ## Return
-      %Arke.Core.Query{ ... orders: [ %Arke.Core.Query.Order{} ] ... }
+    - query => refer to `new/1`
+    - parameter => parameter used to order the query results
+    - direction => the direction the query will use to search
   """
+  @spec add_order(
+          query :: Arke.Core.Query.t(),
+          parameter :: Arke.Core.Parameter.t(),
+          direction :: :asc | :desc
+        ):: Arke.Core.Query.t()
   def add_order(query, parameter, direction) do
     %{
       query
@@ -338,18 +279,9 @@ defmodule Arke.Core.Query do
 
   ## Parameters
     - query => refer to `new/1`
-    - offset => integer => define the offset of the query
-
-  ## Example
-      iex> person = Arke.Core.Arke.new(id: :person, label: "Person")
-      ...> query = Arke.Core.Query.new(person, :arke_system)
-      ...> Arke.Core.Query.set_offset(query, 5)
-
-  ## Return
-      %Arke.Core.Query{... offset: value ...}
-
+    - offset => define the offset of the query
   """
-
+  @spec set_offset(query :: Arke.Core.Query.t(), offset :: nil | number() | String.t()):: Arke.Core.Query.t()
   def set_offset(query, nil), do: query
 
   def set_offset(query, offset) when is_binary(offset),
@@ -365,15 +297,8 @@ defmodule Arke.Core.Query do
   ## Parameters
     - query => refer to `new/1`
     - limit => integer => set the results limit of the query
-
-  ## Example
-      iex> person = Arke.Core.Arke.new(id: :person, label: "Person")
-      ...> query = Arke.Core.Query.new(person, :arke_system)
-      ...> Arke.Core.Query.set_limit(query, 100)
-
-  ## Return
-      %Arke.Core.Query{... limit: value ...}
   """
+  @spec set_limit(query :: Arke.Core.Query.t(), offset :: nil | number() | String.t()):: Arke.Core.Query.t()
   def set_limit(query, nil), do: query
 
   def set_limit(query, offset) when is_binary(offset),
