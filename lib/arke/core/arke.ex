@@ -23,20 +23,6 @@ defmodule Arke.Core.Arke do
   alias Arke.Boundary.ArkeManager
 
   arke id: :arke do
-    group(:arke_or_group)
-
-    parameter(:label, :string, required: true)
-    parameter(:active, :boolean, required: false, default_boolean: true)
-    parameter(:type, :string, required: true, default_string: "arke")
-
-    parameter(:parameters, :link,
-      multiple: true,
-      arke_or_group_id: "parameter",
-      connection_type: "parameter",
-      filter_keys: ["arke_id", "id", "label"],
-      depth: 0,
-      default_link: []
-    )
   end
 
   def on_create(arke, unit) do
@@ -49,6 +35,26 @@ defmodule Arke.Core.Arke do
     ArkeManager.update(id, project, unit)
     {:ok, unit}
   end
+
+  def on_update(_, %{id: id, metadata: %{project: project}, data: data} = unit) do
+    parameters =
+      Enum.reduce(data.parameters, [], fn a, new_parameters ->
+        [handle_link_init(a, :parameters) | new_parameters]
+      end)
+
+    unit = Unit.update(unit, %{parameters: parameters})
+
+    ArkeManager.update(id, project, unit)
+    {:ok, unit}
+  end
+
+  def handle_link_init(u, p) when is_binary(u),
+    do: %{id: String.to_atom(u), metadata: %{"parameter_id" => Atom.to_string(p)}}
+
+  def handle_link_init(u, p) when is_atom(u),
+    do: %{id: u, metadata: %{"parameter_id" => Atom.to_string(p)}}
+
+  def handle_link_init(u, _), do: u
 
   def on_delete(_, unit) do
     ArkeManager.remove(unit)

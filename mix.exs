@@ -1,7 +1,7 @@
 defmodule Arke.MixProject do
   use Mix.Project
 
-  @version "0.1.8"
+  @version "0.3.1"
   @scm_url "https://github.com/arkemishub/arke"
   @site_url "https://arkehub.com"
   @logo_url "public/arke-logo.png"
@@ -12,9 +12,12 @@ defmodule Arke.MixProject do
       name: "Arke",
       version: @version,
       build_path: "./_build",
+      config_path: "./config/config.exs",
       deps_path: "./deps",
       lockfile: "./mix.lock",
       elixir: "~> 1.13",
+      source_url: @scm_url,
+      homepage_url: @site_url,
       dialyzer: [plt_add_apps: ~w[eex]a],
       description: description(),
       package: package(),
@@ -25,6 +28,8 @@ defmodule Arke.MixProject do
       source_url: @scm_url,
       homepage_url: @site_url,
       elixirc_paths: elixirc_paths(Mix.env()),
+      elixirc_options: [warnings_as_errors: false],
+      versioning: versioning(),
       docs: [
         # The main page in the docs
         main: "Arke",
@@ -32,6 +37,15 @@ defmodule Arke.MixProject do
         extras: ["README.md", "LICENSE"],
         groups_for_modules: groups_for_modules()
       ]
+    ]
+  end
+
+  defp versioning do
+    [
+      tag_prefix: "v",
+      commit_msg: "v%s",
+      annotation: "tag release-%s created with mix_version",
+      annotate: true
     ]
   end
 
@@ -54,7 +68,10 @@ defmodule Arke.MixProject do
       {:timex, "~> 3.7.11"},
       {:google_api_storage, "~> 0.34.0"},
       {:goth, "~> 1.3.0"},
-      {:httpoison, "~> 2.0"}
+      {:httpoison, "~> 2.0"},
+      {:calendar, "~> 1.0.0"},
+      {:xlsxir, "~> 1.6"},
+      {:libcluster, "~> 3.3"},
     ]
   end
 

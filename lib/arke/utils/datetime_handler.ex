@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-defmodule Arke.DatetimeHandler do
+defmodule Arke.Utils.DatetimeHandler do
   @moduledoc """
   This module is responsible for managing datetime, date and time values
   """
@@ -23,6 +23,7 @@ defmodule Arke.DatetimeHandler do
   @date_msg "must be %Date{} | ~D[YYYY-MM-DD] | iso8601 (YYYY-MM-DD) format"
 
   @time_msg "must be must be %Time{} |~T[HH:MM:SS] | iso8601 (HH:MM:SS) format"
+  @general_msg " values must be %Date{} | ~D[YYYY-MM-DD]| %DateTime{} | %NaiveDateTime{} | ~N[YYYY-MM-DDTHH:MM:SS] | ~N[YYYY-MM-DD HH:MM:SS] | ~U[YYYY-MM-DD HH:MM:SS]"
 
   defp check_datetime(v, only_value) do
     case Timex.is_valid?(v) do
@@ -68,14 +69,19 @@ defmodule Arke.DatetimeHandler do
         {:error, @time_msg}
     end
   end
-
-  # ----- DATETIME -----
   @doc """
   Returns a %DateTime{} | %Date{}| %Time{} representing the current moment in time.
 
   """
   @spec now(:datetime | :date | :time) :: DateTime.t() | Date.t() | Time.t()
   def now(:datetime), do: Timex.set(Timex.now(), microsecond: 0)
+  def now(:date), do: Timex.now() |> Timex.to_date()
+  def now(:time), do: Time.utc_now() |> Time.truncate(:second)
+
+
+  # ----- DATETIME -----
+
+  def from_unix(s, unit \\ :second), do: Timex.from_unix(s, unit)
 
   @doc """
   Parse the given value to a %DateTime{}.
@@ -100,10 +106,19 @@ defmodule Arke.DatetimeHandler do
       {:error, _} -> {:error, @datetime_msg}
     end
   end
+  def format(value, format \\ "{ISO:Extended}"), do:  Timex.format(value,format)
+  def format!(value, format \\ "{ISO:Extended}"), do:  Timex.format!(value,format)
+
+  def shift_datetime(datetime, opts) do
+    case parse_datetime(datetime) do
+      {:ok, value} -> Timex.shift(value, opts)
+      {:error, msg} -> {:error, msg}
+    end
+  end
+
+  def shift_datetime(opts), do: Timex.shift(now(:datetime), opts)
 
   # ----- DATE -----
-  def now(:date), do: Timex.now() |> Timex.to_date()
-
   @doc """
   Parse the given value to a %Date{}.
   Usually returns `{:ok, value}` except if the `only_value` parameter is set to `true`. In this case it will returns only the value but it still returns `{:error, msg}` if an error occured
@@ -126,18 +141,26 @@ defmodule Arke.DatetimeHandler do
     end
   end
 
+  def shift_date(date, opts) do
+    case parse_date(date) do
+      {:ok, value} -> Timex.shift(value, opts)
+      {:error, msg} -> {:error, msg}
+    end
+  end
+
+  def shift_date(opts), do: Timex.shift(now(:date), opts)
+
   # ----- TIME -----
 
-  def now(:time), do: Time.utc_now() |> Time.truncate(:second)
   @doc """
   Parse the given value to a %Time{}.
   Usually returns `{:ok, value}` except if the `only_value` parameter is set to `true`. In this case it will returns only the value but it still returns `{:error, msg}` if an error occured
   Returns `nil` if `nil` is given
   """
   @spec parse_time(
-    value :: Time.t() | nil | String.t(),
-    only_value :: boolean()
-  ) :: nil | {:ok, Date.t()} | Date.t() | {:error, term()}
+          value :: Time.t() | nil | String.t(),
+          only_value :: boolean()
+        ) :: nil | {:ok, Date.t()} | Date.t() | {:error, term()}
   def parse_time(value, only_value \\ false)
   def parse_time(value, true) when is_nil(value), do: nil
   def parse_time(value, _only_value) when is_nil(value), do: {:ok, nil}
@@ -158,6 +181,24 @@ defmodule Arke.DatetimeHandler do
 
       {:error, _} ->
         {:error, @time_msg}
+    end
+  end
+
+  def after?(first_date, second_date) do
+    try do
+      Timex.after?(first_date, second_date)
+    rescue
+      _ ->
+        @general_msg
+    end
+  end
+
+  def before?(first_date, second_date) do
+    try do
+      Timex.before?(first_date, second_date)
+    rescue
+      _ ->
+        @general_msg
     end
   end
 end

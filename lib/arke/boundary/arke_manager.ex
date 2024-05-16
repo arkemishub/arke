@@ -15,24 +15,17 @@
 defmodule Arke.Boundary.ArkeManager do
   @moduledoc """
              This module manage the gen servers for the element specified in `Arke.Core.Arke`
-             """ && false
-  use Arke.UnitManager
+             """
 
-  set_registry_name(:arke_registry)
-  set_supervisor_name(:arke_supervisor)
+  alias Arke.Utils.ErrorGenerator, as: Error
+  use Arke.Boundary.UnitManager
+
+  manager_id(:arke)
+  # set_supervisor_name(:arke_supervisor)
 
   def before_create(%{id: id, data: data, metadata: unit_metadata} = unit, project) do
     unit = check_module(unit)
-    # new_parameters =
-    #   Enum.reduce(get_parameters(unit), [], fn %{id: parameter_id, metadata: parameter_metadata} = _,
-    #                                       new_parameters ->
-    #     case init_parameter(project, parameter_id, parameter_metadata) do
-    #       {:error, msg} -> %{id: parameter_id, metadata: parameter_metadata}
-    #       parameter -> [parameter | new_parameters]
-    #     end
-    #   end)
 
-    # {Unit.update(unit, parameters: new_parameters), project}
     {unit, project}
   end
 
@@ -42,7 +35,6 @@ defmodule Arke.Boundary.ArkeManager do
                                           metadata: parameter_metadata
                                         },
                                         new_parameters ->
-      # parameter = Enum.filter(parameters, fn %{id: id} -> id == parameter_id end)
 
       case init_parameter(project, parameter_id, parameter_metadata) do
         {:error, msg} -> new_parameters
@@ -65,38 +57,48 @@ defmodule Arke.Boundary.ArkeManager do
       {:error, msg} ->
         nil
 
-      %{id: id, metadata: %{project: project}} ->
-        GenServer.call(via({id, project}), {:get_parameter, parameter_id})
+      %{id: id, data: data} ->
+        with %{id: id, metadata: metadata} <-
+               Enum.find(data.parameters, {:error, "parameter id not found"}, fn f ->
+                 f.id == parameter_id
+               end),
+             %Unit{} = parameter <- init_parameter(project, id, metadata),
+             do: parameter,
+             else: ({:error, msg} -> nil)
+
     end
   end
 
   def get_parameter(unit_id, project, %Unit{} = parameter), do: parameter
 
-  # Call get link
-  def handle_call({:get_parameter, parameter_id}, _from, {%{data: data} = unit, project})
-      when is_atom(parameter_id) do
-    with %{id: id, metadata: metadata} <-
-           Enum.find(data.parameters, {:error, "parameter id not found"}, fn f ->
-             f.id == parameter_id
-           end),
-         %Unit{} = parameter <- init_parameter(project, id, metadata),
-         do: {:reply, parameter, {unit, project}},
-         else:
-           ({:error, msg} ->
-              {:reply, nil, {unit, project}})
+  def update_parameter(unit_id, parameter_id, project, metadata) when is_binary(parameter_id),
+    do: update_parameter(unit_id, String.to_existing_atom(parameter_id), project, metadata)
+
+  def update_parameter(unit_id, parameter_id, project, metadata) do
+    case get(unit_id, project) do
+      nil ->
+        Error.create(:unit, "unit #{unit_id} not found")
+
+      {:error, msg} ->
+        Error.create(:unit, msg)
+
+      %{id: id, data: data} = arke ->
+        parameters =
+          Enum.map(data.parameters, fn x ->
+            if x.id == parameter_id, do: Map.put(x, :metadata, metadata), else: x
+          end)
+
+        new_unit = Unit.update(arke, parameters: parameters)
+        update(unit_id, project, new_unit)
+    end
   end
+
 
   defp check_module(%{__module__: nil} = unit),
     do: Unit.update(unit, __module__: Arke.System.Arke)
 
   defp check_module(unit), do: unit
 
-  # defp link_init(project, :parameters, child_id, metadata) do
-  #   case init_parameter(project, child_id, metadata) do
-  #     {:error, msg} -> %{id: child_id, metadata: metadata}
-  #     p -> p
-  #   end
-  # end
 
   defp init_parameter(project, id, metadata, p) do
     arke_id = Map.get(p, :arke, nil)
@@ -114,13 +116,15 @@ defmodule Arke.Boundary.ArkeManager do
       nil
     )
 
-    # Unit.update(parameter, metadata)
   end
 
   defp init_parameter(project, id, metadata) do
-    case Arke.Boundary.ParamsManager.get(id, project) do
+    case Arke.Boundary.ParameterManager.get(id, project) do
+      nil ->
+        Error.create(:parameter, "parameter #{id} not found")
+
       {:error, msg} ->
-        {:error, msg}
+        Error.create(:parameter, msg)
 
       parameter ->
         parameter = handle_init_p(id, parameter, metadata)
@@ -128,11 +132,10 @@ defmodule Arke.Boundary.ArkeManager do
   end
 
   defp handle_init_p(id, nil, metadata) do
-    IO.inspect({id, metadata})
     nil
   end
 
-  defp handle_init_p(id, parameter, metadata) do
-    Unit.update(parameter, metadata)
+  defp handle_init_p(id, parameter, override_data) do
+    Map.update(parameter,:data, %{},fn v -> Map.merge(v,override_data, fn _k, pdata,ovdata -> ovdata end) end)
   end
 end

@@ -21,7 +21,7 @@ defmodule Arke.StructManager do
   alias Arke.Boundary.GroupManager
   alias Arke.Boundary.ArkeManager
   alias Arke.QueryManager
-  alias Arke.DatetimeHandler, as: DatetimeHandler
+  alias Arke.Utils.DatetimeHandler, as: DatetimeHandler
   alias Arke.Core.{Unit, Arke}
 
   @type parameter :: %{
@@ -101,9 +101,12 @@ defmodule Arke.StructManager do
       metadata: unit.metadata
     }
 
-    {:ok, new_unit} = ArkeManager.call_func(arke, :on_struct_encode, [unit, nil])
+    {:ok, new_unit} = ArkeManager.call_func(arke, :before_struct_encode, [arke, unit])
 
-    data = get_parsed_data(new_unit.data, arke, opts) |> Map.merge(base_data)
+    data = get_raw_data(new_unit) |> get_parsed_data(arke, opts) |> Map.merge(base_data)
+
+    {:ok, data} = ArkeManager.call_func(arke, :on_struct_encode, [arke, new_unit, data, opts])
+
     # TODO figure out why in link units project key in metadata is a string
     Map.put(data, :metadata, Map.drop(data.metadata, [:project, "project"]))
   end
@@ -111,6 +114,7 @@ defmodule Arke.StructManager do
   defp handle_load_link(_, _, false, _opts), do: []
 
   defp handle_load_link(unit, project, true, opts) do
+
     get_link_id_list(unit)
     |> get_link_units(project, opts)
   end
@@ -120,7 +124,7 @@ defmodule Arke.StructManager do
 
   defp get_link_units(id_list, project, opts) do
     QueryManager.filter_by(id__in: id_list, project: project)
-    |> Enum.map(fn unit -> encode(unit, Keyword.put(opts, :load_links, false)) end)
+    |> Enum.map(fn unit -> encode(unit, opts) end)
   end
 
   defp get_link_id_list(units) when is_list(units) do
@@ -146,6 +150,14 @@ defmodule Arke.StructManager do
   defp updates_id_list(id_list, id) when is_nil(id), do: id_list
   defp updates_id_list(id_list, id) when is_list(id), do: id_list ++ id
   defp updates_id_list(id_list, id), do: [id | id_list]
+
+  defp get_raw_data(%{link: nil} = unit), do: unit.data
+
+  defp get_raw_data(%{link: link} = unit) do
+    Map.put(unit.data, :link, link)
+  end
+
+  defp get_raw_data(unit), do: unit.data
 
   defp get_parsed_data(data, arke, opts \\ [])
   defp get_parsed_data(nil, arke, _), do: %{}
@@ -192,21 +204,45 @@ defmodule Arke.StructManager do
 
   def validate_data(id, value, arke, opts) do
     param = ArkeManager.get_parameter(arke, id)
-
-    new_value = parse_value(value, param.arke_id, opts)
+    new_value = parse_value(value, param, Enum.into(opts, %{}))
     %{id => new_value}
   end
 
-  defp parse_value(value, type, _opts \\ [])
+  defp parse_value(value, param, _opts \\ [])
 
-  defp parse_value(value, :link, opts) do
-    load_links = Keyword.get(opts, :load_links, false)
+  defp parse_value(value, %{arke_id: :link} = _param, opts) do
+    load_links = Map.get(opts, :load_links, false)
 
-    Keyword.get(opts, :link_units, [])
+    Map.get(opts, :link_units, [])
     |> filter_link_units(value, load_links)
   end
 
-  defp parse_value(value, _type, _opts), do: value
+  defp parse_value(value, %{data: %{values: nil}} = param, %{load_values: true} = opts) do
+    opts = Map.delete(opts, :load_values)
+    parse_value(value, param, opts)
+  end
+
+  defp parse_value(
+         value,
+         %{arke_id: param_type, data: %{multiple: false, values: values}} = param,
+         %{load_values: true} = opts
+       )
+       when param_type in [:string, :float, :integer] and is_list(values) do
+    Enum.find(values, fn map -> Map.get(map, :value, nil) == value end)
+  end
+
+  defp parse_value(
+         value,
+         %{arke_id: param_type, data: %{multiple: true, values: values}} = param,
+         %{load_values: true} = opts
+       )
+       when param_type in [:string, :float, :integer] and is_list(values) and is_list(value) do
+    Enum.reduce(value, [], fn v, new_value ->
+      [Enum.find(values, fn map -> Map.get(map, :value, nil) == v end) | new_value]
+    end)
+  end
+
+  defp parse_value(value, _param, _opts), do: value
 
   defp filter_link_units(link_units, map_list, false) when is_list(map_list) do
     Enum.map(map_list, fn map -> filter_link_units(link_units, map, false) end)
@@ -320,7 +356,8 @@ defmodule Arke.StructManager do
   """
   @spec get_struct(arke :: Unit.t()) :: %{parameters: [parameter()], label: String.t()}
   def get_struct(%{arke_id: :arke, data: data} = arke) do
-    %{parameters: get_struct_parameters(ArkeManager.get_parameters(arke), %{}), label: data.label}
+    struct = %{parameters: get_struct_parameters(arke, %{}), label: data.label}
+    ArkeManager.call_func(arke, :after_get_struct, [arke, struct])
   end
 
   @doc """
@@ -331,10 +368,12 @@ defmodule Arke.StructManager do
           label: String.t()
         }
   def get_struct(arke, %{data: data} = unit, opts) do
-    %{
-      parameters: get_struct_parameters(ArkeManager.get_parameters(arke), unit, opts),
+    struct = %{
+      parameters: get_struct_parameters(arke, unit, opts),
       label: arke.data.label
     }
+
+    ArkeManager.call_func(arke, :after_get_struct, [arke, unit, struct])
   end
 
   @doc """
@@ -345,17 +384,21 @@ defmodule Arke.StructManager do
           label: String.t()
         }
   def get_struct(arke, %{data: data} = unit) do
-    %{
-      parameters: get_struct_parameters(ArkeManager.get_parameters(arke), unit, %{}),
+    struct = %{
+      parameters: get_struct_parameters(arke, unit, %{}),
       label: arke.data.label
     }
+
+    ArkeManager.call_func(arke, :after_get_struct, [arke, unit, struct])
   end
 
   def get_struct(%{arke_id: :arke, data: data} = arke, opts) do
-    %{
-      parameters: get_struct_parameters(ArkeManager.get_parameters(arke), opts),
+    struct = %{
+      parameters: get_struct_parameters(arke, opts),
       label: data.label
     }
+
+    ArkeManager.call_func(arke, :after_get_struct, [arke, struct])
   end
 
   def get_struct(_), do: raise("Must pass a valid arke or unit")
@@ -370,15 +413,19 @@ defmodule Arke.StructManager do
 
   defp get_filtered_parameters(parameters, _), do: parameters
 
-  defp get_struct_parameters(parameters, opts) do
-    get_filtered_parameters(parameters, opts)
-    |> Enum.reduce([], fn p, acc -> [base_parameter_struct(p) |> add_type_fields() | acc] end)
+  defp get_struct_parameters(%{metadata: %{project: project}} = arke, opts) do
+    ArkeManager.get_parameters(arke)
+    |> get_filtered_parameters(opts)
+    |> Enum.reduce([], fn p, acc ->
+      [base_parameter_struct(p) |> add_type_fields(project) | acc]
+    end)
   end
 
-  defp get_struct_parameters(parameters, unit, opts) do
-    get_filtered_parameters(parameters, opts)
+  defp get_struct_parameters(%{metadata: %{project: project}} = arke, unit, opts) do
+    ArkeManager.get_parameters(arke)
+    |> get_filtered_parameters(opts)
     |> Enum.reduce([], fn p, acc ->
-      [base_parameter_struct(p) |> add_type_fields() |> add_value(unit) | acc]
+      [base_parameter_struct(p) |> add_type_fields(project) |> add_value(unit) | acc]
     end)
   end
 
@@ -419,7 +466,7 @@ defmodule Arke.StructManager do
   # STRING PARAMETER ###################################################
   ######################################################################
 
-  defp add_type_fields({%{arke_id: :string, data: data} = parameter, base_data}) do
+  defp add_type_fields({%{arke_id: :string, data: data} = parameter, base_data}, _project) do
     Map.merge(base_data, %{
       max_length: data.max_length,
       min_length: data.min_length,
@@ -434,7 +481,7 @@ defmodule Arke.StructManager do
   # NUMBER PARAMETER ###################################################
   ######################################################################
 
-  defp add_type_fields({%{arke_id: :integer, data: data} = _parameter, base_data}) do
+  defp add_type_fields({%{arke_id: :integer, data: data} = _parameter, base_data}, _project) do
     Map.merge(base_data, %{
       max: data.max,
       min: data.min,
@@ -444,7 +491,7 @@ defmodule Arke.StructManager do
     })
   end
 
-  defp add_type_fields({%{arke_id: :float, data: data} = _parameter, base_data}) do
+  defp add_type_fields({%{arke_id: :float, data: data} = _parameter, base_data}, _project) do
     Map.merge(base_data, %{
       max: data.max,
       min: data.min,
@@ -458,7 +505,7 @@ defmodule Arke.StructManager do
   # BOOLEAN PARAMETER ##################################################
   ######################################################################
 
-  defp add_type_fields({%{arke_id: :boolean, data: data} = parameter, base_data}) do
+  defp add_type_fields({%{arke_id: :boolean, data: data} = parameter, base_data}, _project) do
     Map.merge(base_data, %{
       default: data.default_boolean
     })
@@ -468,7 +515,7 @@ defmodule Arke.StructManager do
   # DICT PARAMETER #####################################################
   ######################################################################
 
-  defp add_type_fields({%{arke_id: :dict, data: data} = parameter, base_data}) do
+  defp add_type_fields({%{arke_id: :dict, data: data} = parameter, base_data}, _project) do
     Map.merge(base_data, %{
       default: data.default_dict
     })
@@ -478,7 +525,7 @@ defmodule Arke.StructManager do
   # LIST PARAMETER #####################################################
   ######################################################################
 
-  defp add_type_fields({%{arke_id: :list, data: data} = parameter, base_data}) do
+  defp add_type_fields({%{arke_id: :list, data: data} = parameter, base_data}, _project) do
     Map.merge(base_data, %{
       default: data.default_list
     })
@@ -489,13 +536,14 @@ defmodule Arke.StructManager do
   ######################################################################
 
   defp add_type_fields(
-         {%{arke_id: :link, data: data, metadata: %{project: project}} = _parameter, base_data}
+         {%{arke_id: :link, data: data} = _parameter, base_data},
+         project
        ) do
     Map.merge(base_data, %{
       default: data.default_link,
       multiple: data.multiple,
       filter_keys: data.filter_keys,
-      ref: encode(get_arke_or_group_id(data.arke_or_group_id, project), type: :json)
+      link_ref: encode(get_arke_or_group_id(data.arke_or_group_id, project), type: :json)
       # depth: data.depth,
       # connection_type: data.connection_type
     })
@@ -511,6 +559,12 @@ defmodule Arke.StructManager do
           group -> group
         end
 
+      nil ->
+        case GroupManager.get(arke_or_group_id, project) do
+          {:error, _} -> nil
+          group -> group
+        end
+
       arke ->
         arke
     end
@@ -519,5 +573,7 @@ defmodule Arke.StructManager do
   ######################################################################
   # DEFAULT PARAMETER ##################################################
   ######################################################################
-  defp add_type_fields({_, base_data}), do: base_data
+  defp add_type_fields({p, base_data}, _project) do
+    base_data
+  end
 end

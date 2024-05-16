@@ -75,31 +75,132 @@ defmodule Arke.System do
       Overridable function in order to be able to edit data before the creation
       """
       def before_create(arke, unit), do: {:ok, unit}
-
       @doc """
       Overridable function in order to be able to edit data during the encoding
       """
-      def on_struct_encode(unit, _), do: {:ok, unit}
-
+      def on_struct_encode(_, _, data, opts), do: {:ok, data}
+      def before_struct_encode(_, unit), do: {:ok, unit}
       @doc """
       Overridable function in order to be able to edit data on the update
       """
-      def on_update(arke, unit), do: {:ok, unit}
-
+      def on_update(arke, old_unit, unit), do: {:ok, unit}
       @doc """
       Overridable function in order to be able to edit data before the update
       """
       def before_update(arke, unit), do: {:ok, unit}
-
       @doc """
       Overridable function in order to be able to edit data during the deletion
       """
       def on_delete(arke, unit), do: {:ok, unit}
-
       @doc """
       Overridable function in order to be able to edit data before the deletion
       """
       def before_delete(arke, unit), do: {:ok, unit}
+
+      def after_get_struct(arke, unit, struct), do: struct
+      def after_get_struct(arke, struct), do: struct
+
+      def import(%{runtime_data: %{conn: %{method: "POST"}=conn}, metadata: %{project: project}} = arke) do
+        member = ArkeAuth.Guardian.Plug.current_resource(conn)
+        mode = Map.get(conn.body_params, "mode", "default")
+
+        case Map.get(conn.body_params, "file", nil) do
+          nil -> {:error, "file is required", 400}
+          file -> import_units(arke, project, member, file, mode)
+        end
+      end
+
+      defp import_units(arke, project, member, file, mode) do
+        {:ok, ref} = Enum.at(Xlsxir.multi_extract(file.path), 0)
+        all_units = get_all_units_for_import(project)
+
+        file_as_list = Xlsxir.get_list(ref)
+
+        header_file = Enum.at(file_as_list, 0)
+        rows = file_as_list |> List.delete_at(0)
+
+        header = get_header_for_import(project, arke, header_file) |> parse_haeder_for_import(header_file)
+
+        {correct_units, error_units} = Enum.with_index(rows) |> Enum.reduce({[], []}, fn {row, index}, {correct_units, error_units} ->
+          case Enum.filter(row, & !is_nil(&1)) do
+            [] -> {correct_units, error_units}
+            _ -> case load_units(project, arke, header, row, all_units, mode) do
+                   {:error, args, errors} ->
+                     m = Enum.reduce(header, %{}, fn {h, index}, acc ->
+                       acc = Map.put(acc, h, parse_cell(Enum.at(row, index)))
+                     end) |> Map.put("errors", errors)
+                     {correct_units, [m | error_units]}
+                   {:ok, unit_args} -> {[unit_args | correct_units], error_units}
+                 end
+          end
+        end)
+
+        existing_units = get_existing_units_for_import(project, arke, header, correct_units)
+        units_args = Enum.filter(correct_units, fn u -> check_existing_units_for_import(project, arke, header, u, existing_units) == false end)
+        if length(units_args) > 0 do
+          Enum.map(Stream.chunk_every(units_args, 5000) |> Enum.to_list(), fn chunk ->
+            ArkePostgres.Repo.insert_all("arke_unit", chunk, prefix: Atom.to_string(project))
+          end)
+        end
+
+        count_inserted =  length(units_args)
+        count_existing =  length(existing_units)
+        count_error =  length(error_units)
+        total_count =  count_inserted + count_error + count_existing
+
+        res = %{
+          count_inserted: count_inserted,
+          count_existing: count_existing,
+          count_error: count_error,
+          total_count: total_count,
+          error_units: error_units
+        }
+        {:ok, res, 201}
+      end
+
+      defp parse_cell(value) when is_tuple(value), do: Kernel.inspect(value)
+      defp parse_cell(value), do: value
+
+      defp get_header_for_import(project, arke, header_file) do
+        Enum.reduce(Enum.with_index(header_file), [], fn {cell, index}, acc ->
+          case Arke.Boundary.ArkeManager.get_parameter(arke, project, cell) do
+            nil -> acc
+            parameter -> [Atom.to_string(parameter.id) | acc]
+          end
+        end)
+      end
+      defp parse_haeder_for_import(header, header_file) do
+        Enum.reduce(Enum.with_index(header_file), [], fn {cell, index}, acc ->
+          case cell do
+            nil -> acc
+            "" -> acc
+            cell ->
+              case cell in header do
+                nil -> acc
+                parameter -> [{cell, index} | acc]
+              end
+          end
+        end)
+      end
+
+      defp get_all_units_for_import(project), do: []
+
+      defp load_units(project, arke, header, row, _, "default") do
+        args = Enum.reduce(header, [], fn {parameter_id, index}, acc ->
+          acc = Keyword.put(acc, String.to_existing_atom(parameter_id), Enum.at(row, index))
+        end)
+
+        with %Arke.Core.Unit{} = unit <- Arke.Core.Unit.load(arke, args, :create),
+             {:ok, unit} <- Arke.Validator.validate(unit, :create, project),
+             do: {:ok, args},
+             else: ({:error, errors} -> {:error, args, errors})
+      end
+      defp get_existing_units_for_import(project, arke, header, units_args), do: []
+      defp check_existing_units_for_import(project, arke, header, units_args, existing_units), do: true
+      defp get_import_value(header, row, column) do
+        index = Enum.find(header, fn {k, v} -> k == column end) |> elem(1)
+        Enum.at(row, index)
+      end
 
       defoverridable on_load: 2,
                      before_load: 2,
@@ -107,11 +208,23 @@ defmodule Arke.System do
                      before_validate: 2,
                      on_create: 2,
                      before_create: 2,
-                     on_struct_encode: 2,
-                     on_update: 2,
+                     before_struct_encode: 2,
+                     on_struct_encode: 4,
+                     on_update: 3,
                      before_update: 2,
                      on_delete: 2,
-                     before_delete: 2
+                     before_delete: 2,
+                     after_get_struct: 2,
+                     after_get_struct: 3,
+
+                    # Import
+                      import: 1,
+                     import_units: 5,
+                      get_header_for_import: 3,
+                     get_all_units_for_import: 1,
+                      load_units: 6,
+                     get_existing_units_for_import: 4,
+                      check_existing_units_for_import: 5
     end
   end
 
@@ -123,7 +236,7 @@ defmodule Arke.System do
   Macro to create an arke struct with the given parameters
 
   ## Example
-      arke do
+      arke  do
         parameter :custom_parameter, :string, required: true, unique: true
         parameter :custom_parameter2, :string, required: true, values: ["value1", "value2"]
         parameter :custom_parameter3, :integer, required: true, values: [%{label: "option 1", value: 1},%{label: "option 2", value: 2}]
@@ -137,6 +250,7 @@ defmodule Arke.System do
     type = Keyword.get(opts, :type, "arke")
     active = Keyword.get(opts, :active, true)
     metadata = Keyword.get(opts, :metadata, %{})
+
     base_parameters = get_base_arke_parameters(type)
 
     quote do
@@ -146,6 +260,7 @@ defmodule Arke.System do
       metadata = unquote(Macro.escape(metadata))
       caller = unquote(__CALLER__.module)
 
+      # todo: remove string to atom
       id =
         Keyword.get(
           opts,
@@ -162,7 +277,7 @@ defmodule Arke.System do
         Keyword.get(
           opts,
           :label,
-          id |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
+          id |> to_string |> String.replace("_", " ") |> String.capitalize()
         )
 
       unquote(base_parameters)
@@ -171,9 +286,9 @@ defmodule Arke.System do
       @arke %{
         id: id,
         data: %{label: label, active: active, type: type, parameters: @parameters},
-        metadata: metadata
+        metadata: metadata,
       }
-      #      @arke Arke.Core.Arke.new(id: id, label: label, active: active, metadata: metadata, type: type, parameters: @parameters)
+
     end
   end
 
@@ -282,13 +397,15 @@ defmodule Arke.System.BaseParameter do
   """
   @spec check_enum(type :: :string | :integer | :float, opts :: [...] | []) ::
           [...] | [] | [%{label: String.t(), value: float() | integer() | String.t()}, ...]
+  def check_enum(type, opts) when is_binary(type), do: check_enum(String.to_atom(type),opts)
   def check_enum(type, opts) do
     enum_parameters = [:string, :integer, :float]
-
     case type in enum_parameters do
-      true -> __enum_parameter__(opts, type)
+      true ->
+        __enum_parameter__(opts, type)
       false -> opts
     end
+
   end
 
   defp parameter_option_common(opts, id) do
@@ -343,20 +460,24 @@ defmodule Arke.System.BaseParameter do
     Keyword.put_new(opts, key, default)
   end
 
-  defp __enum_parameter__(opts, type) do
+  def __enum_parameter__(opts, type) when is_map(opts), do: __enum_parameter__(Map.to_list(opts),type)
+  def __enum_parameter__(opts, type) do
     case Keyword.has_key?(opts, :values) do
-      true -> __validate_values__(opts, opts[:values], type)
-      false -> opts
+      true ->   __validate_values__(opts, opts[:values], type)
+      false ->
+        opts
     end
   end
 
-  defp __validate_values__(opts, nil, _), do: Keyword.delete(opts, :values)
+  defp __validate_values__(opts, nil, _), do: opts
 
-  defp __validate_values__(opts, %{"value" => value, "datetime" => _} = values, type)
+  defp __validate_values__(opts, %{"value" => value, "datetime" => _} = _values, type)
        when not is_nil(value),
        do: __validate_values__(opts, value, type)
 
+
   defp __validate_values__(opts, [h | _t] = values, type) when is_map(h) do
+
     condition =
       cond do
         type == :string ->
@@ -368,12 +489,11 @@ defmodule Arke.System.BaseParameter do
         type == :float ->
           fn l, v -> is_binary(l) and is_number(v) end
       end
-
     case Enum.all?(values, fn map ->
            Enum.map([:label, :value], fn key -> Map.has_key?(map, key) end)
          end) do
       true ->
-        __create_map_values__(__check_map__(values), opts, type, condition)
+       __create_map_values__(__check_map__(values), opts, type, condition)
 
       # FARE RAISE ECCEZIONE DA GESTIRE. CHIAVI DEVONO ESSERE TUTTE UGUALI
       _ ->
@@ -392,12 +512,9 @@ defmodule Arke.System.BaseParameter do
     __values_from_list__(values, opts, condition)
   end
 
-  # FARE RAISE ECCEZIONE DA GESTIRE
-  defp __validate_values__(opts, _, _),
-    do: Keyword.update(opts, :values, nil, fn _current_value -> nil end)
 
   # CONVERT ALL STRINGS KEY TO ATOMS (string are received from API)
-  defp __check_map__([%{"label" => _l, "value" => _v} | h] = values) do
+  defp __check_map__([%{"label" => _l, "value" => _v} | _h] = values) do
     Enum.map(
       values,
       &Enum.into(&1, %{}, fn {key, val} -> {String.to_existing_atom(key), val} end)

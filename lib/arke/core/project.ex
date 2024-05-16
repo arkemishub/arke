@@ -22,12 +22,7 @@ defmodule Arke.Core.Project do
 
   @persistence Application.get_env(:arke, :persistence)
 
-  arke id: :arke_project, label: "Arke Project" do
-    parameter(:label, :string, required: true)
-    parameter(:description, :string, required: false)
-    parameter(:persistence, :dict, required: true, values: nil, default_dict: %{})
-    parameter(:type, :string, required: true, default_string: :postgres_schema)
-  end
+  arke id: :arke_project do  end
 
   def on_create(_, unit) do
     persistence_fn = @persistence[:arke_postgres][:create_project]

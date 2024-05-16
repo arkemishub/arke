@@ -22,9 +22,10 @@ defmodule Arke.LinkManager do
   alias Arke.Core.Unit
 
   def add_node(project, %Unit{} = parent, %Unit{} = child, type \\ "link", metadata \\ %{}) do
-    arke_link = ArkeManager.get(:arke_link, :arke_system)
+    arke_link = ArkeManager.get(:arke_link, project)
 
-    case check_link(project, parent, child, type, metadata, arke_link) do
+
+    case check_link(project, parent, child, arke_link) do
       {_, nil} ->
         QueryManager.create(project, arke_link,
           parent_id: Atom.to_string(parent.id),
@@ -40,19 +41,40 @@ defmodule Arke.LinkManager do
 
   def add_node(project, parent, child, type, metadata)
       when is_binary(parent) and is_binary(child) do
+    with %Unit{}=unit_parent <- QueryManager.get_by(id: parent, project: project),
+         %Unit{}=unit_child <- QueryManager.get_by(id: child, project: project) do
+      add_node(project, unit_parent, unit_child, type, metadata)
+      else
+      _ ->  Error.create(:link, "parent: `#{parent}` or child: `#{child}` not found")
+    end
+  end
+
+  def add_node(_project,  _parent, _child, _type, _metadata), do: Error.create(:link, "invalid parameters")
+
+  def update_node(project, %Unit{} = parent, %Unit{} = child, type, metadata) do
+    arke_link = ArkeManager.get(:arke_link, :arke_system)
+
+    case check_link(project, parent, child, arke_link) do
+      {:error, _} -> Error.create(:link, "link not found")
+      {:ok, link} -> QueryManager.update(link, metadata: metadata, type: type)
+    end
+  end
+
+  def update_node(project, parent, child, type, metadata)
+      when is_binary(parent) and is_binary(child) do
     unit_parent = QueryManager.get_by(id: parent, project: project)
     unit_child = QueryManager.get_by(id: child, project: project)
 
-    add_node(project, unit_parent, unit_child, type, metadata)
+    update_node(project, unit_parent, unit_child, type, metadata)
   end
 
-  def add_node(_project, _parent, _child, _type, _metadata),
+  def update_node(_project, _parent, _child, _type, _metadata),
     do: Error.create(:link, "invalid parameters")
 
   def delete_node(project, %Unit{} = parent, %Unit{} = child, type, metadata \\ %{}) do
     arke_link = ArkeManager.get(:arke_link, :arke_system)
 
-    case check_link(project, parent, child, type, metadata, arke_link) do
+    case check_link(project, parent, child, arke_link) do
       {:error, _} -> Error.create(:link, "link not found")
       {:ok, link} -> QueryManager.delete(project, link)
     end
@@ -69,13 +91,11 @@ defmodule Arke.LinkManager do
   def delete_node(_project, _parent, _child, _type, _metadata),
     do: Error.create(:link, "invalid parameters")
 
-  defp check_link(project, parent, child, type, metadata, arke_link) do
+  defp check_link(project, parent, child, arke_link) do
     with %Arke.Core.Unit{} = link <-
            Arke.QueryManager.query(project: project, arke: arke_link)
            |> Arke.QueryManager.filter(:parent_id, :eq, Atom.to_string(parent.id), false)
            |> Arke.QueryManager.filter(:child_id, :eq, Atom.to_string(child.id), false)
-           |> Arke.QueryManager.filter(:type, :eq, type, false)
-           |> Arke.QueryManager.filter(:metadata, :eq, metadata, false)
            |> Arke.QueryManager.one(),
          do: {:ok, link},
          else: (_ -> {:error, nil})

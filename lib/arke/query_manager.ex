@@ -38,10 +38,13 @@ defmodule Arke.QueryManager do
     - `isnull` -> value is_nil -> `IS NULL`
 
   """
-  alias Arke.Boundary.{ArkeManager, ParameterManager, GroupManager, ParamsManager}
+  alias Arke.Boundary.{ArkeManager, ParameterManager, GroupManager}
   alias Arke.Validator
   alias Arke.LinkManager
+  alias Arke.QueryManager
+  alias Arke.Utils.DatetimeHandler, as: DatetimeHandler
   alias Arke.Core.{Arke, Unit, Query, Parameter}
+
 
   @persistence Application.get_env(:arke, :persistence)
   @record_fields [:id, :data, :metadata, :inserted_at, :updated_at]
@@ -144,16 +147,98 @@ defmodule Arke.QueryManager do
   @spec create(project :: atom(), arke :: Arke.t(), args :: [...]) :: func_return()
   def create(project, arke, args) do
     persistence_fn = @persistence[:arke_postgres][:create]
-
     with %Unit{} = unit <- Unit.load(arke, args, :create),
          {:ok, unit} <- Validator.validate(unit, :create, project),
          {:ok, unit} <- ArkeManager.call_func(arke, :before_create, [arke, unit]),
+         {:ok, unit} <- handle_group_call_func(arke, unit, :before_unit_create),
+         {:ok, unit} <- handle_link_parameters_unit(arke, unit),
          {:ok, unit} <- persistence_fn.(project, unit),
-         {:ok, unit} <- handle_link_parameters(unit, %{}),
          {:ok, unit} <- ArkeManager.call_func(arke, :on_create, [arke, unit]),
+         {:ok, unit} <- handle_link_parameters(unit, %{}),
+         {:ok, unit} <- handle_group_call_func(arke, unit, :on_unit_create),
          do: {:ok, unit},
          else: ({:error, errors} -> {:error, errors})
   end
+
+  defp handle_link_parameters_unit(%{id: :arke_link} = _, unit), do: {:ok, unit}
+
+  defp handle_link_parameters_unit(
+         %{data: parameters} = arke,
+         %{metadata: %{project: project}} = unit
+       ) do
+
+
+    {errors, link_units} =
+      Enum.filter(ArkeManager.get_parameters(arke), fn p -> p.arke_id == :link end)
+      |> Enum.reduce({[], []}, fn p, {errors, link_units} ->
+
+        arke = ArkeManager.get(String.to_existing_atom(p.data.arke_or_group_id), project)
+
+        case handle_create_on_link_parameters_unit(
+               project,
+               unit,
+               p,
+               arke,
+               Unit.get_value(unit, p.id)
+             ) do
+          {:ok, parameter, %Unit{} = link_unit} -> {errors, [{parameter, link_unit} | link_units]}
+          {:ok, parameter, link_unit} -> {errors, link_units}
+          {:error, e} -> {[e | errors], link_units}
+        end
+      end)
+
+    case length(errors) > 0 do
+      true ->
+        Enum.map(link_units, fn {p, u} ->
+          delete(project, u)
+        end)
+
+        {:error, errors}
+
+      false ->
+        args =
+          Enum.reduce(link_units, %{}, fn {p, u}, args ->
+            Map.put(args, p.id, Atom.to_string(u.id))
+          end)
+
+        {:ok, Unit.update(unit, args)}
+    end
+  end
+
+  defp handle_create_on_link_parameters_unit(project, unit, parameter, arke, value)
+       when is_nil(value),
+       do: {:ok, parameter, value}
+
+  defp handle_create_on_link_parameters_unit(project, unit, parameter, arke, value)
+       when is_binary(value),
+       do: {:ok, parameter, value}
+
+  defp handle_create_on_link_parameters_unit(project, unit, parameter, arke, value)
+       when is_map(value) do
+    value = Map.put(value, :runtime_data, %{link: unit, link_parameter: parameter})
+
+    case create(project, arke, value) do
+      {:ok, unit} -> {:ok, parameter, unit}
+      {:error, error} -> {:error, error}
+    end
+  end
+
+  defp handle_create_on_link_parameters_unit(_, _, parameter, _, value),
+    do: {:ok, parameter, value}
+
+  def handle_group_call_func(arke, unit, func) do
+
+    GroupManager.get_groups_by_arke(arke)
+    |> Enum.reduce_while(unit, fn group, new_unit ->
+      with {:ok, new_unit} <- GroupManager.call_func(group, func, [arke, new_unit]),
+           do: {:cont, new_unit},
+           else: ({:error, errors} -> {:halt, {:error, errors}})
+    end)
+    |> check_group_manager_functions_errors()
+  end
+
+  def check_group_manager_functions_errors({:error, errors} = _), do: {:error, errors}
+  def check_group_manager_functions_errors(unit), do: {:ok, unit}
 
   @doc """
   Function to create a Unit.
@@ -175,20 +260,26 @@ defmodule Arke.QueryManager do
 
   """
   @spec update(Unit.t(), args :: list()) :: func_return()
-  def update(%{arke_id: arke_id, metadata: %{project: project}, data: data} = unit, args) do
+  def update(%{arke_id: arke_id, metadata: %{project: project}, data: data} = current_unit, args) do
     persistence_fn = @persistence[:arke_postgres][:update]
     arke = ArkeManager.get(arke_id, project)
-
-    with %Unit{} = unit <- Unit.update(unit, args),
+    with %Unit{} = unit <- Unit.update(current_unit, args),
+         {:ok, unit} <- update_at_on_update(unit),
          {:ok, unit} <- Validator.validate(unit, :update, project),
          {:ok, unit} <- ArkeManager.call_func(arke, :before_update, [arke, unit]),
+         {:ok, unit} <- handle_group_call_func(arke, unit, :before_unit_update),
+         {:ok, unit} <- handle_link_parameters_unit(arke, unit),
          {:ok, unit} <- persistence_fn.(project, unit),
+         {:ok, unit} <- ArkeManager.call_func(arke, :on_update, [arke, current_unit, unit]),
          {:ok, unit} <- handle_link_parameters(unit, data),
-         {:ok, unit} <- ArkeManager.call_func(arke, :on_update, [arke, unit]),
+         {:ok, unit} <- handle_group_call_func(arke, unit, :on_unit_update),
          do: {:ok, unit},
          else: ({:error, errors} -> {:error, errors})
   end
-
+  defp update_at_on_update(unit) do
+    updated_at = DatetimeHandler.now(:datetime)
+    {:ok, Unit.update(unit, updated_at: updated_at)}
+  end
   @doc """
   Function to delete a given unit
 
@@ -211,7 +302,9 @@ defmodule Arke.QueryManager do
     persistence_fn = @persistence[:arke_postgres][:delete]
 
     with {:ok, unit} <- ArkeManager.call_func(arke, :before_delete, [arke, unit]),
+         {:ok, unit} <- handle_group_call_func(arke, unit, :before_unit_delete),
          {:ok, nil} <- persistence_fn.(project, unit),
+         {:ok, unit} <- handle_group_call_func(arke, unit, :on_unit_delete),
          {:ok, _unit} <- ArkeManager.call_func(arke, :on_delete, [arke, unit]),
          do: {:ok, nil},
          else: ({:error, errors} -> {:error, errors})
@@ -428,10 +521,9 @@ defmodule Arke.QueryManager do
     do: handle_filter(query, :group_id, :eq, value, negate)
 
   defp handle_filter(query, :group_id, :eq, value, negate) do
-    %{id: id, metadata: %{project: group_project}} = group = get_group(value, query.project)
-    # arke_list = GroupManager.get_arke_list(group)
+    %{id: id} = group = get_group(value, query.project)
     arke_list =
-      Enum.map(GroupManager.get_link(id, group_project, :arke_list), fn a ->
+      Enum.map(GroupManager.get_arke_list(group), fn a ->
         Atom.to_string(a.id)
       end)
 
@@ -597,13 +689,14 @@ defmodule Arke.QueryManager do
   defp get_parameter_operator(_, _), do: nil
 
   defp get_parameter(%{arke: nil, project: project} = query, %{id: id} = _parameter),
-    do: ParamsManager.get(id, project)
+    do: ParameterManager.get(id, project)
 
   defp get_parameter(%{arke: nil, project: project} = query, key),
-    do: ParamsManager.get(key, project)
+    do: ParameterManager.get(key, project)
 
-  defp get_parameter(%{arke: arke, project: project} = query, key),
-    do: ArkeManager.get_parameter(arke, project, key)
+  defp get_parameter(%{arke: arke, project: project} = query, key) do
+    ArkeManager.get_parameter(arke, project, key)
+  end
 
   defp handle_link_parameters(
          %{arke_id: arke_id, metadata: %{project: project}, data: new_data, id: id} = unit,
@@ -624,10 +717,22 @@ defmodule Arke.QueryManager do
   defp handle_link_parameter(_, nil, _, _), do: nil
 
   defp handle_link_parameter(unit, %{data: %{multiple: false}} = parameter, old_value, new_value) do
-    IO.inspect("node to delete #{old_value}")
-    IO.inspect("node to add #{new_value}")
-    update_parameter_link(unit, parameter, old_value, :delete, old_value == new_value)
-    update_parameter_link(unit, parameter, new_value, :add, old_value == new_value)
+    update_parameter_link(
+      unit,
+      parameter,
+      normalize_value(old_value),
+      :delete,
+      old_value == new_value
+    )
+
+    update_parameter_link(
+      unit,
+      parameter,
+      normalize_value(new_value),
+      :add,
+      old_value == new_value
+    )
+
     {:ok, unit}
   end
 
@@ -636,13 +741,11 @@ defmodule Arke.QueryManager do
 
     old_value = old_value || []
     new_value = new_value || []
+    nodes_to_delete = Enum.map(old_value -- new_value, &normalize_value(&1))
 
-    notdes_to_delete = old_value -- new_value
-    nodes_to_add = new_value -- old_value
-    IO.inspect("nodes to delete #{notdes_to_delete}")
-    IO.inspect("nodes to add #{nodes_to_add}")
+    nodes_to_add = Enum.map(new_value -- old_value, &normalize_value(&1))
 
-    Enum.each(notdes_to_delete, fn n ->
+    Enum.each(nodes_to_delete, fn n ->
       update_parameter_link(unit, parameter, n, :delete, false)
     end)
 
@@ -657,31 +760,61 @@ defmodule Arke.QueryManager do
   defp update_parameter_link(_, _, nil, _, _), do: nil
 
   defp update_parameter_link(
-         %{metadata: %{project: project}} = parent,
-         %{id: p_id, data: p_data} = _parameter,
-         child_id,
-         :add,
+         %{metadata: %{project: project}} = unit,
+         %{
+           id: p_id,
+           data: %{connection_type: connection_type, direction: "child"}
+         } = _parameter,
+         id_to_link,
+         action,
          false
        ) do
-    child = get_by(project: project, id: child_id)
-
-    LinkManager.add_node(project, parent, child, p_data.connection_type, %{
-      parameter_id: Atom.to_string(p_id)
-    })
+    handle_update_parameter_link(
+      project,
+      Atom.to_string(unit.id),
+      id_to_link,
+      connection_type,
+      p_id,
+      action
+    )
   end
 
   defp update_parameter_link(
-         %{metadata: %{project: project}} = parent,
-         %{id: p_id, data: p_data} = _parameter,
-         child_id,
-         :delete,
+         %{metadata: %{project: project}} = unit,
+         %{
+           id: p_id,
+           data: %{connection_type: connection_type, direction: "parent"}
+         } = _parameter,
+         id_to_link,
+         action,
          false
        ) do
-    IO.inspect("delete nodes #{child_id} with project #{project}")
-    child = get_by(project: project, id: child_id)
+    handle_update_parameter_link(
+      project,
+      id_to_link,
+      Atom.to_string(unit.id),
+      connection_type,
+      p_id,
+      action
+    )
+  end
 
-    LinkManager.delete_node(project, parent, child, p_data.connection_type, %{
+  defp handle_update_parameter_link(project, from, to, connection_type, p_id, :add) do
+    LinkManager.add_node(project, from, to, connection_type, %{parameter_id: Atom.to_string(p_id)})
+  end
+
+  defp handle_update_parameter_link(project, from, to, connection_type, p_id, :delete) do
+    LinkManager.delete_node(project, from, to, connection_type, %{
       parameter_id: Atom.to_string(p_id)
     })
   end
+
+  # Function to get only the parameter id from `handle_link_parameter`
+  defp normalize_value(nil), do: nil
+
+  defp normalize_value(%{id: id} = value) do
+    to_string(id)
+  end
+
+  defp normalize_value(value), do: to_string(value)
 end

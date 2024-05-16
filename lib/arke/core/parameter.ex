@@ -41,7 +41,8 @@ defmodule Arke.Core.Parameter do
   ## Get list of attributes definable in opts during creation:
       iex> Arke.Core.Parameter.'ParameterType'.get_parameters()
   """
-  alias Arke.Core.Parameter
+  alias Arke.Boundary.ParameterManager
+
 
   @type parameter_struct() ::
           Parameter.Boolean.t()
@@ -52,49 +53,27 @@ defmodule Arke.Core.Parameter do
 
   @doc """
        Macro defining a shared struct of parameter used across Arkes
-       """ && false
+       """
+  use Arke.System.Group
 
-  defmacro base_parameters() do
-    quote do
-      group(:parameter)
-
-      parameter(:label, :string, required: true)
-      parameter(:format, :string, default_string: "attribute")
-      parameter(:is_primary, :boolean, default_boolean: false)
-      parameter(:nullable, :boolean, default_boolean: true)
-      parameter(:required, :boolean, default_boolean: false)
-      parameter(:persistence, :string, default_string: "arke_parameter")
-      parameter(:only_run_time, :boolean, default_boolean: false)
-      parameter(:helper_text, :string, required: false)
-    end
+  group id: "parameter" do
   end
 
-  #  @doc """
-  #  Create new parameter by passing the type and the options to assign
-  #
-  #  ## Parameters
-  #    - opts => %{type: `ParameterType`, opts: [keyword: value] | %{map}} => opts like the `id` we want to give to the parameter we are creating.
-  #      {[type](#module-types): `ParameterType`} is required unless you want to create a generic parameter with no type
-  #
-  #
-  #  ## Examples
-  #      iex> Arke.Core.Parameter.new(%{type: :string, opts: [id: "test"]})
-  #
-  #  ## Return
-  #      %Arke.Core.Parameter.'ParameterType'{}
-  #
-  #  """
-  #  @spec new(arg1 :: %{type: atom(), opts: list(parameter_struct())}) :: parameter_struct()
-  #  def new(%{type: :string, opts: opts} = _), do: Parameter.String.new([{:type, :string} | opts])
-  #  def new(%{type: :atom, opts: opts} = _), do: Parameter.String.new([{:type, :string} | opts])
-  #  def new(%{type: :integer, opts: opts} = _), do: Parameter.Integer.new([{:type, :integer} | opts])
-  #  def new(%{type: :float, opts: opts} = _), do: Parameter.Float.new([{:type, :float} | opts])
-  #  def new(%{type: :boolean, opts: opts} = _), do: Parameter.Boolean.new([{:type, :boolean} | opts])
-  #  def new(%{type: :date, opts: opts} = _), do: Parameter.Date.new([{:type, :date} | opts])
-  #  def new(%{type: :time, opts: opts} = _), do: Parameter.Time.new([{:type, :time} | opts])
-  #  def new(%{type: :datetime, opts: opts} = _), do: Parameter.DateTime.new([{:type, :datetime} | opts])
-  #  def new(%{type: :dict, opts: opts} = _), do: Parameter.Dict.new([{:type, :dict} | opts])
-  #  def new(%{opts: opts} = _), do: Enum.into(opts, %{helper_text: ""})
+  def on_unit_create(_arke, %{id: id, metadata: %{project: project}} = unit) do
+    ParameterManager.create(unit)
+    {:ok, unit}
+  end
+
+  def on_unit_update(_, %{id: id, metadata: %{project: project}} = unit) do
+    ParameterManager.update(id, project, unit)
+    {:ok, unit}
+  end
+
+  def on_unit_delete(_, %{id: id, metadata: %{project: project}} = unit) do
+    ParameterManager.remove(unit)
+    {:ok, unit}
+  end
+
 end
 
 defmodule Arke.Core.Parameter.String do
@@ -119,18 +98,10 @@ defmodule Arke.Core.Parameter.String do
   """
   alias Arke.Core.Parameter
   alias Arke.Boundary.ParameterManager
-  require Parameter
+  
   use Arke.System
 
-  arke do
-    Parameter.base_parameters()
-    parameter(:min_length, :integer, required: false)
-    parameter(:max_length, :integer, required: false)
-    parameter(:strip, :boolean, default_boolean: false)
-    parameter(:values, :list, required: false)
-    parameter(:multiple, :boolean, default_boolean: false)
-    parameter(:unique, :boolean, required: false)
-    parameter(:default_string, :string, default_string: nil)
+  arke id: "string" do
   end
 
   def before_load(data, _persistence_fn) do
@@ -138,22 +109,6 @@ defmodule Arke.Core.Parameter.String do
     {:ok, Enum.into(args, %{})}
   end
 
-  def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
-    ParameterManager.create(unit)
-    {:ok, unit}
-  end
-
-  def on_update(_, %{id: id, metadata: %{project: project}} = unit) do
-    ParameterManager.update(id, project, unit)
-    {:ok, unit}
-  end
-
-  def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
-    ParameterManager.remove(unit)
-    {:ok, unit}
-  end
 end
 
 defmodule Arke.Core.Parameter.Integer do
@@ -177,16 +132,10 @@ defmodule Arke.Core.Parameter.Integer do
   """
   alias Arke.Core.Parameter
   alias Arke.Boundary.ParameterManager
-  require Parameter
+  
   use Arke.System
 
-  arke do
-    Parameter.base_parameters()
-    parameter(:min, :integer, required: false)
-    parameter(:max, :integer, required: false)
-    parameter(:values, :list, required: false)
-    parameter(:multiple, :boolean, default_boolean: false)
-    parameter(:default_integer, :integer, default_integer: nil)
+  arke id: "integer" do
   end
 
   def before_load(data, _persistence_fn) do
@@ -194,22 +143,6 @@ defmodule Arke.Core.Parameter.Integer do
     {:ok, Enum.into(args, %{})}
   end
 
-  def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
-    ParameterManager.create(unit)
-    {:ok, unit}
-  end
-
-  def on_update(_, %{id: id, metadata: %{project: project}} = unit) do
-    ParameterManager.update(id, project, unit)
-    {:ok, unit}
-  end
-
-  def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
-    ParameterManager.remove(unit)
-    {:ok, unit}
-  end
 end
 
 defmodule Arke.Core.Parameter.Float do
@@ -233,16 +166,10 @@ defmodule Arke.Core.Parameter.Float do
   """
   alias Arke.Core.Parameter
   alias Arke.Boundary.ParameterManager
-  require Parameter
+  
   use Arke.System
 
-  arke do
-    Parameter.base_parameters()
-    parameter(:min, :float, required: false)
-    parameter(:max, :float, required: false)
-    parameter(:values, :list, required: false)
-    parameter(:multiple, :boolean, default_boolean: false)
-    parameter(:default_float, :float, default_float: nil)
+  arke id: "float" do
   end
 
   def before_load(data, _persistence_fn) do
@@ -250,22 +177,6 @@ defmodule Arke.Core.Parameter.Float do
     {:ok, Enum.into(args, %{})}
   end
 
-  def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
-    ParameterManager.create(unit)
-    {:ok, unit}
-  end
-
-  def on_update(_, %{id: id, metadata: %{project: project}} = unit) do
-    ParameterManager.update(id, project, unit)
-    {:ok, unit}
-  end
-
-  def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
-    ParameterManager.remove(unit)
-    {:ok, unit}
-  end
 end
 
 defmodule Arke.Core.Parameter.Boolean do
@@ -285,29 +196,10 @@ defmodule Arke.Core.Parameter.Boolean do
   """
   alias Arke.Core.Parameter
   alias Arke.Boundary.ParameterManager
-  require Parameter
+  
   use Arke.System
 
-  arke do
-    Parameter.base_parameters()
-    parameter(:default_boolean, :boolean, default_boolean: false)
-  end
-
-  def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
-    ParameterManager.create(unit)
-    {:ok, unit}
-  end
-
-  def on_update(_, %{id: id, metadata: %{project: project}} = unit) do
-    ParameterManager.update(id, project, unit)
-    {:ok, unit}
-  end
-
-  def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
-    ParameterManager.remove(unit)
-    {:ok, unit}
+  arke id: "boolean"  do
   end
 end
 
@@ -328,29 +220,10 @@ defmodule Arke.Core.Parameter.Dict do
   """
   alias Arke.Core.Parameter
   alias Arke.Boundary.ParameterManager
-  require Parameter
+  
   use Arke.System
 
-  arke do
-    Parameter.base_parameters()
-    parameter(:default_dict, :dict, default_dict: nil)
-  end
-
-  def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
-    ParameterManager.create(unit)
-    {:ok, unit}
-  end
-
-  def on_update(_, %{id: id, metadata: %{project: project}} = unit) do
-    ParameterManager.update(id, project, unit)
-    {:ok, unit}
-  end
-
-  def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
-    ParameterManager.remove(unit)
-    {:ok, unit}
+  arke id: "dict" do
   end
 end
 
@@ -371,29 +244,10 @@ defmodule Arke.Core.Parameter.List do
   """
   alias Arke.Core.Parameter
   alias Arke.Boundary.ParameterManager
-  require Parameter
+  
   use Arke.System
 
-  arke do
-    Parameter.base_parameters()
-    parameter(:default_list, :list, default_list: nil)
-  end
-
-  def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
-    ParameterManager.create(unit)
-    {:ok, unit}
-  end
-
-  def on_update(_, %{id: id, metadata: %{project: project}} = unit) do
-    ParameterManager.update(id, project, unit)
-    {:ok, unit}
-  end
-
-  def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
-    ParameterManager.remove(unit)
-    {:ok, unit}
+  arke id: "list" do
   end
 end
 
@@ -422,29 +276,10 @@ defmodule Arke.Core.Parameter.Date do
 
   alias Arke.Core.Parameter
   alias Arke.Boundary.ParameterManager
-  require Parameter
+  
   use Arke.System
 
-  arke do
-    Parameter.base_parameters()
-    parameter(:default_date, :date, default_date: nil)
-  end
-
-  def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
-    ParameterManager.create(unit)
-    {:ok, unit}
-  end
-
-  def on_update(_, %{id: id, metadata: %{project: project}} = unit) do
-    ParameterManager.update(id, project, unit)
-    {:ok, unit}
-  end
-
-  def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
-    ParameterManager.remove(unit)
-    {:ok, unit}
+  arke id: "date" do
   end
 end
 
@@ -472,30 +307,12 @@ defmodule Arke.Core.Parameter.Time do
   """
   alias Arke.Core.Parameter
   alias Arke.Boundary.ParameterManager
-  require Parameter
+  
   use Arke.System
 
-  arke do
-    Parameter.base_parameters()
-    parameter(:default_time, :time, default_time: nil)
+  arke id: "time" do
   end
 
-  def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
-    ParameterManager.create(unit)
-    {:ok, unit}
-  end
-
-  def on_update(_, %{id: id, metadata: %{project: project}} = unit) do
-    ParameterManager.update(id, project, unit)
-    {:ok, unit}
-  end
-
-  def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
-    ParameterManager.remove(unit)
-    {:ok, unit}
-  end
 end
 
 defmodule Arke.Core.Parameter.DateTime do
@@ -525,29 +342,10 @@ defmodule Arke.Core.Parameter.DateTime do
 
   alias Arke.Core.Parameter
   alias Arke.Boundary.ParameterManager
-  require Parameter
+  
   use Arke.System
 
-  arke id: :datetime do
-    Parameter.base_parameters()
-    parameter(:default_datetime, :datetime, default_datetime: nil)
-  end
-
-  def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
-    ParameterManager.create(unit)
-    {:ok, unit}
-  end
-
-  def on_update(_, %{id: id, metadata: %{project: project}} = unit) do
-    ParameterManager.update(id, project, unit)
-    {:ok, unit}
-  end
-
-  def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
-    ParameterManager.remove(unit)
-    {:ok, unit}
+  arke id: "datetime" do
   end
 end
 
@@ -564,45 +362,16 @@ defmodule Arke.Core.Parameter.Link do
       ...> Arke.Core.Parameter.Dict(%{type: :dict, opts: params})
 
   ## Return
-      %Arke.Core.Parameter.Dict{}
+      %Arke.Core.Parameter.Link{}
   """
   alias Arke.Core.Parameter
   alias Arke.Boundary.ParameterManager
-  require Parameter
+  
   use Arke.System
 
-  arke do
-    Parameter.base_parameters()
-    parameter(:multiple, :boolean, default_boolean: false)
-
-    parameter(:arke_or_group_id, :link,
-      multiple: false,
-      required: true,
-      helper_text: "Arke or Group id"
-    )
-
-    parameter(:depth, :integer, default_integer: 0)
-    parameter(:connection_type, :string, default_string: "link")
-    parameter(:default_link, :link, default_link: nil)
-    parameter(:filter_keys, :string, default_string: ["id", "arke_id"])
+  arke  id: "link" do
   end
 
-  def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
-    ParameterManager.create(unit)
-    {:ok, unit}
-  end
-
-  def on_update(_, %{id: id, metadata: %{project: project}} = unit) do
-    ParameterManager.update(id, project, unit)
-    {:ok, unit}
-  end
-
-  def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
-    ParameterManager.remove(unit)
-    {:ok, unit}
-  end
 end
 
 defmodule Arke.Core.Parameter.Dynamic do
@@ -615,29 +384,10 @@ defmodule Arke.Core.Parameter.Dynamic do
   """
   alias Arke.Core.Parameter
   alias Arke.Boundary.ParameterManager
-  require Parameter
+  
   use Arke.System
 
-  arke do
-    Parameter.base_parameters()
-    parameter(:default_dynamic, :dynamic, default_dynamic: nil)
-  end
-
-  def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
-    ParameterManager.create(unit)
-    {:ok, unit}
-  end
-
-  def on_update(_, %{id: id, metadata: %{project: project}} = unit) do
-    ParameterManager.update(id, project, unit)
-    {:ok, unit}
-  end
-
-  def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
-    ParameterManager.remove(unit)
-    {:ok, unit}
+  arke id: "dynamic" do
   end
 end
 
@@ -651,28 +401,9 @@ defmodule Arke.Core.Parameter.Binary do
   """
   alias Arke.Core.Parameter
   alias Arke.Boundary.ParameterManager
-  require Parameter
   use Arke.System
 
-  arke do
-    Parameter.base_parameters()
-    parameter(:default_binary, :binary, default_binary: nil)
+  arke id: "binary" do
   end
 
-  def on_create(_, %{metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.create(unit, project)
-    ParameterManager.create(unit)
-    {:ok, unit}
-  end
-
-  def on_update(_, %{id: id, metadata: %{project: project}} = unit) do
-    ParameterManager.update(id, project, unit)
-    {:ok, unit}
-  end
-
-  def on_delete(_, %{id: id, metadata: %{project: project}} = unit) do
-    Arke.Boundary.ParamsManager.remove(id, project)
-    ParameterManager.remove(unit)
-    {:ok, unit}
-  end
 end
