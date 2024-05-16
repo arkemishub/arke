@@ -107,13 +107,13 @@ defmodule Mix.Tasks.Arke.ExportData do
     repo_module.start_link()
   end
 
-  defp start_manager!(nil), do: Mix.raise("Missing `start_manager` function in arke.persistence configuration. Please provide a valid function accordingly to the persistence supported")
+  defp start_manager!(nil), do: Mix.raise("Missing `init` function in arke.persistence configuration. Please provide a valid function accordingly to the persistence supported")
   # this is for arke_postgres
   defp start_manager!(function), do: function.()
 
 
   defp export_data(opts,persistence)  do
-    start_manager!(Application.get_env(:arke, :persistence)[String.to_atom(persistence)][:start_manager])
+    start_manager!(Application.get_env(:arke, :persistence)[String.to_atom(persistence)][:init])
     project = String.to_atom(opts[:project]) || :arke_system
     split_file =  opts[:split_file] || false
     data = get_data(project,opts)
