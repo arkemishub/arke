@@ -13,6 +13,10 @@
 # limitations under the License.
 
 defmodule Arke.Boundary.UnitManager do
+  @moduledoc false &&"""
+  This module handle all the managers providing functions to create/delete/edit such managers.
+  The managers stores the struct of a Unit. Such struct is used in the validation process.
+  """
   defmacro __using__(_) do
     quote do
       use GenServer

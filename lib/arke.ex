@@ -13,6 +13,7 @@
 # limitations under the License.
 
 defmodule Arke do
+  @moduledoc false
   alias Arke.Core.Unit
   alias Arke.Boundary.{ArkeManager, GroupManager, ParameterManager}
   alias Arke.System.BaseParameter

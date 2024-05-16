@@ -13,9 +13,10 @@
 # limitations under the License.
 
 defmodule Arke.Boundary.ArkeManager do
-  @moduledoc """
-             This module manage the gen servers for the element specified in `Arke.Core.Arke`
-             """
+  @moduledoc false &&
+  """
+  It extends `Arke.Boundary.UnitManager` by providing more functions specific to the Arkes.
+  """
 
   alias Arke.Utils.ErrorGenerator, as: Error
   use Arke.Boundary.UnitManager
