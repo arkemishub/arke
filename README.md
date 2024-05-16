@@ -17,3 +17,20 @@ def deps do
 end
 ```
 
+Also add in our project the configuration below based on your persistence. In this case we use `arke_postgres`
+```
+config :arke,
+    persistence: %{
+        arke_postgres: %{
+            init: &ArkePostgres.init/0,
+            create: &ArkePostgres.create/2,
+            update: &ArkePostgres.update/2,
+            delete: &ArkePostgres.delete/2,
+            execute_query: &ArkePostgres.Query.execute/2,
+            create_project: &ArkePostgres.create_project/1,
+            delete_project: &ArkePostgres.delete_project/1,
+            repo: ArkePostgres.Repo,
+        }
+    }
+```
+This configuration is used to apply all the CRUD operations in the `Arke.QueryManager` module
