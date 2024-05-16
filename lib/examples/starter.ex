@@ -13,9 +13,10 @@
 # limitations under the License.
 
 defmodule Arke.Examples.Starter do
-  @moduledoc """
-               Module to start all the defaults gen server
-             """
+  @moduledoc false &&
+  """
+    Module to start all the defaults gen server
+  """
   alias Arke.Boundary.{ArkeManager}
 
   @doc """
