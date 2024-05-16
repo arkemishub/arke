@@ -21,7 +21,7 @@ defmodule Arke.QueryManager do
     - Arke -> `Arke.Core.Arke`
     - Unit -> `Arke.Core.Unit`
     - Group -> `Arke.Core.Group`
-
+    - Link -> `Arke.Core.Link`
   ## `Operators`
     - `eq` -> equal -> `=`
     - `contains` -> contains a value (Case sensitive) ->  `LIKE %word%`
@@ -66,10 +66,7 @@ defmodule Arke.QueryManager do
           | :isnull
 
   @doc """
-  Create a new query.
-
-  ## Example
-      iex> Arke.QueryManager.query(project: :public)
+  Create a new query
   """
   @spec query(opts :: [project: String.t() | atom()]) ::
           Query.t()
@@ -80,24 +77,15 @@ defmodule Arke.QueryManager do
   end
 
   @doc """
-  Create a new topology query
+  Create a new topology query. It will get all the units related to the first one
 
   ## Parameter
     - `query` -> refer to `query/1`
     - `unit` -> struct of the unit used as reference for the query
     - `opts` -> KeywordList containing the link conditions
-    - `depth`  max depth of the topoplogy
-    - `direction` --> the direction of the link. From parent to child or viceversa
-    - `connection_type`  -> name of the connection to search
-
-  ## Example
-
-      iex> Arke.QueryManager.query(project: :public)
-      ...> unit = QueryManager.get_by([project: :arke_system, id: "test"])
-      ...> QueryManager.link(query, unit)
-
-  ## Return
-      %Arke.Core.Query{}
+      - `depth`  max depth of the recursion.
+      - `direction` --> the direction of the link. One of `child` or `parent`
+      - `connection_type`  -> name of the connection to search
   """
 
   @spec link(
@@ -126,23 +114,11 @@ defmodule Arke.QueryManager do
   defp parse_link_direction(direction), do: direction
 
   @doc """
-  Function to create a Unit.
-
-  It calls the persistence_function `:create` set under (:arke -> :persistence -> :arke_postgres -> :create) in the configuration file
-
+  Function to create a Unit. It will load a Unit based on the given arke, which is used as a model, and the given data.
   ## Parameters
     - `project` ->  identify the `Arke.Core.Project`
     - `arke` ->  identify the struct of the element we want to create
-    - `args` ->  list of key: value we want to assign to the {arke_struct} above
-
-  ## Example
-      iex> string = ArkeManager.get(:string, :default)
-      ...> Arke.QueryManager.create(:default, string, [id: "name", label: "Nome"])
-
-  ## Returns
-      {:ok, %Arke.Core.Unit{}}
-
-
+    - `args` ->  the data of the new element we want to create
   """
   @spec create(project :: atom(), arke :: Arke.t(), args :: [...]) :: func_return()
   def create(project, arke, args) do
@@ -241,22 +217,12 @@ defmodule Arke.QueryManager do
   def check_group_manager_functions_errors(unit), do: {:ok, unit}
 
   @doc """
-  Function to create a Unit.
-
-  It calls the persistence_function `:update` set under (:arke -> :persistence -> :arke_postgres -> :update) in the configuration file
+  Function to update a Unit.
 
   ## Parameters
     - `project` -> identify the `Arke.Core.Project`
     - `unit` ->  unit to update
     - `args` -> list of key: value to update
-
-  ## Example
-      iex> name = QueryManager.get_by(id: "name")
-      ...> QueryManager.update(:default, name, [max_length: 20])
-
-  ## Returns
-      {:ok,  %Arke.Core.Unit{} }
-      {:error, [msg]}
 
   """
   @spec update(Unit.t(), args :: list()) :: func_return()
@@ -281,20 +247,10 @@ defmodule Arke.QueryManager do
     {:ok, Unit.update(unit, updated_at: updated_at)}
   end
   @doc """
-  Function to delete a given unit
-
-  It calls the persistence_function `:delete` set under (:arke -> :persistence -> :arke_postgres -> :delete) in the configuration file
-
+  Function to delete a given unit. It will delete the manager, if any, and the db record
   ## Parameters
     - `project` ->  identify the `Arke.Core.Project`
     - `unit` -> the unit to delete
-  ## Example
-      iex> unit = Arke.QueryManager.get_by(id: "name")
-      ...> Arke.QueryManager.delete(:test_project, unit)
-
-  ## Returns
-      {:ok, _}
-
   """
   @spec delete(project :: atom(), Unit.t()) :: {:ok, any()}
   def delete(project, %{arke_id: arke_id} = unit) do
@@ -311,30 +267,16 @@ defmodule Arke.QueryManager do
   end
 
   @doc """
-  Create a query which is used to get a single element which match the given criteria
-
-  ## Parameters
-    - `opts`  -> used to identify the element to get
-
-  ## Example
-      iex> Arke.QueryManager.get_by(id: "name")
+  Create a query which is used to get a single element which match the given criteria.
+  If more are returned then an exception will be raised
   """
-  @spec get_by(opts :: list()) :: Unit.t() | nil
+  @spec get_by(opts :: [{:project,atom} | {atom,any}]) :: Unit.t() | nil
   def get_by(opts \\ []), do: basic_query(opts) |> one
 
   @doc """
   Create a query which is used to get all the element which match the given criteria
-
-  ## Parameters
-    - `opts` -> identify the element to get
-
-  ## Example
-      iex> Arke.QueryManager.filter_by(id: "name")
-
-  ## Return
-      [ Arke.Core.Unit{}, ...]
   """
-  @spec filter_by(opts :: [...]) :: [Unit.t()] | []
+  @spec filter_by(opts :: [{:project,atom} | {atom,any}]) :: [Unit.t()] | []
   def filter_by(opts \\ []), do: basic_query(opts) |> all
   defp basic_query(opts) when is_map(opts), do: Map.to_list(opts) |> basic_query
 
@@ -372,9 +314,6 @@ defmodule Arke.QueryManager do
   ## Example
       iex> query = QueryManager.query(arke: nil, project: :arke_system)
       ...> query = QueryManager.and_(query, false, QueryManager.conditions(parameter__eq: "value"))
-
-  ## Return
-      %Arke.Core.Query{}
   """
   @spec and_(query :: Query.t(), negate :: boolean(), filters :: list()) :: Query.t()
   def and_(query, negate, filters) when is_list(filters),
@@ -394,8 +333,6 @@ defmodule Arke.QueryManager do
       iex> query = QueryManager.query(arke: nil, project: :arke_system)
       ...> query = QueryManager.or_(query, false, QueryManager.conditions(parameter__eq: "value"))
 
-  ## Return
-      %Arke.Core.Query{}
   """
   @spec or_(query :: Query.t(), negate :: boolean(), filters :: list()) :: Query.t()
   def or_(query, negate, filters) when is_list(filters),
@@ -421,9 +358,6 @@ defmodule Arke.QueryManager do
 
   ## Example
       iex> QueryManager.condition(:string, :eq, "test")
-
-  ## Return
-      %Arke.Core.Query.BaseFilter{}
   """
   @spec condition(
           parameter :: Unit.t(),
@@ -443,9 +377,6 @@ defmodule Arke.QueryManager do
 
   ## Example
       iex>  QueryManager.conditions(name__eq: "test", string__contains: "t")
-
-  ## Return
-      [ %Arke.Core.Query.BaseFilter{}, ...]
   """
   @spec conditions(opts :: list()) :: [Query.BaseFilter.t()]
   def conditions(opts \\ []) do
@@ -465,10 +396,6 @@ defmodule Arke.QueryManager do
   ## Example
       iex> query = Arke.QueryManager.query()
       ...> QueryManager.where(query, [id__contains: "me", id__contains: "n"])
-
-  ## Return
-      %Arke.Core.Query{ %Arke.Core.Query.Filter{ ... base_filters: %Arke.Core.Query.BaseFilter{ ... }}}
-
   """
   @spec where(query :: Query.t(), opts :: list()) :: Query.t()
   def where(query, opts \\ []) do
@@ -481,31 +408,23 @@ defmodule Arke.QueryManager do
   end
 
   @doc """
-  It creates a filter for the given query
+  It adds a filter for the given query
 
   ## Parameters
     - `query` -> refer to `query/1`
     - `filter` -> refer to `Arke.Core.Query.Filter`
-
-  ## Example
-      iex> query = Arke.QueryManager.Query.t
-      ...> parameter = Arke.Boundary.ParameterManager.get(:id,:arke_system)
-      ...> Arke.Core.Query.new_filter(parameter,:equal,"name",false)
-      ...> Arke.Core.Query.filter(query, filter)
-
-
   """
   @spec filter(query :: Query.t(), filter :: Query.Filter.t()) :: Query.t()
   def filter(query, filter), do: Query.add_filter(query, filter)
 
   @doc """
-  It creates a filter for the given query
+  It adds a filter for the given query
   """
   @spec filter(
           query :: Query.t(),
           parameter :: Arke.t() | String.t() | atom(),
           operator :: operator(),
-          value :: String.t() | boolean() | number(),
+          value :: any,
           negate :: boolean()
         ) :: Query.t()
   def filter(query, parameter, operator, value, negate \\ false),
@@ -542,15 +461,9 @@ defmodule Arke.QueryManager do
   Define a criteria to order the element returned from a query
 
   ## Parameter
-    - `query` -> refer to `query/1`
-    - `parameter1 -> used to order the query
-    - `direction` -> way of sorting the results
-
-  ## Example
-      iex> query = QueryManager.query()
-      ...> parameter = Arke.Boundary.ParameterManager.get(:id,:default)
-      ...> QueryManager.order(query, parameter, :asc)
-
+    - `query` => refer to `query/1`
+    - `parameter => used to order the query
+    - `direction` => way of sorting the results (ascending or  descending)
   """
   @spec order(
           query :: Query.t(),
@@ -566,26 +479,16 @@ defmodule Arke.QueryManager do
   ## Parameter
     - `query` -> refer to `query/1`
     - `offset` -> offset of the query
-
-  ## Example
-      iex> query = QueryManager.query()
-      ...> QueryManager.where(query, id: "name") |> QueryManager.offset(5)
-
   """
   @spec offset(query :: Query.t(), offset :: integer()) :: Query.t()
   def offset(query, offset), do: Query.set_offset(query, offset)
 
   @doc """
-  Set the limit of the element to be returned from a query
+  Set the limit of the results of a query
 
   ## Parameter
     - `query` -> refer to `query/1`
     - `limit` -> number of element to return
-
-  ## Example
-      iex> query = QueryManager.query()
-      ...> QueryManager.where(query, id: "name") |> QueryManager.limit(1)
-
   """
   @spec limit(query :: Query.t(), limit :: integer()) :: Query.t()
   def limit(query, limit), do: Query.set_limit(query, limit)
@@ -597,11 +500,6 @@ defmodule Arke.QueryManager do
     - `query` -> refer to `query/1`
     - `offset` -> offset of the query
     - `limit` -> number of element to return
-
-  ## Example
-      iex> query = QueryManager.query()
-      ...> QueryManager.pagination(query, 0,5)
-
   """
   @spec pagination(query :: Query.t(), offset :: integer(), limit :: integer()) ::
           {count :: integer(), elements :: [] | [Unit.t()]}
@@ -613,22 +511,15 @@ defmodule Arke.QueryManager do
   end
 
   @doc """
-   Run the `execute_query` set in the configuration under (:arke -> :persistence -> :arke_postgres -> :execute_query) with  `:all` as the second parameter
-
+  Run the given query and return all the results
   ## Parameter
     - query -> refer to `query/1`
-
-  ## Example
-       iex> query = QueryManager.query()
-       ...> QueryManager.where(query, id: "name") |> QueryManager.all()
   """
   @spec all(query :: Query.t()) :: [Unit.t()] | []
   def all(query), do: execute_query(query, :all)
 
   @doc """
-
-  Run the `execute_query` set in the configuration under (:arke -> :persistence -> :arke_postgres -> :execute_query) with  `:one` as the second parameter
-
+    Run the given query and return only the first result
   ## Parameter
     - `query` -> refer to `query/1`
 
@@ -637,8 +528,7 @@ defmodule Arke.QueryManager do
   def one(query), do: execute_query(query, :one)
 
   @doc """
-  Run the `execute_query` set in the configuration under (:arke -> :persistence -> :arke_postgres -> :execute_query) with  `:raw` as the second parameter
-
+  Return the given query as a string
   ## Parameter
     - `query` -> refer to `query/1`
   """
@@ -646,20 +536,15 @@ defmodule Arke.QueryManager do
   def raw(query), do: execute_query(query, :raw)
 
   @doc """
-  Run the `execute_query` set in the configuration under (:arke -> :persistence -> :arke_postgres -> :execute_query) with  `:count` as the second parameter
-
+  Run the given query and return only the number of the records that have been found
   ## Parameter
     - `query` -> refer to `query/1`
-
-  ## Returns
-      integer
   """
   @spec count(query :: Query.t()) :: integer()
   def count(query), do: execute_query(query, :count)
 
   @doc """
-  Run the `execute_query` set in the configuration under (:arke -> :persistence -> :arke_postgres -> :execute_query) with  `:pseudo_query` as the second parameter
-
+  Return the given query as Ecto pseudo query
   ## Parameter
     - `query` -> refer to `query/1`
   """
