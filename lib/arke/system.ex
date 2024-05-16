@@ -14,7 +14,7 @@
 
 defmodule Arke.System do
   @moduledoc """
-  Module which manage the creation of every Arke struct
+  Module which define all the basics functions of an Arke
   """
 
   @doc """
@@ -79,6 +79,9 @@ defmodule Arke.System do
       Overridable function in order to be able to edit data during the encoding
       """
       def on_struct_encode(_, _, data, opts), do: {:ok, data}
+      @doc """
+      Overridable function in order to be able to edit data before the encoding
+      """
       def before_struct_encode(_, unit), do: {:ok, unit}
       @doc """
       Overridable function in order to be able to edit data on the update
@@ -97,9 +100,15 @@ defmodule Arke.System do
       """
       def before_delete(arke, unit), do: {:ok, unit}
 
+      @doc """
+      Overridable function in order to be able to edit data after the encoding
+      """
       def after_get_struct(arke, unit, struct), do: struct
       def after_get_struct(arke, struct), do: struct
 
+      @doc """
+      Overridable function used to import arkes from excel file
+      """
       def import(%{runtime_data: %{conn: %{method: "POST"}=conn}, metadata: %{project: project}} = arke) do
         member = ArkeAuth.Guardian.Plug.current_resource(conn)
         mode = Map.get(conn.body_params, "mode", "default")
@@ -110,6 +119,9 @@ defmodule Arke.System do
         end
       end
 
+      @doc """
+      Overridable function used to import units from excels files
+      """
       defp import_units(arke, project, member, file, mode) do
         {:ok, ref} = Enum.at(Xlsxir.multi_extract(file.path), 0)
         all_units = get_all_units_for_import(project)
@@ -161,6 +173,9 @@ defmodule Arke.System do
       defp parse_cell(value) when is_tuple(value), do: Kernel.inspect(value)
       defp parse_cell(value), do: value
 
+      @doc """
+      Overridable function used to get the header which will be used to parse the units
+      """
       defp get_header_for_import(project, arke, header_file) do
         Enum.reduce(Enum.with_index(header_file), [], fn {cell, index}, acc ->
           case Arke.Boundary.ArkeManager.get_parameter(arke, project, cell) do
@@ -183,8 +198,14 @@ defmodule Arke.System do
         end)
       end
 
+      @doc """
+      Overridable function used to get all the units that will be used in the import
+      """
       defp get_all_units_for_import(project), do: []
 
+      @doc """
+      Overridable function used to create Units struct from the data in an import file
+      """
       defp load_units(project, arke, header, row, _, "default") do
         args = Enum.reduce(header, [], fn {parameter_id, index}, acc ->
           acc = Keyword.put(acc, String.to_existing_atom(parameter_id), Enum.at(row, index))
@@ -195,7 +216,13 @@ defmodule Arke.System do
              do: {:ok, args},
              else: ({:error, errors} -> {:error, args, errors})
       end
+      @doc """
+      Overridable function used to get all the units already created
+      """
       defp get_existing_units_for_import(project, arke, header, units_args), do: []
+      @doc """
+      Overridable function used to check if all the units for the import are valid or not
+      """
       defp check_existing_units_for_import(project, arke, header, units_args, existing_units), do: true
       defp get_import_value(header, row, column) do
         index = Enum.find(header, fn {k, v} -> k == column end) |> elem(1)
@@ -233,17 +260,13 @@ defmodule Arke.System do
   ######################################################################################################################
 
   @doc """
-  Macro to create an arke struct with the given parameters
+  Macro to manager an arke and its related functions
 
   ## Example
-      arke  do
-        parameter :custom_parameter, :string, required: true, unique: true
-        parameter :custom_parameter2, :string, required: true, values: ["value1", "value2"]
-        parameter :custom_parameter3, :integer, required: true, values: [%{label: "option 1", value: 1},%{label: "option 2", value: 2}]
-        parameter :custom_parameter4, :dict, required: true, default: %{"default_dict_key": "default_dict_value"}
-        parameter :custom_parameter5, :type, ...opts
+      arke id: :some_id do
       end
 
+  From now on all the overridable functions can be edited and all the public funcitons will be used as API custom function
   """
   @spec arke(args :: list(), Macro.t()) :: %{}
   defmacro arke(opts \\ [], do: block) do
