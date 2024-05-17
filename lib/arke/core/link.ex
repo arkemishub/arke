@@ -61,8 +61,8 @@ defmodule Arke.Core.Link do
   def on_create(
         _,
         %{
-          data: %{type: type, parent_id: parent_id, child_id: child_id},
-          metadata: %{project: project} = metadata
+          data: %{type: _type, parent_id: _parent_id, child_id: _child_id},
+          metadata: %{project: _project} = _metadata
         } = unit
       ) do
     {:ok, unit}
@@ -83,7 +83,7 @@ defmodule Arke.Core.Link do
         _,
         %{
           data: %{type: "parameter", parent_id: parent_id, child_id: child_id},
-          metadata: %{project: project} = metadata
+          metadata: %{project: project} = _metadata
         } = unit
       ) do
     ArkeManager.remove_link(
@@ -100,7 +100,7 @@ defmodule Arke.Core.Link do
         _,
         %{
           data: %{type: "group", parent_id: parent_id, child_id: child_id},
-          metadata: %{project: project} = metadata
+          metadata: %{project: project} = _metadata
         } = unit
       ) do
     GroupManager.remove_link(
@@ -116,8 +116,8 @@ defmodule Arke.Core.Link do
   def on_delete(
         _,
         %{
-          data: %{type: type, parent_id: parent_id, child_id: child_id},
-          metadata: %{project: project} = metadata
+          data: %{type: _type, parent_id: _parent_id, child_id: _child_id},
+          metadata: %{project: _project} = _metadata
         } = unit
       ) do
     {:ok, unit}

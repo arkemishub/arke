@@ -68,7 +68,7 @@ defmodule Arke.Core.Query do
       - negate =>  used to figure out whether the condition is to be denied \n
     """
     @spec new(
-            parameter :: Arke.Core.Parameter.t(),
+            parameter :: %Arke.Core.Unit{},
             operator :: atom(),
             value :: any,
             negate :: boolean
@@ -140,7 +140,7 @@ defmodule Arke.Core.Query do
   """
   @spec add_link_filter(
           query :: Arke.Core.Query.t(),
-          unit :: Arke.Core.Unit.t(),
+          unit :: %Arke.Core.Unit{},
           depth :: integer(),
           direction :: :child | :parent,
           connection_type :: String.t()
@@ -202,7 +202,7 @@ defmodule Arke.Core.Query do
     - negate => used to figure out whether the condition is to be denied
   """
   @spec new_filter(
-          parameter :: Arke.Core.Parameter.t(),
+          parameter :: %Arke.Core.Unit{},
           operator :: Arke.Core.QueryManager.operator(),
           value :: any,
           negate :: boolean()
@@ -242,7 +242,7 @@ defmodule Arke.Core.Query do
 
   """
   @spec new_base_filter(
-  parameter :: Arke.Core.Parameter.t(),
+  parameter :: %Arke.Core.Unit{},
   operator :: Arke.Core.QueryManager.operator(),
   value :: any,
   negate :: boolean()
@@ -264,7 +264,7 @@ defmodule Arke.Core.Query do
   """
   @spec add_order(
           query :: Arke.Core.Query.t(),
-          parameter :: Arke.Core.Parameter.t(),
+          parameter :: %Arke.Core.Unit{},
           direction :: :asc | :desc
         ):: Arke.Core.Query.t()
   def add_order(query, parameter, direction) do

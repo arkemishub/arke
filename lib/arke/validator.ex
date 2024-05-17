@@ -22,7 +22,7 @@ defmodule Arke.Validator do
   alias Arke.Utils.DatetimeHandler, as: DatetimeHandler
   alias Arke.Core.{Arke, Unit, Parameter}
 
-  @type func_return() :: {:ok, Unit.t()} | Error.t()
+  @type func_return() :: {:ok, %Unit{}} | Error.t()
 
   @doc """
   Function to check the given data based on the fields in the reference schema.
@@ -50,7 +50,7 @@ defmodule Arke.Validator do
       %{:error, [message]}
 
   """
-  @spec validate(unit :: Unit.t(), peristence_fn :: :create | :update, project :: atom()) ::
+  @spec validate(unit :: %Unit{}, peristence_fn :: :create | :update, project :: atom()) ::
           func_return()
   def validate(%{arke_id: arke_id} = unit, persistence_fn, project \\ :arke_system) do
     with {:ok, unit} <- check_duplicate_unit(unit, project, persistence_fn) do
@@ -134,7 +134,7 @@ defmodule Arke.Validator do
       {value,["parameter label", message ]} in case of error
   """
   @spec validate_parameter(
-          arke :: Arke.t(),
+          arke :: %Arke{},
           parameter :: Sring.t() | atom() | Parameter.parameter_struct(),
           value :: any(),
           project :: atom()

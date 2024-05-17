@@ -49,7 +49,7 @@ defmodule Arke.QueryManager do
   @persistence Application.get_env(:arke, :persistence)
   @record_fields [:id, :data, :metadata, :inserted_at, :updated_at]
 
-  @type func_return() :: {:ok, Unit.t()} | Error.t()
+  @type func_return() :: {:ok, %Unit{}} | Error.t()
   @type operator() ::
           :eq
           | :contains
@@ -90,7 +90,7 @@ defmodule Arke.QueryManager do
 
   @spec link(
           Query.t(),
-          unit :: Unit.t(),
+          unit :: %Unit{},
           opts :: [direction: :child | :parent, depth: integer(), type: String.t()]
         ) :: Query.t()
   def link(query, unit, opts \\ []) do
@@ -120,7 +120,7 @@ defmodule Arke.QueryManager do
     - `arke` ->  identify the struct of the element we want to create
     - `args` ->  the data of the new element we want to create
   """
-  @spec create(project :: atom(), arke :: Arke.t(), args :: [...]) :: func_return()
+  @spec create(project :: atom(), arke :: %Arke{}, args :: [...]) :: func_return()
   def create(project, arke, args) do
     persistence_fn = @persistence[:arke_postgres][:create]
     with %Unit{} = unit <- Unit.load(arke, args, :create),
@@ -225,7 +225,7 @@ defmodule Arke.QueryManager do
     - `args` -> list of key: value to update
 
   """
-  @spec update(Unit.t(), args :: list()) :: func_return()
+  @spec update(%Unit{}, args :: list()) :: func_return()
   def update(%{arke_id: arke_id, metadata: %{project: project}, data: data} = current_unit, args) do
     persistence_fn = @persistence[:arke_postgres][:update]
     arke = ArkeManager.get(arke_id, project)
@@ -252,7 +252,7 @@ defmodule Arke.QueryManager do
     - `project` ->  identify the `Arke.Core.Project`
     - `unit` -> the unit to delete
   """
-  @spec delete(project :: atom(), Unit.t()) :: {:ok, any()}
+  @spec delete(project :: atom(), %Unit{}) :: {:ok, any()}
   def delete(project, %{arke_id: arke_id} = unit) do
     arke = ArkeManager.get(arke_id, project)
     persistence_fn = @persistence[:arke_postgres][:delete]
@@ -270,13 +270,13 @@ defmodule Arke.QueryManager do
   Create a query which is used to get a single element which match the given criteria.
   If more are returned then an exception will be raised
   """
-  @spec get_by(opts :: [{:project,atom} | {atom,any}]) :: Unit.t() | nil
+  @spec get_by(opts :: [{:project,atom} | {atom,any}]) :: %Unit{} | nil
   def get_by(opts \\ []), do: basic_query(opts) |> one
 
   @doc """
   Create a query which is used to get all the element which match the given criteria
   """
-  @spec filter_by(opts :: [{:project,atom} | {atom,any}]) :: [Unit.t()] | []
+  @spec filter_by(opts :: [{:project,atom} | {atom,any}]) :: [%Unit{}] | []
   def filter_by(opts \\ []), do: basic_query(opts) |> all
   defp basic_query(opts) when is_map(opts), do: Map.to_list(opts) |> basic_query
 
@@ -360,7 +360,7 @@ defmodule Arke.QueryManager do
       iex> QueryManager.condition(:string, :eq, "test")
   """
   @spec condition(
-          parameter :: Unit.t(),
+          parameter :: %Unit{},
           negate :: boolean(),
           value :: String.t() | boolean() | number() | nil,
           negate :: boolean()
@@ -422,7 +422,7 @@ defmodule Arke.QueryManager do
   """
   @spec filter(
           query :: Query.t(),
-          parameter :: Arke.t() | String.t() | atom(),
+          parameter :: %Arke{} | String.t() | atom(),
           operator :: operator(),
           value :: any,
           negate :: boolean()
@@ -462,12 +462,12 @@ defmodule Arke.QueryManager do
 
   ## Parameter
     - `query` => refer to `query/1`
-    - `parameter => used to order the query
+    - `parameter` => used to order the query
     - `direction` => way of sorting the results (ascending or  descending)
   """
   @spec order(
           query :: Query.t(),
-          parameter :: Arke.t() | String.t() | atom(),
+          parameter :: %Arke{} | String.t() | atom(),
           direction :: :asc | :desc
         ) :: Query.t()
   def order(query, parameter, direction),
@@ -502,7 +502,7 @@ defmodule Arke.QueryManager do
     - `limit` -> number of element to return
   """
   @spec pagination(query :: Query.t(), offset :: integer(), limit :: integer()) ::
-          {count :: integer(), elements :: [] | [Unit.t()]}
+          {count :: integer(), elements :: [] | [%Unit{}]}
   def pagination(query, offset, limit) do
     tmp_query = %{query | orders: []}
     count = count(tmp_query)
@@ -515,7 +515,7 @@ defmodule Arke.QueryManager do
   ## Parameter
     - query -> refer to `query/1`
   """
-  @spec all(query :: Query.t()) :: [Unit.t()] | []
+  @spec all(query :: Query.t()) :: [%Unit{}] | []
   def all(query), do: execute_query(query, :all)
 
   @doc """
@@ -524,7 +524,7 @@ defmodule Arke.QueryManager do
     - `query` -> refer to `query/1`
 
   """
-  @spec one(query :: Query.t()) :: Unit.t() | nil
+  @spec one(query :: Query.t()) :: %Unit{} | nil
   def one(query), do: execute_query(query, :one)
 
   @doc """

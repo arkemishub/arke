@@ -14,7 +14,8 @@
 
 defmodule Arke.System do
   @moduledoc """
-  Core module which handle all the management functions for an Arke
+  Core module which handle all the management functions for an Arke.
+  See `Arke.Example.System.MacroArke` to get a list of all the available functions.
   """
 
   @doc """
@@ -24,7 +25,7 @@ defmodule Arke.System do
   """
   defmacro __using__(_) do
     quote do
-      #      @after_compile __MODULE__
+
       Module.register_attribute(__MODULE__, :arke, accumulate: false, persist: true)
       Module.register_attribute(__MODULE__, :groups, accumulate: true, persist: true)
       Module.register_attribute(__MODULE__, :parameters, accumulate: true, persist: false)
@@ -34,6 +35,7 @@ defmodule Arke.System do
       import unquote(__MODULE__),
         only: [arke: 1, arke: 2, parameter: 3, parameter: 2, group: 1, group: 2]
 
+      # Return the Arke struct for the given module
       @doc false
       def arke_from_attr(),
         do: Keyword.get(__MODULE__.__info__(:attributes), :arke, []) |> List.first()
@@ -104,7 +106,7 @@ defmodule Arke.System do
         header_file = Enum.at(file_as_list, 0)
         rows = file_as_list |> List.delete_at(0)
 
-        header = get_header_for_import(project, arke, header_file) |> parse_haeder_for_import(header_file)
+        header = get_header_for_import(project, arke, header_file) |> parse_header_for_import(header_file)
 
         {correct_units, error_units} = Enum.with_index(rows) |> Enum.reduce({[], []}, fn {row, index}, {correct_units, error_units} ->
           case Enum.filter(row, & !is_nil(&1)) do
@@ -155,7 +157,7 @@ defmodule Arke.System do
           end
         end)
       end
-      defp parse_haeder_for_import(header, header_file) do
+      defp parse_header_for_import(header, header_file) do
         Enum.reduce(Enum.with_index(header_file), [], fn {cell, index}, acc ->
           case cell do
             nil -> acc
@@ -229,7 +231,7 @@ defmodule Arke.System do
       arke id: :some_id do
       end
 
-  From now on all the overridable functions can be edited and all the public funcitons will be used as API custom function
+  From now on all the overridable functions can be edited and all the public functions will be used as API custom function
   """
   @spec arke(args :: list(), Macro.t()) :: %{}
   defmacro arke(opts \\ [], do: block) do

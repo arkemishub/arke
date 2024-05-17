@@ -36,7 +36,6 @@ defmodule Arke.MixProject do
         logo: @logo_url,
         extras: ["README.md", "LICENSE"],
         groups_for_modules: groups_for_modules(),
-        extras: extras()
       ]
     ]
   end
@@ -113,7 +112,8 @@ defmodule Arke.MixProject do
       Parameter: [~r"Arke.Core.Parameter"],
       Query: [~r"Arke.Core.Query"],
       Core: [~r"Arke.Core."],
-      Utils: [~r"Arke.Utils."]
+      Utils: [~r"Arke.Utils."],
+      Example: [~r"Arke.Example."],
     ]
   end
   defp extras do

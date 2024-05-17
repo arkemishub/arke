@@ -41,7 +41,7 @@ defmodule Arke.StructManager do
     - `unit` -> unit or list of units that we want to encode
     - `type` -> desired encode type
   """
-  @spec encode(unit :: [Unit.t(), ...], format :: :json) :: %{atom() => any} | [...]
+  @spec encode(unit :: [%Unit{}, ...], format :: :json) :: %{atom() => any} | [...]
   def encode(unit, opts \\ [])
 
   def encode(unit, opts) do
@@ -239,7 +239,7 @@ defmodule Arke.StructManager do
           arke_id :: atom(),
           data :: %{key: any()},
           format :: atom()
-        ) :: Unit.t()
+        ) :: %Unit{}
   def decode(project, arke_id, data, :json) when is_atom(arke_id) do
     ArkeManager.get(arke_id, project)
     |> Unit.load(data)
@@ -305,7 +305,7 @@ defmodule Arke.StructManager do
   ## Parameters
     - `arke` -> Arke struct
  """
-  @spec get_struct(arke :: Unit.t()) :: %{parameters: [parameter()], label: String.t()}
+  @spec get_struct(arke :: %Unit{}) :: %{parameters: [parameter()], label: String.t()}
   def get_struct(%{arke_id: :arke, data: data} = arke) do
     struct = %{parameters: get_struct_parameters(arke, %{}), label: data.label}
     ArkeManager.call_func(arke, :after_get_struct, [arke, struct])
@@ -319,7 +319,7 @@ defmodule Arke.StructManager do
      - `unit` -> Unit struct
      - `opts` -> Data we want to include or exclude
   """
-  @spec get_struct(arke :: Unit.t(), unit :: Unit.t(), opts :: [{:include, [atom]} | {:exclude, [atom]}] | [...] | [] ) :: %{
+  @spec get_struct(arke :: %Unit{}, unit :: %Unit{}, opts :: [{:include, [atom]} | {:exclude, [atom]}] | [...] | [] ) :: %{
           parameters: [parameter()],
           label: String.t()
         }
@@ -335,7 +335,7 @@ defmodule Arke.StructManager do
   @doc """
   Get a Unit Struct
   """
-  @spec get_struct(arke :: Unit.t(), unit :: Unit.t()) :: %{
+  @spec get_struct(arke :: %Unit{}, unit :: %Unit{}) :: %{
           parameters: [parameter()],
           label: String.t()
         }
