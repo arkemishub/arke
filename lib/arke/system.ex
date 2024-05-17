@@ -14,11 +14,11 @@
 
 defmodule Arke.System do
   @moduledoc """
-  Module which define all the basics functions of an Arke
+  Core module which handle all the management functions for an Arke
   """
 
   @doc """
-  Macro to simplify the creation of a new Arke
+  This macro is used whenever we want to edit the default behaviour
 
         use Arke.System
   """
@@ -34,81 +34,56 @@ defmodule Arke.System do
       import unquote(__MODULE__),
         only: [arke: 1, arke: 2, parameter: 3, parameter: 2, group: 1, group: 2]
 
-      #      @before_compile unquote(__MODULE__)
-
+      @doc false
       def arke_from_attr(),
         do: Keyword.get(__MODULE__.__info__(:attributes), :arke, []) |> List.first()
 
+      @doc false
       def groups_from_attr(), do: Keyword.get(__MODULE__.__info__(:attributes), :groups, [])
 
+      @doc false
       def base_parameters() do
         unit = arke_from_attr()
         unit.data.parameters
       end
 
-      @doc """
-      Overridable function in order to be able to edit data during the  unit load
-      """
+      @doc false
       def on_load(data, _persistence_fn), do: {:ok, data}
 
-      @doc """
-      Overridable function in order to be able to edit data before the load
-      """
+      @doc false
       def before_load(data, _persistence_fn), do: {:ok, data}
 
-      @doc """
-      Overridable function in order to be able to edit data during the validation
-      """
+      @doc false
       def on_validate(arke, unit), do: {:ok, unit}
 
-      @doc """
-      Overridable function in order to be able to edit data before the validation
-      """
+      @doc false
       def before_validate(arke, unit), do: {:ok, unit}
 
-      @doc """
-      Overridable function in order to be able to edit data during the creation
-      """
+      @doc false
       def on_create(arke, unit), do: {:ok, unit}
 
-      @doc """
-      Overridable function in order to be able to edit data before the creation
-      """
+      @doc false
       def before_create(arke, unit), do: {:ok, unit}
-      @doc """
-      Overridable function in order to be able to edit data during the encoding
-      """
+      @doc false
       def on_struct_encode(_, _, data, opts), do: {:ok, data}
-      @doc """
-      Overridable function in order to be able to edit data before the encoding
-      """
+      @doc false
       def before_struct_encode(_, unit), do: {:ok, unit}
-      @doc """
-      Overridable function in order to be able to edit data on the update
-      """
+      @doc false
       def on_update(arke, old_unit, unit), do: {:ok, unit}
-      @doc """
-      Overridable function in order to be able to edit data before the update
-      """
+      @doc false
       def before_update(arke, unit), do: {:ok, unit}
-      @doc """
-      Overridable function in order to be able to edit data during the deletion
-      """
+      @doc false
       def on_delete(arke, unit), do: {:ok, unit}
-      @doc """
-      Overridable function in order to be able to edit data before the deletion
-      """
+      @doc false
       def before_delete(arke, unit), do: {:ok, unit}
 
-      @doc """
-      Overridable function in order to be able to edit data after the encoding
-      """
+      @doc false
       def after_get_struct(arke, unit, struct), do: struct
+
+      @doc false
       def after_get_struct(arke, struct), do: struct
 
-      @doc """
-      Overridable function used to import arkes from excel file
-      """
+      @doc false
       def import(%{runtime_data: %{conn: %{method: "POST"}=conn}, metadata: %{project: project}} = arke) do
         member = ArkeAuth.Guardian.Plug.current_resource(conn)
         mode = Map.get(conn.body_params, "mode", "default")
@@ -119,9 +94,7 @@ defmodule Arke.System do
         end
       end
 
-      @doc """
-      Overridable function used to import units from excels files
-      """
+      @doc false
       defp import_units(arke, project, member, file, mode) do
         {:ok, ref} = Enum.at(Xlsxir.multi_extract(file.path), 0)
         all_units = get_all_units_for_import(project)
@@ -173,9 +146,7 @@ defmodule Arke.System do
       defp parse_cell(value) when is_tuple(value), do: Kernel.inspect(value)
       defp parse_cell(value), do: value
 
-      @doc """
-      Overridable function used to get the header which will be used to parse the units
-      """
+      @doc false
       defp get_header_for_import(project, arke, header_file) do
         Enum.reduce(Enum.with_index(header_file), [], fn {cell, index}, acc ->
           case Arke.Boundary.ArkeManager.get_parameter(arke, project, cell) do
@@ -198,14 +169,10 @@ defmodule Arke.System do
         end)
       end
 
-      @doc """
-      Overridable function used to get all the units that will be used in the import
-      """
+      @doc false
       defp get_all_units_for_import(project), do: []
 
-      @doc """
-      Overridable function used to create Units struct from the data in an import file
-      """
+      @doc false
       defp load_units(project, arke, header, row, _, "default") do
         args = Enum.reduce(header, [], fn {parameter_id, index}, acc ->
           acc = Keyword.put(acc, String.to_existing_atom(parameter_id), Enum.at(row, index))
@@ -216,13 +183,9 @@ defmodule Arke.System do
              do: {:ok, args},
              else: ({:error, errors} -> {:error, args, errors})
       end
-      @doc """
-      Overridable function used to get all the units already created
-      """
+      @doc false
       defp get_existing_units_for_import(project, arke, header, units_args), do: []
-      @doc """
-      Overridable function used to check if all the units for the import are valid or not
-      """
+      @doc false
       defp check_existing_units_for_import(project, arke, header, units_args, existing_units), do: true
       defp get_import_value(header, row, column) do
         index = Enum.find(header, fn {k, v} -> k == column end) |> elem(1)
@@ -335,14 +298,13 @@ defmodule Arke.System do
   # PARAMETER MACRO ####################################################################################################
   ######################################################################################################################
 
-  @doc """
+  @doc false && """
   Macro used to define parameter in an arke.
   See example above `arke/2`
 
   """
   @spec parameter(id :: atom(), type :: atom(), opts :: list()) :: Macro.t()
   defmacro parameter(id, type, opts \\ []) do
-    # parameter_dict = Arke.System.BaseParameter.parameter_options(opts, id, type)
     quote bind_quoted: [id: id, type: type, opts: opts] do
       opts = Arke.System.BaseParameter.check_enum(type, opts)
       @parameters %{id: id, arke: type, metadata: opts}
@@ -357,10 +319,9 @@ defmodule Arke.System do
   # GROUP MACRO ####################################################################################################
   ######################################################################################################################
 
-  @doc """
-  Macro used to define parameter in an arke.
+  @doc false && """
+  Assign an arke to a given group.
   See example above `arke/2`
-
   """
   @spec group(id :: atom(), opts :: list()) :: Macro.t()
   defmacro group(id, opts \\ []) do
@@ -383,9 +344,12 @@ defmodule Arke.System.BaseArke do
 end
 
 defmodule Arke.System.BaseParameter do
+  @moduledoc """
+  Default struct for every Parameter type
+  """
   defstruct [:id, :label, :active, :metadata, :type, :parameters]
 
-  @doc """
+  @doc false && """
   Used in the parameter macro to create the map for every parameter which have the `values` option.
   It check if the given value are the same type as the parameter type and then creates a  list of map as follows:
 
@@ -398,12 +362,10 @@ defmodule Arke.System.BaseParameter do
   The code above will be modified to be as follows
 
             values: [%{label "1", value: 1}, %{label "2", value: 2}, %{label "3", value: 3}]
-
-
   """
-  @spec parameter_options(opts :: list(), id :: atom(), type :: atom()) :: %{
+  @spec parameter_options(opts :: [...], id :: atom(), type :: atom()) :: %{
           type: atom(),
-          opts: list()
+          opts: [...]
         }
   def parameter_options(opts, id, type) do
     opts =
@@ -415,13 +377,13 @@ defmodule Arke.System.BaseParameter do
   end
 
   @doc """
-  It checks if the given values match the type of the parameter.
-
+  Checks if the given parameter type has enum values and if these values are formatted correctly
   """
-  @spec check_enum(type :: :string | :integer | :float, opts :: [...] | []) ::
+  @spec check_enum(type :: :atom, opts :: [...] | []) ::
           [...] | [] | [%{label: String.t(), value: float() | integer() | String.t()}, ...]
   def check_enum(type, opts) when is_binary(type), do: check_enum(String.to_atom(type),opts)
   def check_enum(type, opts) do
+    #todo: move check_enum in another module because the BaseParameter struct is unused
     enum_parameters = [:string, :integer, :float]
     case type in enum_parameters do
       true ->
@@ -483,8 +445,8 @@ defmodule Arke.System.BaseParameter do
     Keyword.put_new(opts, key, default)
   end
 
-  def __enum_parameter__(opts, type) when is_map(opts), do: __enum_parameter__(Map.to_list(opts),type)
-  def __enum_parameter__(opts, type) do
+  defp __enum_parameter__(opts, type) when is_map(opts), do: __enum_parameter__(Map.to_list(opts),type)
+  defp __enum_parameter__(opts, type) do
     case Keyword.has_key?(opts, :values) do
       true ->   __validate_values__(opts, opts[:values], type)
       false ->
@@ -518,7 +480,7 @@ defmodule Arke.System.BaseParameter do
       true ->
        __create_map_values__(__check_map__(values), opts, type, condition)
 
-      # FARE RAISE ECCEZIONE DA GESTIRE. CHIAVI DEVONO ESSERE TUTTE UGUALI
+      # RAISE EXCEPTION TO HANDLE. KEYS MUST ALL BE THE SAME
       _ ->
         Keyword.update(opts, :values, nil, fn _current_value -> nil end)
     end
@@ -547,7 +509,7 @@ defmodule Arke.System.BaseParameter do
   defp __check_map__(values), do: values
 
   defp __create_map_values__(values, opts, type, condition) do
-    # FARE RAISE ECCEZIONE DA GESTIRE. CHIAVI DEVONO ESSERE TUTTE UGUALI
+    # RAISE EXCEPTION TO HANDLE. KEYS MUST ALL BE THE SAME
     with true <- Enum.all?(values, fn %{label: l, value: v} -> condition.(l, v) end) do
       new_values =
         Enum.map(values, fn k ->
@@ -564,7 +526,7 @@ defmodule Arke.System.BaseParameter do
   defp __get_map_value__(value, _), do: value
 
   defp __values_from_list__(values, opts, condition) do
-    # FARE RAISE ECCEZIONE DA GESTIRE. CHIAVI DEVONO ESSERE TUTTE UGUALI
+    # RAISE EXCEPTION TO HANDLE. KEYS MUST ALL BE THE SAME
     with true <- Enum.all?(values, &condition.(&1)) do
       new_values =
         Enum.map(values, fn k -> %{label: String.capitalize(to_string(k)), value: k} end)

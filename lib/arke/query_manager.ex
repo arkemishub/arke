@@ -14,9 +14,9 @@
 
 defmodule Arke.QueryManager do
   @moduledoc """
-  Module to manage the CRUD operations to create the below elements and also manage the query to get the elements from db.
+  Module to manage the CRUD operations to create the below `Elements` and also manage the query to get the elements from db.
 
-  ## `arke`
+  ## `Elements`
     - Parameter -> `Arke.Core.Parameter`
     - Arke -> `Arke.Core.Arke`
     - Unit -> `Arke.Core.Unit`

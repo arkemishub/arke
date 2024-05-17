@@ -35,7 +35,8 @@ defmodule Arke.MixProject do
         main: "Arke",
         logo: @logo_url,
         extras: ["README.md", "LICENSE"],
-        groups_for_modules: groups_for_modules()
+        groups_for_modules: groups_for_modules(),
+        extras: extras()
       ]
     ]
   end
@@ -62,7 +63,7 @@ defmodule Arke.MixProject do
     [
       {:typed_struct, "~> 0.2.1"},
       {:uuid, "~> 1.1"},
-      {:ex_doc, "~> 0.28", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.32", only: :dev, runtime: false},
       {:excoveralls, "~> 0.10", only: :test},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:timex, "~> 3.7.11"},
@@ -114,5 +115,8 @@ defmodule Arke.MixProject do
       Core: [~r"Arke.Core."],
       Utils: [~r"Arke.Utils."]
     ]
+  end
+  defp extras do
+  []
   end
 end

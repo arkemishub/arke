@@ -104,6 +104,9 @@ defmodule Arke.Core.Parameter.String do
   arke id: "string" do
   end
 
+  @doc """
+  Before create the Parameter struct check if it has some `values` and if they are formatted correctly
+  """
   def before_load(data, _persistence_fn) do
     args = Arke.System.BaseParameter.check_enum(:string, Map.to_list(data))
     {:ok, Enum.into(args, %{})}
@@ -138,6 +141,9 @@ defmodule Arke.Core.Parameter.Integer do
   arke id: "integer" do
   end
 
+  @doc """
+  Before create the Parameter struct check if it has some `values` and if they are formatted correctly
+  """
   def before_load(data, _persistence_fn) do
     args = Arke.System.BaseParameter.check_enum(:integer, Map.to_list(data))
     {:ok, Enum.into(args, %{})}
@@ -172,6 +178,9 @@ defmodule Arke.Core.Parameter.Float do
   arke id: "float" do
   end
 
+  @doc """
+  Before create the Parameter struct check if it has some `values` and if they are formatted correctly
+  """
   def before_load(data, _persistence_fn) do
     args = Arke.System.BaseParameter.check_enum(:float, Map.to_list(data))
     {:ok, Enum.into(args, %{})}
