@@ -13,7 +13,11 @@
 # limitations under the License.
 
 defmodule Arke.Boundary.GroupManager do
-  @moduledoc false
+  @moduledoc false &&
+  """
+    It extends `Arke.Boundary.UnitManager` by providing more functions specific to the Groups.
+  """
+
   use Arke.Boundary.UnitManager
   alias Arke.Utils.ErrorGenerator, as: Error
 

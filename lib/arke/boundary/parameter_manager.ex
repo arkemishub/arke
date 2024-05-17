@@ -13,12 +13,13 @@
 # limitations under the License.
 
 defmodule Arke.Boundary.ParameterManager do
-  @moduledoc false
+  @moduledoc false &&
+   """
+    It extends `Arke.Boundary.UnitManager` by providing more functions specific to the Parameters.
+   """
   use Arke.Boundary.UnitManager
 
   manager_id(:parameter)
-  # set_registry_name(:parameter_registry)
-  # set_supervisor_name(:parameter_supervisor)
 
   
 end

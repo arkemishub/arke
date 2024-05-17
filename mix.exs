@@ -4,6 +4,7 @@ defmodule Arke.MixProject do
   @version "0.3.1"
   @scm_url "https://github.com/arkemishub/arke"
   @site_url "https://arkehub.com"
+  @logo_url "public/arke-logo.png"
 
   def project do
     [
@@ -24,9 +25,18 @@ defmodule Arke.MixProject do
       test_coverage: [tool: ExCoveralls],
       aliases: aliases(),
       deps: deps(),
+      source_url: @scm_url,
+      homepage_url: @site_url,
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [warnings_as_errors: false],
-      versioning: versioning()
+      versioning: versioning(),
+      docs: [
+        # The main page in the docs
+        main: "Arke",
+        logo: @logo_url,
+        extras: ["README.md", "LICENSE"],
+        groups_for_modules: groups_for_modules(),
+      ]
     ]
   end
 
@@ -52,7 +62,7 @@ defmodule Arke.MixProject do
     [
       {:typed_struct, "~> 0.2.1"},
       {:uuid, "~> 1.1"},
-      {:ex_doc, "~> 0.28", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.32", only: :dev, runtime: false},
       {:excoveralls, "~> 0.10", only: :test},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:timex, "~> 3.7.11"},
@@ -94,5 +104,19 @@ defmodule Arke.MixProject do
         "Github" => @scm_url
       }
     ]
+  end
+
+  defp groups_for_modules() do
+    [
+      System: [~r"Arke.System"],
+      Parameter: [~r"Arke.Core.Parameter"],
+      Query: [~r"Arke.Core.Query"],
+      Core: [~r"Arke.Core."],
+      Utils: [~r"Arke.Utils."],
+      Example: [~r"Arke.Example."],
+    ]
+  end
+  defp extras do
+  []
   end
 end

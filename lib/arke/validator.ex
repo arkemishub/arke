@@ -14,7 +14,7 @@
 
 defmodule Arke.Validator do
   @moduledoc """
-  This module provide validation before assign a certain value to an `{arke_struct}`
+  This module provide the data validation of a unit before its creation
   """
   alias Arke.Boundary.{ArkeManager, ParameterManager}
   alias Arke.QueryManager, as: QueryManager
@@ -22,29 +22,17 @@ defmodule Arke.Validator do
   alias Arke.Utils.DatetimeHandler, as: DatetimeHandler
   alias Arke.Core.{Arke, Unit, Parameter}
 
-  @type func_return() :: {:ok, Unit.t()} | Error.t()
 
   @doc """
-  Function to check the given data based on the fields in the reference schema.
-
+  Check if the given unit has valid data.
+  In order to do so, it uses the arke_id to get the arke which has been used to load the parameters.
+  Then check whether the value of each unit parameter meets the type and requirements of those associated with the arke
   ## Parameters
-    - unit =>  => %Arke.Core.Unit{} => unit to add
-    - persistence_fn => fun.() => function containng the action that will be performed on the Repo
-    - project => :atom => identify the `Arke.Core.Project`
-
-  ## Example
-      iex> schema = Arke.Core.Arke.new
-      ...> param = Arke.Core.Parameter.new(%{type: :string,opts: [id: :name]})
-      ...> schema = Arke.Core.Arke.add_parameter(schema, param)
-      ...> Arke.Validator.validate(%{arke: schema, data: %{name: "test"}})
-
-  ## Return
-      %{:ok,_}
-      %{:error, [message]}
-
+    - `unit` -> unit to validate
+    - `persistence_fn` -> operation identifiers
+    - `project` ->  `Arke.Core.Project`
   """
-  @spec validate(unit :: Unit.t(), peristence_fn :: (() -> any()), project :: atom()) ::
-          func_return()
+  @spec validate(unit :: %Unit{}, peristence_fn :: :create | :update, project :: atom()) :: {:ok, %Unit{}} | {:error, [Error.t()]}
   def validate(%{arke_id: arke_id} = unit, persistence_fn, project \\ :arke_system) do
     with {:ok, unit} <- check_duplicate_unit(unit, project, persistence_fn) do
       {%{data: data} = unit, errors} = before_validate(unit, project)
@@ -110,27 +98,21 @@ defmodule Arke.Validator do
   defp get_result({unit, _errors} = _res), do: {:ok, unit}
 
   @doc """
-  Check if the value can be assigned to a given parameter in a specific schema struct.
+  Check if the value can be assigned to a given parameter for the given Arke.
+  It always returns a tuple with the given value and a list of errors, if any, otherwise it is empty.
 
   ## Parameters
-    - schema_struct => %{arke_struct} => the element where to find and check the field
-    - field => :atom => the id of the paramater
-    - value => any => the value we want to assign to the above field
-    - project => :atom => identify the `Arke.Core.Project`
-
-  ## Example
-        iex> Arke.Boundary.ArkeValidator.validate_field(schema_struct, :field_id, value_to_check)
-
-  ## Returns
-      {value,[]} if success
-      {value,["parameter label", message ]} in case of error
+    - `arke` ->  used as a model to get all the requirements to validate the value of parameter
+    - `parameter` -> the id of the parameter
+    - `value` -> the value we want to assign to the above field
+    - `project` -> identify the `Arke.Core.Project`
   """
   @spec validate_parameter(
-          arke :: Arke.t(),
+          arke :: %Arke{},
           parameter :: Sring.t() | atom() | Parameter.parameter_struct(),
-          value :: String.t() | number() | atom() | boolean() | map() | list(),
+          value :: any(),
           project :: atom()
-        ) :: func_return()
+        ) :: {any(),[Error.t()]} | {any(),[]}
   def validate_parameter(arke, parameter, value, project \\ :arke_system)
 
   def validate_parameter(arke, parameter, value, project) when is_atom(parameter) do
@@ -162,8 +144,8 @@ defmodule Arke.Validator do
     {value, errors}
   end
 
-  def get_default_value(parameter, value) when is_nil(value), do: handle_default_value(parameter)
-  def get_default_value(parameter, value), do: value
+  defp get_default_value(parameter, value) when is_nil(value), do: handle_default_value(parameter)
+  defp get_default_value(parameter, value), do: value
 
   defp parse_value(%{arke_id: :integer, data: %{multiple: false} = data} = _, value)
        when not is_integer(value) and not is_nil(value) do

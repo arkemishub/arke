@@ -14,16 +14,7 @@
 
 defmodule Arke.Utils.ErrorGenerator do
   @moduledoc """
-  Documentation for `Arke.Utils.ErrorGenerator`
-  """
-
-  @doc """
-  Create standardized errors
-
-  ## Parameters
-    - context => string => the context where the error has been generated
-    - errors => list | string => the error itself
-
+  Used to standardize all the arke package errors
   ## Example
       iex> Arke.Utils.ErrorGenerator.create(:auth, "login error")
 
@@ -31,9 +22,19 @@ defmodule Arke.Utils.ErrorGenerator do
        {:error , [%{context: "context_value", message: "message_value"}, ...]}
   """
 
-  @type t() :: {:error, [%{context: String.t(), message: String.t()}]}
+  @doc """
+  Create standardized errors.
+  ## Note
+    - If a list of error is provided they will be created with the same context
+    - If a string is provided the above example will be returned
 
-  @spec create(context :: String.t(), errors :: list() | String.t()) ::
+  ## Parameters
+    - `context` => the context where the error has been generated
+    - `errors`  => the error itself
+
+  """
+
+  @spec create(context :: String.t() | atom(), errors :: [String.t()] | String.t()) ::
           {:error, [%{context: String.t(), message: String.t()}]}
   def create(context, errors) when is_list(errors) do
     {:error, create_map(context, errors)}

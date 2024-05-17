@@ -13,9 +13,19 @@
 # limitations under the License.
 
 defmodule Arke.System do
+  @moduledoc """
+  Core module which handle all the management functions for an Arke.
+  See `Arke.Example.System.MacroArke` to get a list of all the available functions.
+  """
+
+  @doc """
+  This macro is used whenever we want to edit the default behaviour
+
+        use Arke.System
+  """
   defmacro __using__(_) do
     quote do
-      #      @after_compile __MODULE__
+
       Module.register_attribute(__MODULE__, :arke, accumulate: false, persist: true)
       Module.register_attribute(__MODULE__, :groups, accumulate: true, persist: true)
       Module.register_attribute(__MODULE__, :parameters, accumulate: true, persist: false)
@@ -25,34 +35,57 @@ defmodule Arke.System do
       import unquote(__MODULE__),
         only: [arke: 1, arke: 2, parameter: 3, parameter: 2, group: 1, group: 2]
 
-      #      @before_compile unquote(__MODULE__)
-
+      # Return the Arke struct for the given module
+      @doc false
       def arke_from_attr(),
         do: Keyword.get(__MODULE__.__info__(:attributes), :arke, []) |> List.first()
 
+      @doc false
       def groups_from_attr(), do: Keyword.get(__MODULE__.__info__(:attributes), :groups, [])
 
+      @doc false
       def base_parameters() do
         unit = arke_from_attr()
         unit.data.parameters
       end
 
+      @doc false
       def on_load(data, _persistence_fn), do: {:ok, data}
+
+      @doc false
       def before_load(data, _persistence_fn), do: {:ok, data}
+
+      @doc false
       def on_validate(arke, unit), do: {:ok, unit}
+
+      @doc false
       def before_validate(arke, unit), do: {:ok, unit}
+
+      @doc false
       def on_create(arke, unit), do: {:ok, unit}
+
+      @doc false
       def before_create(arke, unit), do: {:ok, unit}
+      @doc false
       def on_struct_encode(_, _, data, opts), do: {:ok, data}
+      @doc false
       def before_struct_encode(_, unit), do: {:ok, unit}
+      @doc false
       def on_update(arke, old_unit, unit), do: {:ok, unit}
+      @doc false
       def before_update(arke, unit), do: {:ok, unit}
+      @doc false
       def on_delete(arke, unit), do: {:ok, unit}
+      @doc false
       def before_delete(arke, unit), do: {:ok, unit}
 
+      @doc false
       def after_get_struct(arke, unit, struct), do: struct
+
+      @doc false
       def after_get_struct(arke, struct), do: struct
 
+      @doc false
       def import(%{runtime_data: %{conn: %{method: "POST"}=conn}, metadata: %{project: project}} = arke) do
         member = ArkeAuth.Guardian.Plug.current_resource(conn)
         mode = Map.get(conn.body_params, "mode", "default")
@@ -63,6 +96,7 @@ defmodule Arke.System do
         end
       end
 
+      @doc false
       defp import_units(arke, project, member, file, mode) do
         {:ok, ref} = Enum.at(Xlsxir.multi_extract(file.path), 0)
         all_units = get_all_units_for_import(project)
@@ -72,7 +106,7 @@ defmodule Arke.System do
         header_file = Enum.at(file_as_list, 0)
         rows = file_as_list |> List.delete_at(0)
 
-        header = get_header_for_import(project, arke, header_file) |> parse_haeder_for_import(header_file)
+        header = get_header_for_import(project, arke, header_file) |> parse_header_for_import(header_file)
 
         {correct_units, error_units} = Enum.with_index(rows) |> Enum.reduce({[], []}, fn {row, index}, {correct_units, error_units} ->
           case Enum.filter(row, & !is_nil(&1)) do
@@ -114,6 +148,7 @@ defmodule Arke.System do
       defp parse_cell(value) when is_tuple(value), do: Kernel.inspect(value)
       defp parse_cell(value), do: value
 
+      @doc false
       defp get_header_for_import(project, arke, header_file) do
         Enum.reduce(Enum.with_index(header_file), [], fn {cell, index}, acc ->
           case Arke.Boundary.ArkeManager.get_parameter(arke, project, cell) do
@@ -122,7 +157,7 @@ defmodule Arke.System do
           end
         end)
       end
-      defp parse_haeder_for_import(header, header_file) do
+      defp parse_header_for_import(header, header_file) do
         Enum.reduce(Enum.with_index(header_file), [], fn {cell, index}, acc ->
           case cell do
             nil -> acc
@@ -136,8 +171,10 @@ defmodule Arke.System do
         end)
       end
 
+      @doc false
       defp get_all_units_for_import(project), do: []
 
+      @doc false
       defp load_units(project, arke, header, row, _, "default") do
         args = Enum.reduce(header, [], fn {parameter_id, index}, acc ->
           acc = Keyword.put(acc, String.to_existing_atom(parameter_id), Enum.at(row, index))
@@ -148,7 +185,9 @@ defmodule Arke.System do
              do: {:ok, args},
              else: ({:error, errors} -> {:error, args, errors})
       end
+      @doc false
       defp get_existing_units_for_import(project, arke, header, units_args), do: []
+      @doc false
       defp check_existing_units_for_import(project, arke, header, units_args, existing_units), do: true
       defp get_import_value(header, row, column) do
         index = Enum.find(header, fn {k, v} -> k == column end) |> elem(1)
@@ -181,33 +220,18 @@ defmodule Arke.System do
     end
   end
 
-  #  defmacro __before_compile__(env) do
-  #  end
-  #
-  #  def compile(translations) do
-  #
-  #  end
-
   ######################################################################################################################
   # ARKE MACRO #########################################################################################################
   ######################################################################################################################
 
   @doc """
-  Macro to create an arke struct with the given parameters.
-  Usable only via `code` and not `iex`.
-
+  Macro to manager an arke and its related functions
 
   ## Example
-      arke  do
-        parameter :custom_parameter, :string, required: true, unique: true
-        parameter :custom_parameter2, :string, required: true, values: ["value1", "value2"]
-        parameter :custom_parameter3, :integer, required: true, values: [%{label: "option 1", value: 1},%{label: "option 2", value: 2}]
-        parameter :custom_parameter4, :dict, required: true, default: %{"default_dict_key": "default_dict_value"}
+      arke id: :some_id do
       end
 
-  ## Return
-      %Arke.Core.'{arke_struct}'{}
-
+  From now on all the overridable functions can be edited and all the public functions will be used as API custom function
   """
   @spec arke(args :: list(), Macro.t()) :: %{}
   defmacro arke(opts \\ [], do: block) do
@@ -276,14 +300,13 @@ defmodule Arke.System do
   # PARAMETER MACRO ####################################################################################################
   ######################################################################################################################
 
-  @doc """
+  @doc false && """
   Macro used to define parameter in an arke.
   See example above `arke/2`
 
   """
   @spec parameter(id :: atom(), type :: atom(), opts :: list()) :: Macro.t()
   defmacro parameter(id, type, opts \\ []) do
-    # parameter_dict = Arke.System.BaseParameter.parameter_options(opts, id, type)
     quote bind_quoted: [id: id, type: type, opts: opts] do
       opts = Arke.System.BaseParameter.check_enum(type, opts)
       @parameters %{id: id, arke: type, metadata: opts}
@@ -298,10 +321,9 @@ defmodule Arke.System do
   # GROUP MACRO ####################################################################################################
   ######################################################################################################################
 
-  @doc """
-  Macro used to define parameter in an arke.
+  @doc false && """
+  Assign an arke to a given group.
   See example above `arke/2`
-
   """
   @spec group(id :: atom(), opts :: list()) :: Macro.t()
   defmacro group(id, opts \\ []) do
@@ -316,40 +338,38 @@ defmodule Arke.System do
 end
 
 defmodule Arke.System.Arke do
+  @moduledoc false
   use Arke.System
 end
 
 defmodule Arke.System.BaseArke do
+  @moduledoc false
   defstruct [:id, :label, :active, :type, :parameters, :metadata]
 end
 
 defmodule Arke.System.BaseParameter do
+  @moduledoc false && """
+    This module is used as entrypoint for every Parameter created which does not have a module associated
+  """
   defstruct [:id, :label, :active, :metadata, :type, :parameters]
 
-  @doc """
+  @doc false && """
   Used in the parameter macro to create the map for every parameter which have the `values` option.
   It check if the given value are the same type as the parameter type and then creates a  list of map as follows:
 
        [%{label "given label", value: given_value}, %{label "given label two ", value: given_value_two}]
 
   Keep in mind that if the values are declared as list instead of map the label will be generated from the value itself.
-       ... omitted code
 
             parameter :custom_parameter2, :integer, required: true, values: [1, 2, 3]
 
-       ... omitted code
-    The code above will results in an `{arke_struct}` with the values as follows
-
-        ... omitted code
+  The code above will be modified to be as follows
 
             values: [%{label "1", value: 1}, %{label "2", value: 2}, %{label "3", value: 3}]
-
-        ... omitted code
-
   """
-  @spec parameter_options(opts :: list(), id :: atom(), type :: atom()) :: %{
+  @spec parameter_options(opts :: [...], id :: atom(), type :: atom()) :: %{
           type: atom(),
-          opts: list()
+          opts: [...]
         }
   def parameter_options(opts, id, type) do
     opts =
@@ -360,8 +380,14 @@ defmodule Arke.System.BaseParameter do
     %{type: type, opts: opts}
   end
 
+  @doc """
+  Checks if the given parameter type has enum values and if these values are formatted correctly
+  """
+  @spec check_enum(type :: :atom, opts :: [...] | []) ::
+          [...] | [] | [%{label: String.t(), value: float() | integer() | String.t()}, ...]
   def check_enum(type, opts) when is_binary(type), do: check_enum(String.to_atom(type),opts)
   def check_enum(type, opts) do
+    #todo: move check_enum in another module because the BaseParameter struct is unused
     enum_parameters = [:string, :integer, :float]
     case type in enum_parameters do
       true ->
@@ -423,8 +449,8 @@ defmodule Arke.System.BaseParameter do
     Keyword.put_new(opts, key, default)
   end
 
-  def __enum_parameter__(opts, type) when is_map(opts), do: __enum_parameter__(Map.to_list(opts),type)
-  def __enum_parameter__(opts, type) do
+  defp __enum_parameter__(opts, type) when is_map(opts), do: __enum_parameter__(Map.to_list(opts),type)
+  defp __enum_parameter__(opts, type) do
     case Keyword.has_key?(opts, :values) do
       true ->   __validate_values__(opts, opts[:values], type)
       false ->
@@ -458,7 +484,7 @@ defmodule Arke.System.BaseParameter do
       true ->
        __create_map_values__(__check_map__(values), opts, type, condition)
 
-      # FARE RAISE ECCEZIONE DA GESTIRE. CHIAVI DEVONO ESSERE TUTTE UGUALI
+      # RAISE EXCEPTION TO HANDLE. KEYS MUST ALL BE THE SAME
       _ ->
         Keyword.update(opts, :values, nil, fn _current_value -> nil end)
     end
@@ -487,7 +513,7 @@ defmodule Arke.System.BaseParameter do
   defp __check_map__(values), do: values
 
   defp __create_map_values__(values, opts, type, condition) do
-    # FARE RAISE ECCEZIONE DA GESTIRE. CHIAVI DEVONO ESSERE TUTTE UGUALI
+    # RAISE EXCEPTION TO HANDLE. KEYS MUST ALL BE THE SAME
     with true <- Enum.all?(values, fn %{label: l, value: v} -> condition.(l, v) end) do
       new_values =
         Enum.map(values, fn k ->
@@ -504,7 +530,7 @@ defmodule Arke.System.BaseParameter do
   defp __get_map_value__(value, _), do: value
 
   defp __values_from_list__(values, opts, condition) do
-    # FARE RAISE ECCEZIONE DA GESTIRE. CHIAVI DEVONO ESSERE TUTTE UGUALI
+    # RAISE EXCEPTION TO HANDLE. KEYS MUST ALL BE THE SAME
     with true <- Enum.all?(values, &condition.(&1)) do
       new_values =
         Enum.map(values, fn k -> %{label: String.capitalize(to_string(k)), value: k} end)
