@@ -19,7 +19,6 @@ defmodule Arke.Core.Arke do
   defstruct [:id, :label, :active, :type, :parameters]
 
   use Arke.System
-  alias Arke.Core.Parameter
   alias Arke.Boundary.ArkeManager
 
   arke id: :arke do
