@@ -13,8 +13,8 @@
 # limitations under the License.
 
 defmodule Arke.Core.Arke do
-  @moduledoc """
-  Defines the skeleton of an Arke by defining its characteristics and the various parameters of which it is composed
+  @moduledoc false && """
+    This module is used as entrypoint for every Arke created which does not have a module associated
   """
   defstruct [:id, :label, :active, :type, :parameters]
 

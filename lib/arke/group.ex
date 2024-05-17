@@ -143,5 +143,8 @@ defmodule Arke.System.Group do
 end
 
 defmodule Arke.System.BaseGroup do
+  @moduledoc false && """
+    This module is used as entrypoint for every Group created which does not have a module associated
+  """
   use Arke.System.Group
 end

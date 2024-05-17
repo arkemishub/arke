@@ -338,16 +338,18 @@ defmodule Arke.System do
 end
 
 defmodule Arke.System.Arke do
+  @moduledoc false
   use Arke.System
 end
 
 defmodule Arke.System.BaseArke do
+  @moduledoc false
   defstruct [:id, :label, :active, :type, :parameters, :metadata]
 end
 
 defmodule Arke.System.BaseParameter do
-  @moduledoc """
-  Default struct for every Parameter type
+  @moduledoc false && """
+    This module is used as entrypoint for every Parameter created which does not have a module associated
   """
   defstruct [:id, :label, :active, :metadata, :type, :parameters]
 
