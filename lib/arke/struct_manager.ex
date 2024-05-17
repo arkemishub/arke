@@ -25,31 +25,23 @@ defmodule Arke.StructManager do
   alias Arke.Core.{Unit, Arke}
 
   @type parameter :: %{
-          default: String.t() | boolean() | atom() | map() | list() | nil,
+          default: any(),
           helper_text: String.t() | nil,
           id: String.t(),
           label: String.t(),
           required: boolean() | nil,
           type: String.t(),
-          key: String.t() | boolean() | atom() | map() | list() | nil
+          key: any()
         }
 
   @doc """
-  Function that encodes a Unit or list of Unit
+  Function thate encodes the given Unit/Units to json
 
   ## Parameters
     - `unit` -> unit or list of units that we want to encode
     - `type` -> desired encode type
-
-  ## Example
-      iex> units = QueryManager.filter_by(arke_id: id)
-      ...> StructManager.encode(units, type: :json)
-
-  ## Returns
-    All the given units encoded based on the given type
-
   """
-  @spec encode(unit :: [Unit.t(), ...], format :: :json) :: %{atom() => String.t()} | [...]
+  @spec encode(unit :: [Unit.t(), ...], format :: :json) :: %{atom() => any} | [...]
   def encode(unit, opts \\ [])
 
   def encode(unit, opts) do
@@ -173,36 +165,7 @@ defmodule Arke.StructManager do
 
   def encode(_unit, _format), do: raise("Must pass a valid unit")
 
-
-  @doc """
-  Validates the given data for links parameter
-
-  ## Parameters
-    - `id` -> parameter to valorize
-    - `value` -> desired value
-    - `arke` -> Arke to look for the parameter
-    - `opts` -> options
-
-  ## Example
-      iex> units = QueryManager.filter_by(arke_id: id)
-      ...> StructManager.encode(units, type: :json)
-
-  ## Returns
-    All the given units encoded based on the given type
-
-  """
-  @spec validate_data(
-          id :: String.t() | atom(),
-          value :: any(),
-          arke :: Unit.t(),
-          opts :: [] | [...]
-        ) :: %{
-          parameters: [parameter()],
-          label: String.t()
-        }
-  def validate_data(id, value, arke, opts \\ [])
-
-  def validate_data(id, value, arke, opts) do
+  defp validate_data(id, value, arke, opts \\ []) do
     param = ArkeManager.get_parameter(arke, id)
     new_value = parse_value(value, param, Enum.into(opts, %{}))
     %{id => new_value}
@@ -262,37 +225,29 @@ defmodule Arke.StructManager do
   end
 
   @doc """
-  Function that decodes data into a Unit or list of Unit
+  Function that convert the given json data to a valid Unit struct
 
   ## Parameters
     - `project` -> identify the `Arke.Core.Project`
-    - `arke_id` -> arke id
-    - `json` -> json data that we want to decode
+    - `arke_id` -> the model to use to load the data
+    - `data` -> json data that we want to decode
     - `type` -> data input type
 
-  ## Example
-      iex> StructManager.decode(:arke, my_json_data, :json)
   """
   @spec decode(
           project :: atom(),
           arke_id :: atom(),
-          json :: %{key: String.t() | number() | boolean() | atom()},
+          data :: %{key: any()},
           format :: atom()
         ) :: Unit.t()
-  def decode(project, arke_id, json, :json) when is_atom(arke_id) do
+  def decode(project, arke_id, data, :json) when is_atom(arke_id) do
     ArkeManager.get(arke_id, project)
-    |> Unit.load(json)
+    |> Unit.load(data)
   end
 
-  def decode(project, arke_id, json, :json) when is_binary(arke_id) do
-    ArkeManager.get(String.to_existing_atom(arke_id), project)
-    |> Unit.load(json)
-  end
+  def decode(project, arke_id, data, :json) when is_binary(arke_id), do: decode(project, String.to_existing_atom(arke_id), data, :json)
 
   def decode(_project, _arke_id, _json, _format), do: raise("Must pass valid data")
-
-  def load(arke_id, data) do
-  end
 
   defp handle_default_value(
          %{arke_id: :string, data: %{default_string: default_string}} = _,
@@ -345,15 +300,11 @@ defmodule Arke.StructManager do
   defp handle_default_value(_, value), do: value
 
   @doc """
-  Function to get a Unit Struct
+  Get an Arke's parameters struct
 
   ## Parameters
-    - `unit` -> unit struct
-
-  ## Example
-        iex> arke = ArkeManager.get(:test, :default)
-        ...> StructManager.get_struct(arke)
-  """
+    - `arke` -> Arke struct
+ """
   @spec get_struct(arke :: Unit.t()) :: %{parameters: [parameter()], label: String.t()}
   def get_struct(%{arke_id: :arke, data: data} = arke) do
     struct = %{parameters: get_struct_parameters(arke, %{}), label: data.label}
@@ -361,9 +312,14 @@ defmodule Arke.StructManager do
   end
 
   @doc """
-  Function to get a Unit Struct
+  Get a Unit Struct with only the data defined by the `opts`
+
+  ## Parameters
+     - `arke` -> Arke model to load the data
+     - `unit` -> Unit struct
+     - `opts` -> Data we want to include or exclude
   """
-  @spec get_struct(arke :: Unit.t(), unit :: Unit.t(), opts :: [] | [...]) :: %{
+  @spec get_struct(arke :: Unit.t(), unit :: Unit.t(), opts :: [{:include, [atom]} | {:exclude, [atom]}] | [...] | [] ) :: %{
           parameters: [parameter()],
           label: String.t()
         }
@@ -377,7 +333,7 @@ defmodule Arke.StructManager do
   end
 
   @doc """
-  Function to get a Unit Struct
+  Get a Unit Struct
   """
   @spec get_struct(arke :: Unit.t(), unit :: Unit.t()) :: %{
           parameters: [parameter()],
