@@ -78,13 +78,16 @@ defmodule Mix.Tasks.Arke.SeedProject do
 
   defp check_file(_arke_id,project, []), do: nil
   defp check_file(arke_id,project, data) do
-    {:ok, datetime} = Arke.Utils.DatetimeHandler.now(:datetime) |> Arke.Utils.DatetimeHandler.format("{ISO:Basic:Z}")
-    dir_path = "log/arke_seed_project/#{project}"
-    path = "#{dir_path}/#{datetime}_#{to_string(arke_id)}.log"
-    Mix.shell().info("--- Writing errors to #{path} --- ")
 
-    File.mkdir_p!(dir_path)
-    write_log_to_file(path, data)
+    unless Mix.env() == :test do
+      {:ok, datetime} = Arke.Utils.DatetimeHandler.now(:datetime) |> Arke.Utils.DatetimeHandler.format("{ISO:Basic:Z}")
+      dir_path = "log/arke_seed_project/#{project}"
+      path = "#{dir_path}/#{datetime}_#{to_string(arke_id)}.log"
+      Mix.shell().info("--- Writing errors to #{path} --- ")
+
+      File.mkdir_p!(dir_path)
+      write_log_to_file(path, data)
+    end
 
   end
 
