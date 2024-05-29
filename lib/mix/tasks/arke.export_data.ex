@@ -210,6 +210,6 @@ defmodule Mix.Tasks.Arke.ExportData do
   defp prepare_parameter(data), do: Enum.map(data,fn parameter-> Map.put(parameter.data,:id,to_string(parameter.id))end)
 
   defp prepare_permission(data), do: Enum.map(data, fn permission ->
-    Map.get(permission.data) |> Map.put(:metadata,Map.delete(permission.metadata,:project)) end)
-
+    %{parent: permission.data.parent_id,child: permission.data.child_id,metadata: Map.delete(permission.metadata,:project), type: permission.data.type}
+  end)
 end
