@@ -64,7 +64,7 @@ defmodule Arke.Validator do
     check_duplicate_units(unit_list, project, persistence_fn)
     |> apply_before_validate(project)
     |> check_bulk_parameters(arke, parameter_list, project)
-    |> check_unique_parameters(arke, parameter_list, project)
+    |> check_unique_parameters(arke, parameter_list, project, persistence_fn)
   end
 
   defp apply_before_validate(%{valid: valid, errors: errors}, project),
@@ -103,27 +103,13 @@ defmodule Arke.Validator do
 
     %{
       valid: valid,
-      errors:
-        Enum.map(duplicates, fn d -> {d, "duplicate values are not allowed for #{d.id}"} end)
+      errors: Enum.map(duplicates, fn d -> {d, "value not allowed for #{d.id}"} end)
     }
   end
 
   defp check_duplicate_units(unit_list, _project, _persistence_fn),
+    # todo: manage update
     do: %{valid: unit_list, errors: []}
-
-  defp check_old_values(errors, old_unit_data, new_unit_data, :update) do
-    duplicate_list =
-      Enum.filter(errors, fn {k, v} ->
-        is_binary(k) and String.contains?(k, "duplicate") and is_atom(v)
-      end)
-
-    same_value =
-      Enum.filter(duplicate_list, fn {_k, v} -> old_unit_data[v] == new_unit_data[v] end)
-
-    :ordsets.subtract(errors, same_value)
-  end
-
-  defp check_old_values(errors, _old_unit_data, _new_unit_data, :create), do: errors
 
   defp get_result({_unit, errors} = _res) when is_list(errors) and length(errors) > 0,
     do: Error.create(:parameter_validation, errors)
@@ -167,7 +153,13 @@ defmodule Arke.Validator do
     end)
   end
 
-  defp check_unique_parameters(%{valid: valid, errors: errors}, arke, parameter_list, project) do
+  defp check_unique_parameters(
+         %{valid: valid, errors: errors},
+         arke,
+         parameter_list,
+         project,
+         :create
+       ) do
     unique_map = create_unique_map(parameter_list, valid)
 
     case map_size(unique_map) do
@@ -186,18 +178,34 @@ defmodule Arke.Validator do
         parameter_already_present = create_unique_map(parameter_list, db_units)
 
         Enum.reduce(valid, %{valid: [], errors: errors}, fn unit, acc ->
-          has_error =
-            Enum.any?(parameter_already_present, fn {parameter_id, values} ->
+          non_unique_parameters =
+            Enum.filter(parameter_already_present, fn {parameter_id, values} ->
               Enum.member?(values, Map.get(unit.data, parameter_id))
             end)
 
-          if has_error do
-            %{acc | errors: [{unit, "duplicate values are not allowed"} | acc.errors]}
+          if length(non_unique_parameters) > 0 do
+            new_errors =
+              Enum.map(non_unique_parameters, fn {parameter_id, _values} ->
+                {unit,
+                 "value not allowed for parameter #{parameter_id}: #{Map.get(unit.data, parameter_id)}"}
+              end)
+
+            %{acc | errors: new_errors ++ acc.errors}
           else
             %{acc | valid: [unit | acc.valid]}
           end
         end)
     end
+  end
+
+  defp check_unique_parameters(
+         %{valid: valid, errors: errors},
+         arke,
+         parameter_list,
+         project,
+         :update
+       ) do
+    %{valid: valid, errors: errors}
   end
 
   @doc """
