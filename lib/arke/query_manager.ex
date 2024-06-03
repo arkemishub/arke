@@ -362,12 +362,26 @@ defmodule Arke.QueryManager do
     arke = ArkeManager.get(arke_id, project)
     persistence_fn = @persistence[:arke_postgres][:delete]
 
-    with {:ok, unit} <- ArkeManager.call_func(arke, :before_delete, [arke, unit]),
-         {:ok, unit} <- handle_group_call_func(arke, unit, :before_unit_delete),
-         {:ok, nil} <- persistence_fn.(project, unit),
-         {:ok, unit} <- handle_group_call_func(arke, unit, :on_unit_delete),
-         {:ok, _unit} <- ArkeManager.call_func(arke, :on_delete, [arke, unit]),
+    with {:ok, unit} <- run_persistence_hooks(arke, unit, :delete, :before),
+         {:ok, unit} <- persistence_fn.(project, unit, []),
+         {:ok, _unit} <- run_persistence_hooks(arke, unit, :delete, :after),
          do: {:ok, nil},
+         else: ({:error, errors} -> {:error, errors})
+  end
+
+  @spec delete_bulk(project :: atom(), [Unit.t()]) :: {:ok, [any()], [any()]}
+  def delete_bulk(project, []), do: {:ok, [], []}
+
+  def delete_bulk(project, [%{arke_id: arke_id} | _] = unit_list) do
+    arke = ArkeManager.get(arke_id, project)
+    persistence_fn = @persistence[:arke_postgres][:delete]
+
+    with %{valid: valid, errors: errors} <-
+           process_bulk(unit_list, [], arke, :delete, :before),
+         {:ok, _, _} <- persistence_fn.(project, valid, bulk: true),
+         %{valid: valid, errors: errors} <-
+           process_bulk(valid, errors, arke, :delete, :after),
+         do: {:ok, valid, errors},
          else: ({:error, errors} -> {:error, errors})
   end
 
@@ -927,5 +941,17 @@ defmodule Arke.QueryManager do
          {:ok, unit} <- handle_group_call_func(arke, unit, :on_unit_update),
          {:ok, unit} <- handle_link_parameters(unit, data),
          do: {:ok, unit}
+  end
+
+  defp run_persistence_hooks(arke, unit, :delete, :before) do
+    with {:ok, unit} <- ArkeManager.call_func(arke, :before_delete, [arke, unit]),
+         {:ok, unit} <- handle_group_call_func(arke, unit, :before_unit_delete),
+         do: {:ok, unit}
+  end
+
+  defp run_persistence_hooks(arke, unit, :delete, :after) do
+    with {:ok, unit} <- handle_group_call_func(arke, unit, :on_unit_delete),
+         {:ok, _unit} <- ArkeManager.call_func(arke, :on_delete, [arke, unit]),
+         do: {:ok, nil}
   end
 end
