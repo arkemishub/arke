@@ -132,11 +132,15 @@ defmodule Arke.Validator do
         {unit, []} ->
           Map.put(acc, :valid, [unit | acc.valid])
 
-        # todo: manage multiple errors
         {unit, unit_errors} ->
-          {parameter_id, err} = List.first(unit_errors)
-
-          %{acc | errors: [{unit, "#{parameter_id} #{err}"} | acc.errors]}
+          %{
+            acc
+            | errors: [
+                {unit,
+                 Enum.map(unit_errors, fn {parameter_id, error} -> "#{parameter_id} #{error}" end)}
+                | acc.errors
+              ]
+          }
       end
     end)
   end
@@ -147,7 +151,7 @@ defmodule Arke.Validator do
        Enum.reduce(unit_list, [], fn unit, acc ->
          case Map.get(unit.data, p.id) do
            nil -> acc
-           v -> [v | acc]
+           v -> [{unit.id, v} | acc]
          end
        end)}
     end)
@@ -158,7 +162,7 @@ defmodule Arke.Validator do
          arke,
          parameter_list,
          project,
-         :create
+         persistence_fn
        ) do
     unique_map = create_unique_map(parameter_list, valid)
 
@@ -171,7 +175,9 @@ defmodule Arke.Validator do
           QueryManager.query(arke: arke.id, project: project)
           |> QueryManager.or_(
             false,
-            Enum.map(unique_map, fn {id, values} -> QueryManager.condition(id, :in, values) end)
+            Enum.map(unique_map, fn {id, uniques} ->
+              QueryManager.condition(id, :in, Enum.map(uniques, fn {_, v} -> v end))
+            end)
           )
           |> QueryManager.all()
 
@@ -179,33 +185,35 @@ defmodule Arke.Validator do
 
         Enum.reduce(valid, %{valid: [], errors: errors}, fn unit, acc ->
           non_unique_parameters =
-            Enum.filter(parameter_already_present, fn {parameter_id, values} ->
-              Enum.member?(values, Map.get(unit.data, parameter_id))
+            Enum.filter(parameter_already_present, fn {parameter_id, uniques} ->
+              case persistence_fn do
+                :create ->
+                  Enum.member?(
+                    Enum.map(uniques, fn {_, v} -> v end),
+                    Map.get(unit.data, parameter_id)
+                  )
+
+                :update ->
+                  Enum.any?(uniques, fn {unit_id, value} ->
+                    to_string(unit_id) != to_string(unit.id) and
+                      value == Map.get(unit.data, parameter_id)
+                  end)
+              end
             end)
 
           if length(non_unique_parameters) > 0 do
-            new_errors =
-              Enum.map(non_unique_parameters, fn {parameter_id, _values} ->
-                {unit,
-                 "value not allowed for parameter #{parameter_id}: #{Map.get(unit.data, parameter_id)}"}
-              end)
+            unit_errors =
+              {unit,
+               Enum.map(non_unique_parameters, fn {parameter_id, _values} ->
+                 "value not allowed for parameter #{parameter_id}: #{Map.get(unit.data, parameter_id)}"
+               end)}
 
-            %{acc | errors: new_errors ++ acc.errors}
+            %{acc | errors: [unit_errors | acc.errors]}
           else
             %{acc | valid: [unit | acc.valid]}
           end
         end)
     end
-  end
-
-  defp check_unique_parameters(
-         %{valid: valid, errors: errors},
-         arke,
-         parameter_list,
-         project,
-         :update
-       ) do
-    %{valid: valid, errors: errors}
   end
 
   @doc """

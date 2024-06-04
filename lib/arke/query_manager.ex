@@ -143,7 +143,7 @@ defmodule Arke.QueryManager do
     persistence_fn = @persistence[:arke_postgres][:create]
 
     with %Unit{} = unit <- Unit.load(arke, args, :create),
-         %{valid: [unit], errors: errors} <- Validator.validate(unit, :create, project),
+         %{valid: [unit], errors: _errors} <- Validator.validate(unit, :create, project),
          {:ok, unit} <- run_persistence_hooks(arke, unit, :create, :before),
          {:ok, unit} <- persistence_fn.(project, unit, []),
          {:ok, unit} <- run_persistence_hooks(arke, unit, :create, :after) do
@@ -162,10 +162,11 @@ defmodule Arke.QueryManager do
     with %{valid: valid, errors: errors} <- prepare_create_bulk_units(arke, data, args),
          %{valid: valid, errors: errors} <- Validator.validate(valid, :create, project),
          %{valid: valid, errors: errors} <- process_bulk(valid, errors, arke, :create, :before),
-         {:ok, valid, persistence_errors} <- persistence_fn.(project, valid, bulk: true),
+         {:ok, inserted_count, valid, persistence_errors} <-
+           persistence_fn.(project, valid, bulk: true),
          %{valid: valid, errors: errors} <-
            process_bulk(valid, errors ++ persistence_errors, arke, :create, :after) do
-      {:ok, valid, errors}
+      {:ok, inserted_count, errors}
     else
       {:error, errors} -> {:error, errors}
     end
@@ -285,7 +286,7 @@ defmodule Arke.QueryManager do
 
     with %Unit{} = unit <- Unit.update(current_unit, args),
          {:ok, unit} <- update_at_on_update(unit),
-         %{valid: [unit], errors: errors} <- Validator.validate(unit, :update, project),
+         %{valid: [unit], errors: _errors} <- Validator.validate(unit, :update, project),
          # todo better valid / error handling
          {:ok, unit} <- run_persistence_hooks(arke, unit, :update, :before),
          {:ok, unit} <- persistence_fn.(project, unit, []),
@@ -307,10 +308,13 @@ defmodule Arke.QueryManager do
   def update_bulk(project, arke, unit_list, data) do
     persistence_fn = @persistence[:arke_postgres][:update]
 
+    %{valid: valid, errors: errors} = prepare_update_bulk_units(arke, unit_list, data)
+
     with %{valid: valid, errors: errors} <- prepare_update_bulk_units(arke, unit_list, data),
          %{valid: valid, errors: errors} <- Validator.validate(valid, :update, project),
          %{valid: valid, errors: errors} <- process_bulk(valid, errors, arke, :update, :before),
-         {:ok, valid, persistence_errors} <- persistence_fn.(project, valid, bulk: true),
+         {:ok, updated_count, valid, persistence_errors} <-
+           persistence_fn.(project, valid, bulk: true),
          %{valid: valid, errors: errors} <-
            process_bulk(
              valid,
@@ -321,7 +325,7 @@ defmodule Arke.QueryManager do
              unit_list,
              data
            ) do
-      {:ok, valid, errors}
+      {:ok, updated_count, errors}
     else
       {:error, errors} -> {:error, errors}
     end
@@ -938,8 +942,8 @@ defmodule Arke.QueryManager do
 
   defp run_persistence_hooks(arke, unit, :update, :after, data, current_unit) do
     with {:ok, unit} <- ArkeManager.call_func(arke, :on_update, [arke, current_unit, unit]),
-         {:ok, unit} <- handle_group_call_func(arke, unit, :on_unit_update),
          {:ok, unit} <- handle_link_parameters(unit, data),
+         {:ok, unit} <- handle_group_call_func(arke, unit, :on_unit_update),
          do: {:ok, unit}
   end
 
