@@ -64,7 +64,7 @@ defmodule Arke.Validator do
     check_duplicate_units(unit_list, project, persistence_fn)
     |> apply_before_validate(project)
     |> check_bulk_parameters(arke, parameter_list, project)
-    |> check_unique_parameters(arke, parameter_list, project, persistence_fn)
+    |> check_unique_parameters(arke, parameter_list, project)
   end
 
   defp apply_before_validate(%{valid: valid, errors: errors}, project),
@@ -158,61 +158,104 @@ defmodule Arke.Validator do
   end
 
   defp check_unique_parameters(
-         %{valid: valid, errors: errors},
+         %{valid: valid, errors: errors} = unit_map,
          arke,
          parameter_list,
-         project,
-         persistence_fn
+         project
        ) do
     unique_map = create_unique_map(parameter_list, valid)
 
-    case map_size(unique_map) do
-      0 ->
-        %{valid: valid, errors: errors}
+    valid
+    |> validate_unique_input([], errors, unique_map)
+    |> validate_and_filter_unique_units(unique_map, arke, project, parameter_list)
+  end
 
-      _ ->
-        db_units =
-          QueryManager.query(arke: arke.id, project: project)
-          |> QueryManager.or_(
-            false,
-            Enum.map(unique_map, fn {id, uniques} ->
-              QueryManager.condition(id, :in, Enum.map(uniques, fn {_, v} -> v end))
-            end)
-          )
-          |> QueryManager.all()
+  defp validate_and_filter_unique_units(
+         %{valid: valid, errors: errors},
+         unique_map,
+         _arke,
+         _project,
+         _parameter_list
+       )
+       when map_size(unique_map) == 0,
+       do: %{valid: valid, errors: errors}
 
-        parameter_already_present = create_unique_map(parameter_list, db_units)
+  defp validate_and_filter_unique_units(
+         %{valid: valid, errors: errors},
+         unique_map,
+         arke,
+         project,
+         parameter_list
+       ) do
+    db_units =
+      QueryManager.query(arke: arke.id, project: project)
+      |> QueryManager.or_(
+        false,
+        Enum.map(unique_map, fn {parameter_id, uniques} ->
+          QueryManager.condition(parameter_id, :in, Enum.map(uniques, fn {_, v} -> v end))
+        end)
+      )
+      |> QueryManager.all()
 
-        Enum.reduce(valid, %{valid: [], errors: errors}, fn unit, acc ->
-          non_unique_parameters =
-            Enum.filter(parameter_already_present, fn {parameter_id, uniques} ->
-              case persistence_fn do
-                :create ->
-                  Enum.member?(
-                    Enum.map(uniques, fn {_, v} -> v end),
-                    Map.get(unit.data, parameter_id)
-                  )
+    parameter_already_present = create_unique_map(parameter_list, db_units)
 
-                :update ->
-                  Enum.any?(uniques, fn {unit_id, value} ->
-                    to_string(unit_id) != to_string(unit.id) and
-                      value == Map.get(unit.data, parameter_id)
-                  end)
-              end
-            end)
+    Enum.reduce(valid, %{valid: [], errors: errors}, fn unit, acc ->
+      {non_unique_parameters, unit_errors} =
+        parameter_already_present
+        |> Enum.reduce({[], []}, fn {parameter_id, uniques}, {non_unique, errors} ->
+          case Enum.find(uniques, fn {unit_id, value} ->
+                 to_string(unit_id) != to_string(unit.id) and
+                   value == Map.get(unit.data, parameter_id)
+               end) do
+            nil ->
+              {non_unique, errors}
 
-          if length(non_unique_parameters) > 0 do
-            unit_errors =
-              {unit,
-               Enum.map(non_unique_parameters, fn {parameter_id, _values} ->
+            _ ->
+              {[{parameter_id, uniques} | non_unique],
+               [
                  "value not allowed for parameter #{parameter_id}: #{Map.get(unit.data, parameter_id)}"
-               end)}
-
-            %{acc | errors: [unit_errors | acc.errors]}
-          else
-            %{acc | valid: [unit | acc.valid]}
+                 | errors
+               ]}
           end
         end)
+
+      if non_unique_parameters == [] do
+        %{acc | valid: [unit | acc.valid]}
+      else
+        %{acc | errors: [{unit, unit_errors} | acc.errors]}
+      end
+    end)
+  end
+
+  defp validate_unique_input(unit_list, valid, errors, unique_map)
+       when map_size(unique_map) == 0,
+       do: %{valid: valid, errors: errors}
+
+  defp validate_unique_input([], valid, errors, _unique_map),
+    do: %{valid: valid, errors: errors}
+
+  defp validate_unique_input([unit | tail], valid, errors, unique_map) do
+    unit_errors =
+      Enum.reduce(unique_map, [], fn {parameter_id, uniques}, acc ->
+        case Map.get(unit.data, parameter_id) do
+          nil ->
+            acc
+
+          value ->
+            if Enum.count(uniques, fn {_, parameter_value} -> parameter_value == value end) > 1 do
+              [
+                "value not allowed for parameter #{parameter_id}: #{value}"
+                | acc
+              ]
+            else
+              acc
+            end
+        end
+      end)
+
+    case unit_errors do
+      [] -> validate_unique_input(tail, [unit | valid], errors, unique_map)
+      _ -> validate_unique_input(tail, valid, [{unit, unit_errors} | errors], unique_map)
     end
   end
 
