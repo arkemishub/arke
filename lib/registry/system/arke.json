@@ -42,6 +42,52 @@
     ]
   },
   {
+    "id": "parameter_value",
+    "label": "Parameter value",
+    "type": "table",
+    "parameters": [
+      {
+        "id": "value",
+        "metadata": {
+          "nullable": true,
+          "required": true,
+          "persistence": "table_column"
+        }
+      },
+      {
+        "id": "datetime",
+        "metadata": {
+          "is_primary": true,
+          "required": true,
+          "persistence": "table_column"
+        }
+      },
+      {
+        "id": "parameter_id",
+        "metadata": {
+          "is_primary": true,
+          "required": true,
+          "persistence": "table_column"
+        }
+      },
+      {
+        "id": "unit_id",
+        "metadata": {
+          "is_primary": true,
+          "required": true,
+          "persistence": "table_column"
+        }
+      },
+      {
+        "id": "metadata",
+        "metadata": {
+          "is_primary": true,
+          "default_dict": {},
+          "persistence": "table_column"
+        }
+      }
+    ]
+  },{
     "id": "arke_link",
     "label": "Link",
     "type": "table",
