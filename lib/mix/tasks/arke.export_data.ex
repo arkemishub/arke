@@ -193,6 +193,8 @@ defmodule Mix.Tasks.Arke.ExportData do
     Enum.map(data,fn arke ->
     parameters = Enum.filter(arke_param_list, fn p -> to_string(p.data.parent_id) == to_string(arke.id) end)
     |> Enum.map(fn p -> %{id: to_string(p.data.child_id), metadata: Map.delete(p.metadata,:project)} end)
+    |>Enum.sort_by(&Map.fetch(&1, :id))
+
     %{id: to_string(arke.id),label: arke.data.label, parameters: parameters}
     end)
     |>Enum.sort_by(&Map.fetch(&1, :id))
@@ -200,7 +202,8 @@ defmodule Mix.Tasks.Arke.ExportData do
 
   defp prepare_group(data) do
     Enum.map(data,fn group ->
-      %{id: to_string(group.id),label: group.data.label, description: group.data.description,arke_list: group.data.arke_list}
+    ordered_arke  = Enum.sort_by(group.data.arke_list, &(&1))
+      %{id: to_string(group.id),label: group.data.label, description: group.data.description,arke_list: ordered_arke}
     end)
     |>Enum.sort_by(&Map.fetch(&1, :id))
   end
