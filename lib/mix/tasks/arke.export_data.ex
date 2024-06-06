@@ -1,17 +1,16 @@
 defmodule Mix.Tasks.Arke.ExportData do
   @moduledoc """
   Export data from a given project in the database and save them in json file.
+    It exports, by default, all the arkes,groups, parameters and permissions
 
   ## Examples
 
       $ mix arke.export_data --project my_project1 --p myproject2
-      $ mix arke.export_data --project my_project --all
       $ mix arke.export_data --project my_project --arke
 
   ## Command line options
 
   * `--project` - The id of the project used to export data.
-  * `--all` - Export all arkes,groups and parameters
   * `--arke` - Export only the arkes
   * `--group` - Export only the groups
   * `--parameter` - Export only the parameters
@@ -33,26 +32,23 @@ defmodule Mix.Tasks.Arke.ExportData do
 
   @switches [
     project: :string,
-    all: :boolean,
     arke: :boolean,
     parameter: :boolean,
-    split_file: :boolean,
+    splitfile: :boolean,
     group: :boolean,
     persistence: :string,
   ]
   @aliases [
     p: :project,
-    A: :all,
     a: :arke,
     g: :group,
-    sf: :split_file,
+    sf: :splitfile,
     pr: :parameter,
     ps: :persistence,
   ]
 
   @impl true
   def run(args) do
-
     case OptionParser.parse!(args, strict: @switches, aliases: @aliases) do
       {[], _opts}->
         Mix.Tasks.Help.run(["arke.export_data"])
@@ -91,7 +87,6 @@ defmodule Mix.Tasks.Arke.ExportData do
     arke_id_str = to_string(arke_id)
     path = "#{dir_path}/#{arke_id_str}.json"
     Mix.shell().info("--- Writing data to #{path} for #{arke_id_str}  --- ")
-
     File.mkdir_p!(dir_path)
     {:ok, body} = Jason.encode(data)
     {:ok, file} = File.open(path, [:append])
@@ -115,14 +110,14 @@ defmodule Mix.Tasks.Arke.ExportData do
   defp export_data(opts,persistence)  do
     start_manager!(Application.get_env(:arke, :persistence)[String.to_atom(persistence)][:init])
     project = String.to_atom(opts[:project]) || :arke_system
-    split_file =  opts[:split_file] || false
+    split_file =  opts[:splitfile] || false
     data = get_data(project,opts)
     arke = prepare_arke(data.arke,data.arke_parameter)
     group = prepare_group(data.group)
     parameter = prepare_parameter(data.parameter)
     permission = prepare_permission(data.permission)
 
-    if opts[:split_file] do
+    if split_file do
       write_to_file(project,:arke,%{arke: arke})
       write_to_file(project,:group,%{group: group})
       write_to_file(project,:parameter,%{parameter: parameter})
@@ -136,17 +131,18 @@ defmodule Mix.Tasks.Arke.ExportData do
   end
 
   def get_data(project,opts) do
-    all = opts[:all] || false
-      if all do
-        get_all(project)
-      else
-        arke =  get_arke(project,opts[:arke])
-        arke_parameter =  get_arke_parameter(project)
-        parameter =  get_parameter(project,opts[:parameter])
-        group =  get_group(project,opts[:group])
-        permission = get_permission(project)
-        %{arke: arke, parameter: parameter, group: group, permission: permission, arke_parameter: arke_parameter}
-      end
+
+    # if the opts doesn not include any flag then export all
+    if not Enum.any?(Keyword.keys(opts), fn k -> k in [:arke,:parameter,:group] end) do
+      get_all(project)
+    else
+      arke =  get_arke(project,opts[:arke])
+      arke_parameter =  get_arke_parameter(project)
+      parameter =  get_parameter(project,opts[:parameter])
+      group =  get_group(project,opts[:group])
+      permission = get_permission(project)
+      %{arke: arke, parameter: parameter, group: group, permission: permission, arke_parameter: arke_parameter}
+    end
   end
 
   defp get_arke(project, nil), do: []
@@ -178,8 +174,8 @@ defmodule Mix.Tasks.Arke.ExportData do
     parsed_data = Enum.reduce(data,%{arke: [],group: [],parameter: []}, fn unit,acc ->
     parse_data(unit,to_string(unit.arke_id),p_list,acc)
     end)
-    Map.put(parsed_data,:permission, get_permission(project))
-    |>Map.put(:arke_parameter, get_arke_parameter(project))
+    |> Map.put(:permission, get_permission(project))
+    |> Map.put(:arke_parameter, get_arke_parameter(project))
   end
 
   defp parse_data(unit,"arke",_p_list,acc), do: %{acc | arke: acc.arke ++ [unit]}
@@ -197,19 +193,25 @@ defmodule Mix.Tasks.Arke.ExportData do
     Enum.map(data,fn arke ->
     parameters = Enum.filter(arke_param_list, fn p -> to_string(p.data.parent_id) == to_string(arke.id) end)
     |> Enum.map(fn p -> %{id: to_string(p.data.child_id), metadata: Map.delete(p.metadata,:project)} end)
+    |>Enum.sort_by(&Map.fetch(&1, :id))
+
     %{id: to_string(arke.id),label: arke.data.label, parameters: parameters}
     end)
+    |>Enum.sort_by(&Map.fetch(&1, :id))
   end
 
   defp prepare_group(data) do
     Enum.map(data,fn group ->
-      %{id: to_string(group.id),label: group.data.label, description: group.data.description,arke_list: group.data.arke_list}
+    ordered_arke  = Enum.sort_by(group.data.arke_list, &(&1))
+      %{id: to_string(group.id),label: group.data.label, description: group.data.description,arke_list: ordered_arke}
     end)
+    |>Enum.sort_by(&Map.fetch(&1, :id))
   end
 
-  defp prepare_parameter(data), do: Enum.map(data,fn parameter-> Map.put(parameter.data,:id,to_string(parameter.id))end)
+  defp prepare_parameter(data), do: Enum.map(data,fn parameter-> Map.put(parameter.data,:id,to_string(parameter.id))end) |>Enum.sort_by(&Map.fetch(&1, :id))
 
   defp prepare_permission(data), do: Enum.map(data, fn permission ->
     %{parent: permission.data.parent_id,child: permission.data.child_id,metadata: Map.delete(permission.metadata,:project), type: permission.data.type}
   end)
+  |>Enum.sort_by(&Map.fetch(&1, :parent))
 end
