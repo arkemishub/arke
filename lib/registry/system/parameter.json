@@ -264,7 +264,7 @@
     "required": false
   },
   {
-    "default_list": {},
+    "default_dict": {},
     "type": "dict",
     "format": "attribute",
     "helper_text": "Metadata",
