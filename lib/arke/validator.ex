@@ -227,9 +227,9 @@ defmodule Arke.Validator do
     end)
   end
 
-  defp validate_unique_input(unit_list, valid, errors, unique_map)
+  defp validate_unique_input(unit_list, _valid, errors, unique_map)
        when map_size(unique_map) == 0,
-       do: %{valid: valid, errors: errors}
+       do: %{valid: unit_list, errors: errors}
 
   defp validate_unique_input([], valid, errors, _unique_map),
     do: %{valid: valid, errors: errors}
