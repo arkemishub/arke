@@ -1425,6 +1425,82 @@ defmodule Arke do
         nil
       )
 
+    value =
+      Unit.new(
+        :value,
+        Map.merge(
+          base_parameter(label: "Value", persistence: "table_column"),
+          %{default_dict: %{}}
+        ),
+        :dict,
+        nil,
+        %{},
+        nil,
+        nil,
+        nil
+      )
+
+    datetime =
+      Unit.new(
+        :datetime,
+        Map.merge(
+          base_parameter(label: "Datetime", persistence: "table_column"),
+          %{default_datetime: nil}
+        ),
+        :datetime,
+        nil,
+        %{},
+        nil,
+        nil,
+        nil
+      )
+
+    parameter_id =
+      Unit.new(
+        :parameter_id,
+        Map.merge(
+          base_parameter(label: "Parameter id", persistence: "table_column"),
+          %{
+            min_length: nil,
+            max_length: nil,
+            strip: false,
+            values: nil,
+            multiple: false,
+            unique: false,
+            default_string: ""
+          }
+        ),
+        :string,
+        nil,
+        %{},
+        nil,
+        nil,
+        nil
+      )
+
+    unit_id =
+      Unit.new(
+        :unit_id,
+        Map.merge(
+          base_parameter(label: "Unit id", persistence: "table_column"),
+          %{
+            min_length: nil,
+            max_length: nil,
+            strip: false,
+            values: nil,
+            multiple: false,
+            unique: false,
+            default_string: ""
+          }
+        ),
+        :string,
+        nil,
+        %{},
+        nil,
+        nil,
+        nil
+      )
+
     parameters = [
       id,
       arke_id,
@@ -1494,7 +1570,11 @@ defmodule Arke do
       size,
       expiration,
       token,
-      user_id
+      user_id,
+      value,
+      parameter_id,
+      unit_id,
+      datetime
     ]
 
     Enum.map(parameters, fn parameter ->
