@@ -43,33 +43,41 @@ defmodule Arke.Validator do
       %{:error, [message]}
 
   """
-  @spec validate(unit :: Unit.t(), peristence_fn :: (() -> any()), project :: atom()) ::
+  @spec validate(unit :: Unit.t() | [Unit.t()], peristence_fn :: (-> any()), project :: atom()) ::
           func_return()
-  def validate(%{arke_id: arke_id} = unit, persistence_fn, project \\ :arke_system) do
-    with {:ok, unit} <- check_duplicate_unit(unit, project, persistence_fn) do
-      {%{data: data} = unit, errors} = before_validate(unit, project)
-      %{data: arke_data} = arke = ArkeManager.get(arke_id, project)
+  def validate(unit, persistence_fn, project \\ :arke_system)
 
-      unit_parameters =
-        Enum.filter(ArkeManager.get_parameters(arke), fn %{data: %{persistence: persistence}} ->
-          persistence == "arke_parameter"
-        end)
-      res =
-        Enum.reduce(unit_parameters, {unit, errors}, fn p, {new_unit, errors} = _res ->
-          {value, err} = validate_parameter(arke, p, Unit.get_value(data, p.id), project)
-          {Unit.update(new_unit, [{p.id, value}]), errors ++ err}
-        end)
+  def validate(%Unit{} = unit, persistence_fn, project),
+    do: validate([unit], persistence_fn, project)
 
-      {new_unit, errors} = res
-      filtered_errors = check_old_values(errors, data, new_unit.data, persistence_fn)
+  def validate([], _persistence_fn, _project),
+    do: %{valid: [], errors: [{nil, "empty list of units"}]}
 
-      get_result({new_unit, filtered_errors})
-    else
-      {:error, errors} -> get_result({unit, errors})
-    end
+  def validate([%Unit{arke_id: arke_id} | _] = unit_list, persistence_fn, project) do
+    %{data: arke_data} = arke = ArkeManager.get(arke_id, project)
 
-    # TODO: handle after validate
+    parameter_list =
+      Enum.filter(ArkeManager.get_parameters(arke), fn %{data: %{persistence: persistence}} ->
+        persistence == "arke_parameter"
+      end)
+
+    check_duplicate_units(unit_list, project, persistence_fn)
+    |> apply_before_validate(project)
+    |> check_bulk_parameters(arke, parameter_list, project)
+    |> check_unique_parameters(arke, parameter_list, project)
   end
+
+  defp apply_before_validate(%{valid: valid, errors: errors}, project),
+    do:
+      Enum.reduce(valid, %{valid: [], errors: errors}, fn u, acc ->
+        case before_validate(u, project) do
+          {unit, []} ->
+            Map.put(acc, :valid, [unit | acc.valid])
+
+          {unit, unit_errors} ->
+            Map.put(errors, :errors, errors ++ {unit, unit_errors})
+        end
+      end)
 
   defp before_validate(%{arke_id: arke_id} = unit, project) do
     arke = ArkeManager.get(arke_id, project)
@@ -79,35 +87,178 @@ defmodule Arke.Validator do
          else: ({:error, errors} -> {unit, errors})
   end
 
-  defp check_duplicate_unit(%{id: unit_id} = unit, _project, :create) when is_nil(unit_id),
-    do: {:ok, unit}
+  defp check_duplicate_units(unit_list, project, :create) do
+    ids_to_check =
+      Enum.filter(unit_list, fn u -> not is_nil(u.id) end) |> Enum.map(&to_string(&1.id))
 
-  defp check_duplicate_unit(%{id: unit_id} = unit, project, :create) do
-    with nil <- QueryManager.get_by(%{:id => unit_id, :project => project}),
-         do: {:ok, unit},
-         else: (_ -> {:error, [{"You can not create Unit with same id", unit_id}]})
-  end
+    duplicates = QueryManager.filter_by(%{:id__in => ids_to_check, :project => project})
+    # todo: merge with system duplicates
 
-  defp check_duplicate_unit(%{id: unit_id} = unit, _project, _persistence_fn), do: {:ok, unit}
-
-  defp check_old_values(errors, old_unit_data, new_unit_data, :update) do
-    duplicate_list =
-      Enum.filter(errors, fn {k, v} ->
-        is_binary(k) and String.contains?(k, "duplicate") and is_atom(v)
+    valid =
+      Enum.reduce(unit_list, [], fn item, acc ->
+        case Enum.find(duplicates, fn d -> d.id == item.id end) do
+          nil -> [item | acc]
+          _ -> acc
+        end
       end)
 
-    same_value =
-      Enum.filter(duplicate_list, fn {_k, v} -> old_unit_data[v] == new_unit_data[v] end)
-
-    :ordsets.subtract(errors, same_value)
+    %{
+      valid: valid,
+      errors: Enum.map(duplicates, fn d -> {d, "value not allowed for #{d.id}"} end)
+    }
   end
 
-  defp check_old_values(errors, _old_unit_data, _new_unit_data, :create), do: errors
+  defp check_duplicate_units(unit_list, _project, _persistence_fn),
+    # todo: manage update
+    do: %{valid: unit_list, errors: []}
 
   defp get_result({_unit, errors} = _res) when is_list(errors) and length(errors) > 0,
     do: Error.create(:parameter_validation, errors)
 
   defp get_result({unit, _errors} = _res), do: {:ok, unit}
+
+  defp check_bulk_parameters(%{valid: valid, errors: errors}, arke, parameter_list, project) do
+    Enum.reduce(valid, %{valid: [], errors: errors}, fn unit, acc ->
+      case Enum.reduce(parameter_list, {unit, []}, fn parameter, {unit, errors} ->
+             {value, err} =
+               validate_parameter(
+                 arke,
+                 parameter,
+                 Unit.get_value(unit.data, parameter.id),
+                 project
+               )
+
+             {Unit.update(unit, [{parameter.id, value}]), errors ++ err}
+           end) do
+        {unit, []} ->
+          Map.put(acc, :valid, [unit | acc.valid])
+
+        {unit, unit_errors} ->
+          %{
+            acc
+            | errors: [
+                {unit,
+                 Enum.map(unit_errors, fn {parameter_id, error} -> "#{parameter_id} #{error}" end)}
+                | acc.errors
+              ]
+          }
+      end
+    end)
+  end
+
+  defp create_unique_map(parameter_list, unit_list) do
+    Map.new(Enum.filter(parameter_list, fn p -> p.data[:unique] end), fn p ->
+      {p.id,
+       Enum.reduce(unit_list, [], fn unit, acc ->
+         case Map.get(unit.data, p.id) do
+           nil -> acc
+           v -> [{unit.id, v} | acc]
+         end
+       end)}
+    end)
+  end
+
+  defp check_unique_parameters(
+         %{valid: valid, errors: errors} = unit_map,
+         arke,
+         parameter_list,
+         project
+       ) do
+    unique_map = create_unique_map(parameter_list, valid)
+
+    valid
+    |> validate_unique_input([], errors, unique_map)
+    |> validate_and_filter_unique_units(unique_map, arke, project, parameter_list)
+  end
+
+  defp validate_and_filter_unique_units(
+         %{valid: valid, errors: errors},
+         unique_map,
+         _arke,
+         _project,
+         _parameter_list
+       )
+       when map_size(unique_map) == 0,
+       do: %{valid: valid, errors: errors}
+
+  defp validate_and_filter_unique_units(
+         %{valid: valid, errors: errors},
+         unique_map,
+         arke,
+         project,
+         parameter_list
+       ) do
+    db_units =
+      QueryManager.query(arke: arke.id, project: project)
+      |> QueryManager.or_(
+        false,
+        Enum.map(unique_map, fn {parameter_id, uniques} ->
+          QueryManager.condition(parameter_id, :in, Enum.map(uniques, fn {_, v} -> v end))
+        end)
+      )
+      |> QueryManager.all()
+
+    parameter_already_present = create_unique_map(parameter_list, db_units)
+
+    Enum.reduce(valid, %{valid: [], errors: errors}, fn unit, acc ->
+      {non_unique_parameters, unit_errors} =
+        parameter_already_present
+        |> Enum.reduce({[], []}, fn {parameter_id, uniques}, {non_unique, errors} ->
+          case Enum.find(uniques, fn {unit_id, value} ->
+                 to_string(unit_id) != to_string(unit.id) and
+                   value == Map.get(unit.data, parameter_id)
+               end) do
+            nil ->
+              {non_unique, errors}
+
+            _ ->
+              {[{parameter_id, uniques} | non_unique],
+               [
+                 "value not allowed for parameter #{parameter_id}: #{Map.get(unit.data, parameter_id)}"
+                 | errors
+               ]}
+          end
+        end)
+
+      if non_unique_parameters == [] do
+        %{acc | valid: [unit | acc.valid]}
+      else
+        %{acc | errors: [{unit, unit_errors} | acc.errors]}
+      end
+    end)
+  end
+
+  defp validate_unique_input(unit_list, _valid, errors, unique_map)
+       when map_size(unique_map) == 0,
+       do: %{valid: unit_list, errors: errors}
+
+  defp validate_unique_input([], valid, errors, _unique_map),
+    do: %{valid: valid, errors: errors}
+
+  defp validate_unique_input([unit | tail], valid, errors, unique_map) do
+    unit_errors =
+      Enum.reduce(unique_map, [], fn {parameter_id, uniques}, acc ->
+        case Map.get(unit.data, parameter_id) do
+          nil ->
+            acc
+
+          value ->
+            if Enum.count(uniques, fn {_, parameter_value} -> parameter_value == value end) > 1 do
+              [
+                "value not allowed for parameter #{parameter_id}: #{value}"
+                | acc
+              ]
+            else
+              acc
+            end
+        end
+      end)
+
+    case unit_errors do
+      [] -> validate_unique_input(tail, [unit | valid], errors, unique_map)
+      _ -> validate_unique_input(tail, valid, [{unit, unit_errors} | errors], unique_map)
+    end
+  end
 
   @doc """
   Check if the value can be assigned to a given parameter in a specific schema struct.
@@ -135,7 +286,7 @@ defmodule Arke.Validator do
 
   def validate_parameter(arke, parameter, value, project) when is_atom(parameter) do
     parameter = get_parameter(arke, parameter, project)
-    check_parameter(parameter, value, project,arke)
+    check_parameter(parameter, value, project, arke)
   end
 
   defp get_parameter(nil, parameter_id, project),
@@ -145,10 +296,10 @@ defmodule Arke.Validator do
     do: ArkeManager.get_parameter(arke, parameter_id)
 
   def validate_parameter(arke, parameter, value, project) do
-    check_parameter(parameter, value, project,arke)
+    check_parameter(parameter, value, project, arke)
   end
 
-  defp check_parameter(parameter, value, project,arke) do
+  defp check_parameter(parameter, value, project, arke) do
     value = get_default_value(parameter, value)
     value = parse_value(parameter, value)
     value = check_whitespace(parameter, value)
@@ -157,7 +308,7 @@ defmodule Arke.Validator do
       []
       |> check_required_parameter(parameter, value)
       |> check_by_type(parameter, value)
-      |> check_duplicate(parameter, value, project,arke)
+      |> check_unique(parameter, value)
 
     {value, errors}
   end
@@ -220,16 +371,10 @@ defmodule Arke.Validator do
 
   defp check_required_parameter(errors, _parameter, _value), do: errors
 
-  defp check_duplicate(errors, %{id: id, data: %{unique: true}} = _parameter, nil, project),
-       do: errors ++ [{"value must not be null for", id}]
+  defp check_unique(errors, %{id: id, data: %{unique: true}} = _parameter, nil),
+    do: errors ++ [{"value must not be null for", id}]
 
-  defp check_duplicate(errors, %{id: id, data: %{unique: true}} = parameter, value, project,arke) do
-    with nil <- QueryManager.get_by(%{id => value, :project => project, :arke_id => arke.id}),
-         do: errors,
-         else: (_ -> errors ++ [{"duplicate values are not allowed for", id}])
-  end
-
-  defp check_duplicate(errors, _parameter, _value, _project,_arke), do: errors
+  defp check_unique(errors, _parameter, _value), do: errors
 
   defp check_by_type(errors, _parameter, value) when is_nil(value), do: errors
 
@@ -258,11 +403,12 @@ defmodule Arke.Validator do
 
   defp check_values(
          errors,
-         %{arke_id: type, data: %{values: values, label: label,multiple: true}} = parameter,
+         %{arke_id: type, data: %{values: values, label: label, multiple: true}} = parameter,
          value
        )
        when is_list(value) do
     admitted_values = Enum.map(values, fn %{label: _l, value: v} -> v end)
+
     with true <- check_values_type(value, type) do
       with [] <- value -- admitted_values do
         errors
@@ -287,7 +433,8 @@ defmodule Arke.Validator do
          value
        ),
        do: errors ++ [{value, "#{label} must be a list of #{type}}"}]
- defp check_values(errors,_parameter,_value), do: errors
+
+  defp check_values(errors, _parameter, _value), do: errors
 
   defp check_values_type(value, type) do
     condition =
@@ -299,18 +446,32 @@ defmodule Arke.Validator do
 
     Enum.all?(value, &condition.(&1))
   end
+
   # --- end Enum ---
   # --- start Multiple ---
-  defp check_multiple(errors, %{id: id, data: %{multiple: false}} = _parameter, value) when is_list(value), do: errors ++ [{"multiple values are not allowed for", id}]
-  defp check_multiple(errors, %{id: id, data: %{multiple: true}} = parameter, value) when not is_list(value), do: check_multiple(errors, parameter, [value])
-  defp check_multiple(errors, %{id: id, arke_id: type, data: %{ multiple: true}} = parameter, value) do
-    case check_values_type(value,type) do
-      true -> errors
+  defp check_multiple(errors, %{id: id, data: %{multiple: false}} = _parameter, value)
+       when is_list(value),
+       do: errors ++ [{"multiple values are not allowed for", id}]
+
+  defp check_multiple(errors, %{id: id, data: %{multiple: true}} = parameter, value)
+       when not is_list(value),
+       do: check_multiple(errors, parameter, [value])
+
+  defp check_multiple(
+         errors,
+         %{id: id, arke_id: type, data: %{multiple: true}} = parameter,
+         value
+       ) do
+    case check_values_type(value, type) do
+      true ->
+        errors
+
       false ->
-        errors ++ [{"[#{Enum.join(value,",")}]", "#{id} must be a list of #{type} "}]
+        errors ++ [{"[#{Enum.join(value, ",")}]", "#{id} must be a list of #{type} "}]
     end
   end
-  defp check_multiple(errors,_parameter,_value), do: errors
+
+  defp check_multiple(errors, _parameter, _value), do: errors
   # --- end Multiple ---
 
   defp check_whitespace(%{data: %{strip: true}} = parameter, value) when is_atom(value) do
@@ -338,7 +499,8 @@ defmodule Arke.Validator do
          value
        ) do
     # todo: used to parse override in metadata which can be written as string
-    max = parse_value(%{arke_id: :integer, data: %{multiple: false}},max_length)
+    max = parse_value(%{arke_id: :integer, data: %{multiple: false}}, max_length)
+
     if String.length(value) > max do
       errors ++ [{label, "max length is #{max_length}"}]
     else
@@ -356,7 +518,8 @@ defmodule Arke.Validator do
          value
        ) do
     # todo: used to parse override in metadata which can be written as string
-    min = parse_value(%{arke_id: :integer, data: %{multiple: false}},min_length)
+    min = parse_value(%{arke_id: :integer, data: %{multiple: false}}, min_length)
+
     if String.length(value) < min do
       errors ++ [{label, "min length is #{min_length}"}]
     else
@@ -405,7 +568,8 @@ defmodule Arke.Validator do
   defp check_max(errors, %{data: %{max: max}} = parameter, _) when is_nil(max), do: errors
 
   defp check_max(errors, %{data: %{max: max, label: label}} = parameter, value) do
-    parsed_max = parse_value(parameter,max)
+    parsed_max = parse_value(parameter, max)
+
     if value > parsed_max do
       errors ++ [{label, "max is #{max}"}]
     else
@@ -416,7 +580,8 @@ defmodule Arke.Validator do
   defp check_min(errors, %{data: %{min: min}} = parameter, _) when is_nil(min), do: errors
 
   defp check_min(errors, %{data: %{min: min, label: label}} = parameter, value) do
-    parsed_min = parse_value(parameter,min)
+    parsed_min = parse_value(parameter, min)
+
     if value < parsed_min do
       errors ++ [{label, "min is #{min}"}]
     else
