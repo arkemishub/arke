@@ -92,6 +92,7 @@ defmodule Arke.Validator do
       Enum.filter(unit_list, fn u -> not is_nil(u.id) end) |> Enum.map(&to_string(&1.id))
 
     duplicates = QueryManager.filter_by(%{:id__in => ids_to_check, :project => project})
+    # todo: merge with system duplicates
 
     valid =
       Enum.reduce(unit_list, [], fn item, acc ->

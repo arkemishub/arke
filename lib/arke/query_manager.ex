@@ -367,8 +367,8 @@ defmodule Arke.QueryManager do
     persistence_fn = @persistence[:arke_postgres][:delete]
 
     with {:ok, unit} <- run_persistence_hooks(arke, unit, :delete, :before),
-         {:ok, unit} <- persistence_fn.(project, unit, []),
-         {:ok, _unit} <- run_persistence_hooks(arke, unit, :delete, :after),
+         {:ok, _} <- persistence_fn.(project, unit, []),
+         {:ok, _} <- run_persistence_hooks(arke, unit, :delete, :after),
          do: {:ok, nil},
          else: ({:error, errors} -> {:error, errors})
   end
@@ -382,7 +382,7 @@ defmodule Arke.QueryManager do
 
     with %{valid: valid, errors: errors} <-
            process_bulk(unit_list, [], arke, :delete, :before),
-         {:ok, _, _} <- persistence_fn.(project, valid, bulk: true),
+         {:ok, _} <- persistence_fn.(project, valid, bulk: true),
          %{valid: valid, errors: errors} <-
            process_bulk(valid, errors, arke, :delete, :after),
          do: {:ok, valid, errors},
