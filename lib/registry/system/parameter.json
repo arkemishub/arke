@@ -75,6 +75,18 @@
     "default_boolean": false,
     "type": "boolean",
     "format": "attribute",
+    "helper_text": "Transform to lowercase",
+    "id": "lowercase",
+    "is_primary": false,
+    "label": "Lowercase",
+    "nullable": true,
+    "persistence": "arke_parameter",
+    "required": false
+  },
+  {
+    "default_boolean": false,
+    "type": "boolean",
+    "format": "attribute",
     "helper_text": "Active",
     "id": "active",
     "is_primary": false,
@@ -457,6 +469,7 @@
     "persistence": "table_column",
     "required": true,
     "strip": true,
+"lowercase": false,
     "unique": true,
     "values": null
   },
@@ -475,6 +488,7 @@
     "persistence": "table_column",
     "required": true,
     "strip": true,
+"lowercase": false,
     "unique": false,
     "values": null
   },
@@ -493,6 +507,7 @@
     "persistence": "arke_parameter",
     "required": true,
     "strip": false,
+"lowercase": false,
     "unique": false,
     "values": null
   },
@@ -511,6 +526,7 @@
     "persistence": "arke_parameter",
     "required": false,
     "strip": false,
+"lowercase": false,
     "unique": false,
     "values": null
   },
@@ -529,6 +545,7 @@
     "persistence": "arke_parameter",
     "required": false,
     "strip": false,
+"lowercase": false,
     "unique": false,
     "values": [
       {
@@ -556,6 +573,7 @@
     "persistence": "arke_parameter",
     "required": false,
     "strip": false,
+"lowercase": false,
     "unique": false,
     "values": null
   },
@@ -574,6 +592,7 @@
     "persistence": "arke_parameter",
     "required": false,
     "strip": false,
+"lowercase": false,
     "unique": false,
     "values": null
   },
@@ -592,6 +611,7 @@
     "persistence": "arke_parameter",
     "required": false,
     "strip": false,
+"lowercase": false,
     "unique": false,
     "values": null
   },
@@ -610,6 +630,7 @@
     "persistence": "arke_parameter",
     "required": false,
     "strip": true,
+"lowercase": false,
     "unique": false,
     "values": null
   },
@@ -628,6 +649,7 @@
     "persistence": "arke_parameter",
     "required": false,
     "strip": true,
+"lowercase": false,
     "unique": false,
     "values": null
   },
@@ -646,6 +668,7 @@
     "persistence": "arke_parameter",
     "required": false,
     "strip": true,
+"lowercase": false,
     "unique": false,
     "values": null
   },
@@ -664,6 +687,7 @@
     "persistence": "arke_parameter",
     "required": false,
     "strip": false,
+"lowercase": false,
     "unique": false,
     "values": null
   },
@@ -682,6 +706,7 @@
     "persistence": "arke_parameter",
     "required": false,
     "strip": false,
+"lowercase": false,
     "unique": false,
     "values": null
   },
@@ -700,6 +725,7 @@
     "persistence": "arke_parameter",
     "required": false,
     "strip": false,
+"lowercase": false,
     "unique": false,
     "values": null
   },
@@ -718,6 +744,7 @@
     "persistence": "arke_parameter",
     "required": false,
     "strip": false,
+"lowercase": false,
     "unique": false,
     "values": null
   },
@@ -736,6 +763,7 @@
     "persistence": "arke_parameter",
     "required": false,
     "strip": false,
+"lowercase": false,
     "unique": false,
     "values": null
   },
@@ -754,6 +782,7 @@
     "persistence": "arke_parameter",
     "required": false,
     "strip": true,
+"lowercase": false,
     "unique": false,
     "values": null
   },
@@ -772,6 +801,7 @@
     "persistence": "arke_parameter",
     "required": false,
     "strip": true,
+"lowercase": false,
     "unique": false,
     "values": [
       {
@@ -799,6 +829,7 @@
     "persistence": "arke_parameter",
     "required": false,
     "strip": false,
+"lowercase": false,
     "unique": false,
     "values": null
   }
