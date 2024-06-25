@@ -46,6 +46,7 @@ defmodule Arke.System do
       def on_struct_encode(_, _, data, opts), do: {:ok, data}
       def before_struct_encode(_, unit), do: {:ok, unit}
       def on_update(arke, old_unit, unit), do: {:ok, unit}
+      def before_update(arke, old_unit, unit), do: {:ok, unit}
       def before_update(arke, unit), do: {:ok, unit}
       def on_delete(arke, unit), do: {:ok, unit}
       def before_delete(arke, unit), do: {:ok, unit}
@@ -171,6 +172,7 @@ defmodule Arke.System do
                      on_struct_encode: 4,
                      on_update: 3,
                      before_update: 2,
+                     before_update: 3,
                      on_delete: 2,
                      before_delete: 2,
                      after_get_struct: 2,
