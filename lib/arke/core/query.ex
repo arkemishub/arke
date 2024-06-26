@@ -17,7 +17,7 @@ defmodule Arke.Core.Query do
     Struct which defines a Query
   """
 
-  defstruct ~w[project arke persistence filters link orders offset limit]a
+  defstruct ~w[project arke persistence distinct filters link orders offset limit]a
   @type t() :: %Arke.Core.Query{}
 
   defmodule LinkFilter do
