@@ -133,17 +133,18 @@ defmodule Arke.Core.Query do
       %Arke.Core.Query{}
 
   """
-  @spec new(arke :: %Arke.Core.Arke{}, project :: atom()) :: Arke.Core.Query.t()
-  def new(arke, project),
-    do: %__MODULE__{
-      project: project,
-      arke: arke,
-      persistence: nil,
-      filters: [],
-      orders: [],
-      offset: nil,
-      limit: nil
-    }
+  @spec new(arke :: %Arke.Core.Arke{}, project :: atom(), distinct :: atom()) :: Arke.Core.Query.t()
+  def new(arke, project, distinct \\ nil),
+      do: %__MODULE__{
+        project: project,
+        arke: arke,
+        distinct: distinct,
+        persistence: nil,
+        filters: [],
+        orders: [],
+        offset: nil,
+        limit: nil
+      }
 
   @doc """
   Add a new link filter
