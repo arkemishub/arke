@@ -256,9 +256,6 @@ defmodule Arke.StructManager do
 
   def decode(_project, _arke_id, _json, _format), do: raise("Must pass valid data")
 
-  def load(arke_id, data) do
-  end
-
   defp handle_default_value(
          %{arke_id: :string, data: %{default_string: default_string}} = _,
          value

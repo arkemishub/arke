@@ -169,8 +169,8 @@ defmodule Arke.Core.Unit do
 
   defp handle_default_value(_), do: nil
 
-  defp get_link(%{depth: depth, link_metadata: link_metadata, link_before_node: link_before_node} = args),
-    do: {%{depth: depth, metadata: link_metadata, link_before_node: link_before_node}, args}
+  defp get_link(%{depth: depth, link_metadata: link_metadata,starting_unit: starting_unit} = args),
+       do: {%{depth: depth, metadata: link_metadata,starting_unit: starting_unit}, args}
 
   defp get_link(args), do: {nil, args}
 
