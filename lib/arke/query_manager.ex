@@ -42,6 +42,7 @@ defmodule Arke.QueryManager do
   alias Arke.LinkManager
   alias Arke.QueryManager
   alias Arke.Utils.DatetimeHandler, as: DatetimeHandler
+  alias Arke.Errors.ArkeError
   alias Arke.Core.{Arke, Unit, Query, Parameter}
 
 
@@ -344,7 +345,12 @@ defmodule Arke.QueryManager do
   defp get_arke(arke, project) when is_binary(arke),
     do: String.to_existing_atom(arke) |> get_arke(project)
 
-  defp get_arke(arke, project) when is_atom(arke), do: ArkeManager.get(arke, project)
+  defp get_arke(arke, project) when is_atom(arke) do
+    case ArkeManager.get(arke, project) do
+      nil -> raise ArkeError, context: :query, errors: "custom_message", plug_status: 404
+      arke -> arke
+    end
+  end
   defp get_arke(arke, _), do: arke
 
   defp get_group(group, project) when is_binary(group),
