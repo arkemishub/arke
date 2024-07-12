@@ -367,10 +367,12 @@ defmodule Arke.Core.Unit do
           value :: String.t() | boolean() | number() | list() | %{} | Date.t(),
           String.t()
         ) :: String.t() | boolean() | number() | list() | %{}
+  defp parse_value("null", _parameter), do: nil
+  defp parse_value("undefined", _parameter), do: nil
+
   defp parse_value(value, %{arke_id: :atom}) when is_binary(value),
     do: String.to_existing_atom(value)
 
-  defp parse_value("null", _parameter), do: nil
 
   defp parse_value(value, %{arke_id: :date}) do
     with {:ok, date} <- DatetimeHandler.parse_date(value),
