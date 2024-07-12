@@ -347,7 +347,7 @@ defmodule Arke.QueryManager do
 
   defp get_arke(arke, project) when is_atom(arke) do
     case ArkeManager.get(arke, project) do
-      nil -> raise ArkeError, context: :query, errors: "custom_message", plug_status: 404
+      nil -> raise ArkeError, context: :query, errors: "Arke #{arke} not found", type: :not_found
       arke -> arke
     end
   end
