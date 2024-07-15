@@ -43,6 +43,7 @@ defmodule Arke.QueryManager do
   alias Arke.QueryManager
   alias Arke.Utils.DatetimeHandler, as: DatetimeHandler
   alias Arke.Errors.ArkeError
+  alias Arke.Utils.ErrorGenerator, as: Error
   alias Arke.Core.{Arke, Unit, Query, Parameter}
 
 
@@ -347,7 +348,9 @@ defmodule Arke.QueryManager do
 
   defp get_arke(arke, project) when is_atom(arke) do
     case ArkeManager.get(arke, project) do
-      nil -> raise ArkeError, context: :query, errors: "Arke #{arke} not found", type: :not_found
+      nil ->
+        {:error,msg} = Error.create(:query, "arke not found")
+        raise ArkeError, error_message: msg, type: :not_found
       arke -> arke
     end
   end
