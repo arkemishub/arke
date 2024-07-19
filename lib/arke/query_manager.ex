@@ -144,9 +144,11 @@ defmodule Arke.QueryManager do
 
     with %Unit{} = unit <- Unit.load(arke, args, :create),
          %{valid: [unit], errors: _errors} <- Validator.validate(unit, :create, project),
-         {:ok, unit} <- run_persistence_hooks(arke, unit, :create, :before),
+         {:ok, unit} <- run_persistence_hook(arke, unit, :create, :before),
+         {:ok, unit} <- run_group_and_link_hooks(arke, unit, :create, :before),
          {:ok, unit} <- persistence_fn.(project, unit, []),
-         {:ok, unit} <- run_persistence_hooks(arke, unit, :create, :after) do
+         {:ok, unit} <- run_persistence_hook(arke, unit, :create, :after),
+         {:ok, unit} <- run_group_and_link_hooks(arke, unit, :create, :after) do
       {:ok, unit}
     else
       {:error, errors} -> {:error, errors}
@@ -288,9 +290,12 @@ defmodule Arke.QueryManager do
          {:ok, unit} <- update_at_on_update(unit),
          %{valid: [unit], errors: _errors} <- Validator.validate(unit, :update, project),
          # todo better valid / error handling
-         {:ok, unit} <- run_persistence_hooks(arke, unit, :update, :before),
+
+         {:ok, unit} <- run_persistence_hook(arke, unit, :update, :before),
+         {:ok, unit} <- run_group_and_link_hooks(arke, unit, :update, :before),
          {:ok, unit} <- persistence_fn.(project, unit, []),
-         {:ok, unit} <- run_persistence_hooks(arke, unit, :update, :after, data, current_unit) do
+         {:ok, unit} <- run_persistence_hook(arke, unit, :update, :after, current_unit),
+         {:ok, unit} <- run_group_and_link_hooks(arke, unit, :update, :after, data) do
       {:ok, unit}
     else
       {:error, errors} -> {:error, errors}
@@ -366,9 +371,11 @@ defmodule Arke.QueryManager do
     arke = ArkeManager.get(arke_id, project)
     persistence_fn = @persistence[:arke_postgres][:delete]
 
-    with {:ok, unit} <- run_persistence_hooks(arke, unit, :delete, :before),
+    with {:ok, unit} <- run_persistence_hook(arke, unit, :delete, :before),
+         {:ok, unit} <- run_group_and_link_hooks(arke, unit, :delete, :before),
          {:ok, _} <- persistence_fn.(project, unit, []),
-         {:ok, _} <- run_persistence_hooks(arke, unit, :delete, :after),
+         {:ok, _} <- run_group_and_link_hooks(arke, unit, :delete, :after),
+         {:ok, _} <- run_persistence_hook(arke, unit, :delete, :after),
          do: {:ok, nil},
          else: ({:error, errors} -> {:error, errors})
   end
@@ -893,69 +900,106 @@ defmodule Arke.QueryManager do
   defp normalize_value(value), do: to_string(value)
 
   defp process_bulk(valid, errors, arke, :update, :after, current_units, data) do
-    Enum.reduce(valid, %{valid: [], errors: errors}, fn unit, acc ->
-      current_unit = Enum.find(current_units, fn u -> u.id == unit.id end)
-      updated_data = Enum.find(data, fn d -> Map.get(d, "id") == to_string(unit.id) end)
+    case run_bulk_persistence_hook(valid, errors, arke, :update, :after, current_units) do
+      {:ok, valid, errors} ->
+        Enum.reduce(valid, %{valid: [], errors: errors}, fn unit, acc ->
+          updated_data = Enum.find(data, fn d -> Map.get(d, "id") == to_string(unit.id) end)
 
-      case run_persistence_hooks(arke, unit, :update, :after, updated_data, current_unit) do
-        {:ok, unit} ->
-          %{acc | valid: [unit | acc.valid]}
+          case run_group_and_link_hooks(arke, unit, :update, :after, updated_data) do
+            {:ok, unit} ->
+              %{acc | valid: [unit | acc.valid]}
 
-        {:error, e} ->
-          %{acc | errors: [{unit, e} | acc.errors]}
-      end
-    end)
+            {:error, e} ->
+              %{acc | errors: [{unit, e} | acc.errors]}
+          end
+        end)
+
+      {:error, errors} ->
+        {:error, errors}
+    end
   end
 
   defp process_bulk(valid, errors, arke, persistence_fn, phase) do
-    Enum.reduce(valid, %{valid: [], errors: errors}, fn unit, acc ->
-      case run_persistence_hooks(arke, unit, persistence_fn, phase) do
-        {:ok, unit} ->
-          %{acc | valid: [unit | acc.valid]}
+    case run_bulk_persistence_hook(valid, errors, arke, persistence_fn, phase) do
+      {:ok, valid, errors} ->
+        Enum.reduce(valid, %{valid: [], errors: errors}, fn unit, acc ->
+          case run_group_and_link_hooks(arke, unit, persistence_fn, phase) do
+            {:ok, unit} ->
+              %{acc | valid: [unit | acc.valid]}
 
-        {:error, e} ->
-          %{acc | errors: [{unit, e} | acc.errors]}
-      end
-    end)
+            {:error, e} ->
+              %{acc | errors: [{unit, e} | acc.errors]}
+          end
+        end)
+
+      {:error, errors} ->
+        {:error, errors}
+    end
   end
 
-  defp run_persistence_hooks(arke, unit, :create, :before) do
-    with {:ok, unit} <- ArkeManager.call_func(arke, :before_create, [arke, unit]),
-         {:ok, unit} <- handle_group_call_func(arke, unit, :before_unit_create),
+  defp run_bulk_persistence_hook(valid, errors, arke, :create, :before),
+    do: ArkeManager.call_func(arke, :before_bulk_create, [arke, valid, errors])
+
+  defp run_bulk_persistence_hook(valid, errors, arke, :create, :after),
+    do: ArkeManager.call_func(arke, :on_bulk_create, [arke, valid, errors])
+
+  defp run_bulk_persistence_hook(valid, errors, arke, :update, :before),
+    do: ArkeManager.call_func(arke, :before_bulk_update, [arke, valid, errors])
+
+  defp run_bulk_persistence_hook(valid, errors, arke, :update, :after, current_units),
+    do: ArkeManager.call_func(arke, :on_bulk_update, [arke, current_units, valid, errors])
+
+  defp run_bulk_persistence_hook(valid, errors, arke, :delete, :before),
+    do: ArkeManager.call_func(arke, :before_bulk_delete, [arke, valid, errors])
+
+  defp run_bulk_persistence_hook(valid, errors, arke, :delete, :after),
+    do: ArkeManager.call_func(arke, :on_bulk_delete, [arke, valid, errors])
+
+  defp run_persistence_hook(arke, unit, :create, :before),
+    do: ArkeManager.call_func(arke, :before_create, [arke, unit])
+
+  defp run_persistence_hook(arke, unit, :create, :after),
+    do: ArkeManager.call_func(arke, :on_create, [arke, unit])
+
+  defp run_persistence_hook(arke, unit, :update, :before),
+    do: ArkeManager.call_func(arke, :before_update, [arke, unit])
+
+  defp run_persistence_hook(arke, unit, :update, :after, current_unit),
+    do: ArkeManager.call_func(arke, :on_update, [arke, current_unit, unit])
+
+  defp run_persistence_hook(arke, unit, :delete, :before),
+    do: ArkeManager.call_func(arke, :before_delete, [arke, unit])
+
+  defp run_persistence_hook(arke, unit, :delete, :after),
+    do: ArkeManager.call_func(arke, :on_delete, [arke, unit])
+
+  defp run_group_and_link_hooks(arke, unit, :create, :before) do
+    with {:ok, unit} <- handle_group_call_func(arke, unit, :before_unit_create),
          {:ok, unit} <- handle_link_parameters_unit(arke, unit),
          do: {:ok, unit}
   end
 
-  defp run_persistence_hooks(arke, unit, :create, :after) do
-    with {:ok, unit} <- ArkeManager.call_func(arke, :on_create, [arke, unit]),
-         {:ok, unit} <- handle_group_call_func(arke, unit, :on_unit_create),
+  defp run_group_and_link_hooks(arke, unit, :create, :after) do
+    with {:ok, unit} <- handle_group_call_func(arke, unit, :on_unit_create),
          {:ok, unit} <- handle_link_parameters(unit, %{}),
          do: {:ok, unit}
   end
 
-  defp run_persistence_hooks(arke, unit, :update, :before) do
-    with {:ok, unit} <- ArkeManager.call_func(arke, :before_update, [arke, unit]),
-         {:ok, unit} <- handle_group_call_func(arke, unit, :before_unit_update),
+  defp run_group_and_link_hooks(arke, unit, :update, :before) do
+    with {:ok, unit} <- handle_group_call_func(arke, unit, :before_unit_update),
          {:ok, unit} <- handle_link_parameters_unit(arke, unit),
          do: {:ok, unit}
   end
 
-  defp run_persistence_hooks(arke, unit, :update, :after, data, current_unit) do
-    with {:ok, unit} <- ArkeManager.call_func(arke, :on_update, [arke, current_unit, unit]),
-         {:ok, unit} <- handle_link_parameters(unit, data),
+  defp run_group_and_link_hooks(arke, unit, :update, :after, data) do
+    with {:ok, unit} <- handle_link_parameters(unit, data),
          {:ok, unit} <- handle_group_call_func(arke, unit, :on_unit_update),
          do: {:ok, unit}
   end
 
-  defp run_persistence_hooks(arke, unit, :delete, :before) do
-    with {:ok, unit} <- ArkeManager.call_func(arke, :before_delete, [arke, unit]),
-         {:ok, unit} <- handle_group_call_func(arke, unit, :before_unit_delete),
-         do: {:ok, unit}
-  end
+  defp run_group_and_link_hooks(arke, unit, :delete, :before),
+    do: handle_group_call_func(arke, unit, :before_unit_delete)
 
-  defp run_persistence_hooks(arke, unit, :delete, :after) do
-    with {:ok, unit} <- handle_group_call_func(arke, unit, :on_unit_delete),
-         {:ok, _unit} <- ArkeManager.call_func(arke, :on_delete, [arke, unit]),
-         do: {:ok, nil}
-  end
+  defp run_group_and_link_hooks(arke, unit, :delete, :after),
+    do: handle_group_call_func(arke, unit, :on_unit_delete)
 end
