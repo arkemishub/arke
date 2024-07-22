@@ -50,10 +50,20 @@ defmodule Arke.System do
       def on_delete(arke, unit), do: {:ok, unit}
       def before_delete(arke, unit), do: {:ok, unit}
 
+      def before_bulk_create(arke, valid, errors), do: {:ok, valid, errors}
+      def on_bulk_create(arke, valid, errors), do: {:ok, valid, errors}
+      def before_bulk_update(arke, valid, errors), do: {:ok, valid, errors}
+      def on_bulk_update(arke, old_units, valid, errors), do: {:ok, valid, errors}
+      def before_bulk_delete(arke, valid, errors), do: {:ok, valid, errors}
+      def on_bulk_delete(arke, valid, errors), do: {:ok, valid, errors}
+
       def after_get_struct(arke, unit, struct), do: struct
       def after_get_struct(arke, struct), do: struct
 
-      def import(%{runtime_data: %{conn: %{method: "POST"}=conn}, metadata: %{project: project}} = arke) do
+      def import(
+            %{runtime_data: %{conn: %{method: "POST"} = conn}, metadata: %{project: project}} =
+              arke
+          ) do
         member = ArkeAuth.Guardian.Plug.current_resource(conn)
         mode = Map.get(conn.body_params, "mode", "default")
 
@@ -72,34 +82,51 @@ defmodule Arke.System do
         header_file = Enum.at(file_as_list, 0)
         rows = file_as_list |> List.delete_at(0)
 
-        header = get_header_for_import(project, arke, header_file) |> parse_haeder_for_import(header_file)
+        header =
+          get_header_for_import(project, arke, header_file)
+          |> parse_haeder_for_import(header_file)
 
-        {correct_units, error_units} = Enum.with_index(rows) |> Enum.reduce({[], []}, fn {row, index}, {correct_units, error_units} ->
-          case Enum.filter(row, & !is_nil(&1)) do
-            [] -> {correct_units, error_units}
-            _ -> case load_units(project, arke, header, row, all_units, mode) do
-                   {:error, args, errors} ->
-                     m = Enum.reduce(header, %{}, fn {h, index}, acc ->
-                       acc = Map.put(acc, h, parse_cell(Enum.at(row, index)))
-                     end) |> Map.put("errors", errors)
-                     {correct_units, [m | error_units]}
-                   {:ok, unit_args} -> {[unit_args | correct_units], error_units}
-                 end
-          end
-        end)
+        {correct_units, error_units} =
+          Enum.with_index(rows)
+          |> Enum.reduce({[], []}, fn {row, index}, {correct_units, error_units} ->
+            case Enum.filter(row, &(!is_nil(&1))) do
+              [] ->
+                {correct_units, error_units}
+
+              _ ->
+                case load_units(project, arke, header, row, all_units, mode) do
+                  {:error, args, errors} ->
+                    m =
+                      Enum.reduce(header, %{}, fn {h, index}, acc ->
+                        acc = Map.put(acc, h, parse_cell(Enum.at(row, index)))
+                      end)
+                      |> Map.put("errors", errors)
+
+                    {correct_units, [m | error_units]}
+
+                  {:ok, unit_args} ->
+                    {[unit_args | correct_units], error_units}
+                end
+            end
+          end)
 
         existing_units = get_existing_units_for_import(project, arke, header, correct_units)
-        units_args = Enum.filter(correct_units, fn u -> check_existing_units_for_import(project, arke, header, u, existing_units) == false end)
+
+        units_args =
+          Enum.filter(correct_units, fn u ->
+            check_existing_units_for_import(project, arke, header, u, existing_units) == false
+          end)
+
         if length(units_args) > 0 do
           Enum.map(Stream.chunk_every(units_args, 5000) |> Enum.to_list(), fn chunk ->
             ArkePostgres.Repo.insert_all("arke_unit", chunk, prefix: Atom.to_string(project))
           end)
         end
 
-        count_inserted =  length(units_args)
-        count_existing =  length(existing_units)
-        count_error =  length(error_units)
-        total_count =  count_inserted + count_error + count_existing
+        count_inserted = length(units_args)
+        count_existing = length(existing_units)
+        count_error = length(error_units)
+        total_count = count_inserted + count_error + count_existing
 
         res = %{
           count_inserted: count_inserted,
@@ -108,6 +135,7 @@ defmodule Arke.System do
           total_count: total_count,
           error_units: error_units
         }
+
         {:ok, res, 201}
       end
 
@@ -122,11 +150,16 @@ defmodule Arke.System do
           end
         end)
       end
+
       defp parse_haeder_for_import(header, header_file) do
         Enum.reduce(Enum.with_index(header_file), [], fn {cell, index}, acc ->
           case cell do
-            nil -> acc
-            "" -> acc
+            nil ->
+              acc
+
+            "" ->
+              acc
+
             cell ->
               case cell in header do
                 nil -> acc
@@ -139,17 +172,22 @@ defmodule Arke.System do
       defp get_all_units_for_import(project), do: []
 
       defp load_units(project, arke, header, row, _, "default") do
-        args = Enum.reduce(header, [], fn {parameter_id, index}, acc ->
-          acc = Keyword.put(acc, String.to_existing_atom(parameter_id), Enum.at(row, index))
-        end)
+        args =
+          Enum.reduce(header, [], fn {parameter_id, index}, acc ->
+            acc = Keyword.put(acc, String.to_existing_atom(parameter_id), Enum.at(row, index))
+          end)
 
         with %Arke.Core.Unit{} = unit <- Arke.Core.Unit.load(arke, args, :create),
              {:ok, unit} <- Arke.Validator.validate(unit, :create, project),
              do: {:ok, args},
              else: ({:error, errors} -> {:error, args, errors})
       end
+
       defp get_existing_units_for_import(project, arke, header, units_args), do: []
-      defp check_existing_units_for_import(project, arke, header, units_args, existing_units), do: true
+
+      defp check_existing_units_for_import(project, arke, header, units_args, existing_units),
+        do: true
+
       defp get_import_value(header, row, column) do
         index = Enum.find(header, fn {k, v} -> k == column end) |> elem(1)
         Enum.at(row, index)
@@ -167,17 +205,23 @@ defmodule Arke.System do
                      before_update: 2,
                      on_delete: 2,
                      before_delete: 2,
+                     before_bulk_create: 3,
+                     on_bulk_create: 3,
+                     before_bulk_update: 3,
+                     on_bulk_update: 4,
+                     before_bulk_delete: 3,
+                     on_bulk_delete: 3,
                      after_get_struct: 2,
                      after_get_struct: 3,
 
-                    # Import
-                      import: 1,
+                     # Import
+                     import: 1,
                      import_units: 5,
-                      get_header_for_import: 3,
+                     get_header_for_import: 3,
                      get_all_units_for_import: 1,
-                      load_units: 6,
+                     load_units: 6,
                      get_existing_units_for_import: 4,
-                      check_existing_units_for_import: 5
+                     check_existing_units_for_import: 5
     end
   end
 
@@ -250,9 +294,8 @@ defmodule Arke.System do
       @arke %{
         id: id,
         data: %{label: label, active: active, type: type, parameters: @parameters},
-        metadata: metadata,
+        metadata: metadata
       }
-
     end
   end
 
@@ -360,15 +403,18 @@ defmodule Arke.System.BaseParameter do
     %{type: type, opts: opts}
   end
 
-  def check_enum(type, opts) when is_binary(type), do: check_enum(String.to_atom(type),opts)
+  def check_enum(type, opts) when is_binary(type), do: check_enum(String.to_atom(type), opts)
+
   def check_enum(type, opts) do
     enum_parameters = [:string, :integer, :float]
+
     case type in enum_parameters do
       true ->
         __enum_parameter__(opts, type)
-      false -> opts
-    end
 
+      false ->
+        opts
+    end
   end
 
   defp parameter_option_common(opts, id) do
@@ -423,10 +469,14 @@ defmodule Arke.System.BaseParameter do
     Keyword.put_new(opts, key, default)
   end
 
-  def __enum_parameter__(opts, type) when is_map(opts), do: __enum_parameter__(Map.to_list(opts),type)
+  def __enum_parameter__(opts, type) when is_map(opts),
+    do: __enum_parameter__(Map.to_list(opts), type)
+
   def __enum_parameter__(opts, type) do
     case Keyword.has_key?(opts, :values) do
-      true ->   __validate_values__(opts, opts[:values], type)
+      true ->
+        __validate_values__(opts, opts[:values], type)
+
       false ->
         opts
     end
@@ -438,9 +488,7 @@ defmodule Arke.System.BaseParameter do
        when not is_nil(value),
        do: __validate_values__(opts, value, type)
 
-
   defp __validate_values__(opts, [h | _t] = values, type) when is_map(h) do
-
     condition =
       cond do
         type == :string ->
@@ -452,11 +500,12 @@ defmodule Arke.System.BaseParameter do
         type == :float ->
           fn l, v -> is_binary(l) and is_number(v) end
       end
+
     case Enum.all?(values, fn map ->
            Enum.map([:label, :value], fn key -> Map.has_key?(map, key) end)
          end) do
       true ->
-       __create_map_values__(__check_map__(values), opts, type, condition)
+        __create_map_values__(__check_map__(values), opts, type, condition)
 
       # FARE RAISE ECCEZIONE DA GESTIRE. CHIAVI DEVONO ESSERE TUTTE UGUALI
       _ ->
@@ -474,7 +523,6 @@ defmodule Arke.System.BaseParameter do
 
     __values_from_list__(values, opts, condition)
   end
-
 
   # CONVERT ALL STRINGS KEY TO ATOMS (string are received from API)
   defp __check_map__([%{"label" => _l, "value" => _v} | _h] = values) do
