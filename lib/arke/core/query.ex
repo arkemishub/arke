@@ -17,7 +17,7 @@ defmodule Arke.Core.Query do
     Struct which defines a Query
   """
 
-  defstruct ~w[project arke persistence filters link orders offset limit]a
+  defstruct ~w[project arke persistence distinct filters link orders offset limit]a
   @type t() :: %Arke.Core.Query{}
 
   defmodule LinkFilter do
@@ -133,17 +133,18 @@ defmodule Arke.Core.Query do
       %Arke.Core.Query{}
 
   """
-  @spec new(arke :: %Arke.Core.Arke{}, project :: atom()) :: Arke.Core.Query.t()
-  def new(arke, project),
-    do: %__MODULE__{
-      project: project,
-      arke: arke,
-      persistence: nil,
-      filters: [],
-      orders: [],
-      offset: nil,
-      limit: nil
-    }
+  @spec new(arke :: %Arke.Core.Arke{}, project :: atom(), distinct :: atom()) :: Arke.Core.Query.t()
+  def new(arke, project, distinct \\ nil),
+      do: %__MODULE__{
+        project: project,
+        arke: arke,
+        distinct: distinct,
+        persistence: nil,
+        filters: [],
+        orders: [],
+        offset: nil,
+        limit: nil
+      }
 
   @doc """
   Add a new link filter

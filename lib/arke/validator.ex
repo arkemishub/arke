@@ -303,6 +303,7 @@ defmodule Arke.Validator do
     value = get_default_value(parameter, value)
     value = parse_value(parameter, value)
     value = check_whitespace(parameter, value)
+    value = check_lowercase(parameter,value)
 
     errors =
       []
@@ -487,6 +488,20 @@ defmodule Arke.Validator do
   end
 
   defp check_whitespace(_, value),
+    do: value
+
+  defp check_lowercase(%{data: %{lowercase: true}} = parameter, value) when is_atom(value) do
+    value
+    |> Atom.to_string()
+    |> String.downcase()
+    |> String.to_atom()
+  end
+
+  defp check_lowercase(%{data: %{lowercase: true}} = parameter, value) do
+    value |> String.downcase()
+  end
+
+  defp check_lowercase(_, value),
     do: value
 
   defp check_max_length(errors, %{data: %{max_length: max_length}} = parameter, _)

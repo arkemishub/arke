@@ -44,6 +44,7 @@ defmodule Arke.QueryManager do
   alias Arke.Utils.DatetimeHandler, as: DatetimeHandler
   alias Arke.Core.{Arke, Unit, Query, Parameter}
 
+
   @persistence Application.get_env(:arke, :persistence)
   @record_fields [:id, :data, :metadata, :inserted_at, :updated_at]
 
@@ -76,7 +77,8 @@ defmodule Arke.QueryManager do
   def query(opts) do
     project = Keyword.get(opts, :project)
     arke = get_arke(Keyword.get(opts, :arke), project)
-    query = Query.new(arke, project)
+    distinct = Keyword.get(opts, :distinct, nil)
+    query = Query.new(arke, project, distinct)
   end
 
   @doc """
@@ -189,6 +191,7 @@ defmodule Arke.QueryManager do
   end
 
   defp handle_link_parameters_unit(%{id: :arke_link} = _, unit), do: {:ok, unit}
+  defp handle_link_parameters_unit(%{id: :parameter_value} = _, unit), do: {:ok, unit}
 
   defp handle_link_parameters_unit(
          %{data: parameters} = arke,
@@ -426,10 +429,11 @@ defmodule Arke.QueryManager do
   defp basic_query(opts) do
     {project, opts} = Keyword.pop!(opts, :project)
     {arke, opts} = Keyword.pop(opts, :arke, nil)
+    {distinct, opts} = Keyword.pop(opts, :distinct, nil)
 
     arke = get_arke(arke, project)
 
-    query(project: project, arke: arke) |> where(opts)
+    query(project: project, arke: arke, distinct: distinct) |> where(opts)
   end
 
   defp get_arke(nil, _), do: nil
