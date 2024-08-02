@@ -92,9 +92,11 @@ defmodule Arke.System do
         existing_units = get_existing_units_for_import(project, arke, header, correct_units)
         units_args = Enum.filter(correct_units, fn u -> check_existing_units_for_import(project, arke, header, u, existing_units) == false end)
         if length(units_args) > 0 do
+          {existing_units,units_args,error_units} = before_unit_import(project,existing_units,units_args,error_units)
           Enum.map(Stream.chunk_every(units_args, 5000) |> Enum.to_list(), fn chunk ->
             ArkePostgres.Repo.insert_all("arke_unit", chunk, prefix: Atom.to_string(project))
           end)
+          {existing_units,units_args,error_units} = on_unit_import(project,existing_units,units_args,error_units)
         end
 
         count_inserted =  length(units_args)
@@ -156,6 +158,9 @@ defmodule Arke.System do
         Enum.at(row, index)
       end
 
+      defp before_unit_import(_project,existing_units,units_args,error_units), do: {existing_units,units_args,error_units}
+      defp on_unit_import(_project,existing_units,units_args,error_units), do: {existing_units,units_args,error_units}
+
       defoverridable on_load: 2,
                      before_load: 2,
                      on_validate: 2,
@@ -174,21 +179,17 @@ defmodule Arke.System do
 
                     # Import
                       import: 1,
-                     import_units: 5,
+                      import_units: 5,
                       get_header_for_import: 3,
-                     get_all_units_for_import: 1,
+                      get_all_units_for_import: 1,
                       load_units: 6,
-                     get_existing_units_for_import: 4,
-                      check_existing_units_for_import: 5
+                      get_existing_units_for_import: 4,
+                      check_existing_units_for_import: 5,
+                      before_unit_import: 4,
+                      on_unit_import: 4
     end
   end
 
-  #  defmacro __before_compile__(env) do
-  #  end
-  #
-  #  def compile(translations) do
-  #
-  #  end
 
   ######################################################################################################################
   # ARKE MACRO #########################################################################################################
