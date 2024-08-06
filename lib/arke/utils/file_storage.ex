@@ -16,7 +16,6 @@ defmodule Arke.Utils.FileStorage do
 
   defmacro __using__(_)do
     quote do
-      alias Arke.Utils.Gcp
 
       def upload_file(file_name, file_data, opts \\ []), do: {:ok, nil}
 
