@@ -27,7 +27,7 @@ defmodule Arke.Utils.FileStorage do
 
       def get_bucket_file_signed_url(file_path, opts \\ []), do: {:ok, nil}
 
-      defoverridable upload_file: 2,
+      defoverridable upload_file: 3,
                      get_file: 2,
                      get_public_url: 2,
                      delete_file: 2,
