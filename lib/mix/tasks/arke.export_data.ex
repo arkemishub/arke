@@ -208,7 +208,11 @@ defmodule Mix.Tasks.Arke.ExportData do
     |>Enum.sort_by(&Map.fetch(&1, :id))
   end
 
-  defp prepare_parameter(data), do: Enum.map(data,fn parameter-> Map.put(parameter.data,:id,to_string(parameter.id))end) |>Enum.sort_by(&Map.fetch(&1, :id))
+  defp prepare_parameter(data), do: Enum.map(data,fn parameter->
+      Map.put(parameter.data, :id, to_string(parameter.id))
+      |> Map.put(:type, to_string(parameter.arke_id))
+    end)
+   |> Enum.sort_by(&Map.fetch(&1, :id))
 
   defp prepare_permission(data), do: Enum.map(data, fn permission ->
     %{parent: permission.data.parent_id,child: permission.data.child_id,metadata: Map.delete(permission.metadata,:project), type: permission.data.type}

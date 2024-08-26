@@ -285,7 +285,6 @@ defmodule Mix.Tasks.Arke.SeedProject do
     Mix.shell().info("--- Creating arke #{id} --- ")
     {parameter,new_data} = Map.pop(current, :parameters, [])
 
-
     #aggiungere try do block
     with nil <- QueryManager.get_by(id: id, project: project, arke_id: "arke"),
          %Unit{} = model <- ArkeManager.get(:arke, project),
