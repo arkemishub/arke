@@ -170,7 +170,7 @@ defmodule Arke.QueryManager do
            persistence_fn.(project, valid, bulk: true),
          %{valid: valid, errors: errors} <-
            process_bulk(valid, errors ++ persistence_errors, arke, :create, :after) do
-      {:ok, inserted_count, errors}
+      {:ok, inserted_count, valid, errors}
     else
       {:error, errors} -> {:error, errors}
     end
@@ -311,7 +311,7 @@ defmodule Arke.QueryManager do
     {:ok, Unit.update(unit, updated_at: updated_at)}
   end
 
-  def update_bulk(_, _, [], _), do: {:ok, [], []}
+  def update_bulk(_, _, [], _), do: {:ok, 0, [], []}
 
   def update_bulk(project, arke, unit_list, data) do
     persistence_fn = @persistence[:arke_postgres][:update]
@@ -333,7 +333,7 @@ defmodule Arke.QueryManager do
              unit_list,
              data
            ) do
-      {:ok, updated_count, errors}
+      {:ok, updated_count, valid, errors}
     else
       {:error, errors} -> {:error, errors}
     end
