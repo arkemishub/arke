@@ -13,6 +13,8 @@
 # limitations under the License.
 
 defmodule Arke.System do
+  @default_import_mode "default"
+
   defmacro __using__(_) do
     quote do
       #      @after_compile __MODULE__
@@ -66,7 +68,7 @@ defmodule Arke.System do
               arke
           ) do
         member = ArkeAuth.Guardian.Plug.current_resource(conn)
-        mode = Map.get(conn.body_params, "mode", "default")
+        mode = Map.get(conn.body_params, "mode", @default_import_mode)
 
         case Map.get(conn.body_params, "file", nil) do
           nil -> {:error, "file is required", 400}
@@ -76,7 +78,7 @@ defmodule Arke.System do
 
       defp import_units(arke, project, member, file, mode) do
         {:ok, ref} = Enum.at(Xlsxir.multi_extract(file.path), 0)
-        all_units = get_all_units_for_import(project)
+        all_units = get_all_units_for_import(project, mode)
 
         file_as_list = Xlsxir.get_list(ref)
 
@@ -84,7 +86,7 @@ defmodule Arke.System do
         rows = file_as_list |> List.delete_at(0)
 
         header =
-          get_header_for_import(project, arke, header_file)
+          get_header_for_import(project, arke, header_file, mode)
           |> parse_haeder_for_import(header_file)
 
         {correct_units, error_units} =
@@ -119,11 +121,15 @@ defmodule Arke.System do
           end)
 
         if length(units_args) > 0 do
-          {existing_units,units_args,error_units} = before_unit_import(project,existing_units,units_args,error_units)
+          {existing_units, units_args, error_units} =
+            before_unit_import(project, existing_units, units_args, error_units)
+
           Enum.map(Stream.chunk_every(units_args, 5000) |> Enum.to_list(), fn chunk ->
             ArkePostgres.Repo.insert_all("arke_unit", chunk, prefix: Atom.to_string(project))
           end)
-          {existing_units,units_args,error_units} = on_unit_import(project,existing_units,units_args,error_units)
+
+          {existing_units, units_args, error_units} =
+            on_unit_import(project, existing_units, units_args, error_units)
         end
 
         count_inserted = length(units_args)
@@ -145,7 +151,7 @@ defmodule Arke.System do
       defp parse_cell(value) when is_tuple(value), do: Kernel.inspect(value)
       defp parse_cell(value), do: value
 
-      defp get_header_for_import(project, arke, header_file) do
+      defp get_header_for_import(project, arke, header_file, @default_import_mode) do
         Enum.reduce(Enum.with_index(header_file), [], fn {cell, index}, acc ->
           case Arke.Boundary.ArkeManager.get_parameter(arke, project, cell) do
             nil -> acc
@@ -172,9 +178,9 @@ defmodule Arke.System do
         end)
       end
 
-      defp get_all_units_for_import(project), do: []
+      defp get_all_units_for_import(_project, _mode), do: []
 
-      defp load_units(project, arke, header, row, _, "default") do
+      defp load_units(project, arke, header, row, _, @default_import_mode) do
         args =
           Enum.reduce(header, [], fn {parameter_id, index}, acc ->
             acc = Keyword.put(acc, String.to_existing_atom(parameter_id), Enum.at(row, index))
@@ -196,8 +202,11 @@ defmodule Arke.System do
         Enum.at(row, index)
       end
 
-      defp before_unit_import(_project,existing_units,units_args,error_units), do: {existing_units,units_args,error_units}
-      defp on_unit_import(_project,existing_units,units_args,error_units), do: {existing_units,units_args,error_units}
+      defp before_unit_import(_project, existing_units, units_args, error_units),
+        do: {existing_units, units_args, error_units}
+
+      defp on_unit_import(_project, existing_units, units_args, error_units),
+        do: {existing_units, units_args, error_units}
 
       defoverridable on_load: 2,
                      before_load: 2,
@@ -221,19 +230,18 @@ defmodule Arke.System do
                      after_get_struct: 2,
                      after_get_struct: 3,
 
-                    # Import
-                      import: 1,
-                      import_units: 5,
-                      get_header_for_import: 3,
-                      get_all_units_for_import: 1,
-                      load_units: 6,
-                      get_existing_units_for_import: 4,
-                      check_existing_units_for_import: 5,
-                      before_unit_import: 4,
-                      on_unit_import: 4
+                     # Import
+                     import: 1,
+                     import_units: 5,
+                     get_header_for_import: 4,
+                     get_all_units_for_import: 2,
+                     load_units: 6,
+                     get_existing_units_for_import: 4,
+                     check_existing_units_for_import: 5,
+                     before_unit_import: 4,
+                     on_unit_import: 4
     end
   end
-
 
   ######################################################################################################################
   # ARKE MACRO #########################################################################################################
