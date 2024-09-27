@@ -18,6 +18,7 @@ defmodule Arke.Core.File do
   """
 
   use Arke.System
+  require Logger
 
   alias Arke.Boundary.ArkeManager
 
