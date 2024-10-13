@@ -115,10 +115,12 @@ defmodule Arke.Core.Query do
     @moduledoc """
       Base struct Order:
       - parameter => %Arke.Core.Parameter.`ParameterType` => refer to `Arke.Core.Parameter`
-      - direction => "child" | "parent" => the direction the query will use to search \n
+      - direction => "child" | "parent" => the direction the query will use to search
+      - path => [Arke.Core.Parameter.ParameterType] => the path of the parameter
+       \n
       It is used to define the return order of a Query
     """
-    defstruct ~w[parameter direction]a
+    defstruct ~w[parameter direction path]a
     @type t() :: %Arke.Core.Query.Order{}
   end
 
@@ -332,6 +334,16 @@ defmodule Arke.Core.Query do
   ## Return
       %Arke.Core.Query{ ... orders: [ %Arke.Core.Query.Order{} ] ... }
   """
+
+  def add_order(query, parameter, direction) when is_list(parameter) do
+    {parameter, path} = List.pop_at(parameter, -1)
+
+    %{
+      query
+      | orders: [%Order{parameter: parameter, direction: direction, path: path} | query.orders]
+    }
+  end
+
   def add_order(query, parameter, direction) do
     %{
       query

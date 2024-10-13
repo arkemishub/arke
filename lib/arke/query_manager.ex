@@ -656,9 +656,23 @@ defmodule Arke.QueryManager do
   """
   @spec order(
           query :: Query.t(),
-          parameter :: Arke.t() | String.t() | atom(),
+          parameter :: Arke.t() | String.t() | atom() | [Arke.t()] | [String.t()] | [atom()],
           direction :: atom()
         ) :: Query.t()
+  def order(query, parameter, direction) when is_list(parameter) do
+    parameters =
+      Enum.with_index(parameter)
+      |> Enum.map(fn {p, index} ->
+        if index == 0 do
+          get_parameter(query, p)
+        else
+          get_parameter(%{query | arke: nil}, p)
+        end
+      end)
+
+    Query.add_order(query, parameters, direction)
+  end
+
   def order(query, parameter, direction),
     do: Query.add_order(query, get_parameter(query, parameter), direction)
 
