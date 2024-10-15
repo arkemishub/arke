@@ -13,7 +13,6 @@
 # limitations under the License.
 
 defmodule Arke.Utils.Export do
-
   alias Arke.QueryManager
   alias Arke.Boundary.ArkeManager
 
@@ -27,9 +26,8 @@ defmodule Arke.Utils.Export do
   end
 
   def get_data(project, opts) do
-    all = opts[:all] || false
-
-    if all do
+    # if the opts doesn not include any flag then export all
+    if not Enum.any?(Keyword.keys(opts), fn k -> k in [:arke, :parameter, :group] end) do
       get_all(project)
     else
       arke = get_arke(project, opts[:arke])
