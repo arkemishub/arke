@@ -112,7 +112,7 @@ defmodule Mix.Tasks.Arke.ExportData do
     project = String.to_atom(opts[:project]) || :arke_system
     split_file =  opts[:split_file] || false
     export_data = Arke.Utils.Export.get_db_structure(project, opts)
-    if opts[:split_file] do
+    if split_file do
       write_to_file(project,:arke,%{arke: export_data.arke})
       write_to_file(project,:group,%{group: export_data.group})
       write_to_file(project,:parameter,%{parameter: export_data.parameter})
