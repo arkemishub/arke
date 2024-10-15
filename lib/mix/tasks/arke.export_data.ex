@@ -116,7 +116,7 @@ defmodule Mix.Tasks.Arke.ExportData do
       write_to_file(project,:arke,%{arke: export_data.arke})
       write_to_file(project,:group,%{group: export_data.group})
       write_to_file(project,:parameter,%{parameter: export_data.parameter})
-      write_to_file(project,:link,%{link: export_data.permission})
+      write_to_file(project,:link,%{link: export_data.link})
     else
       write_to_file(project,:all, export_data)
     end
