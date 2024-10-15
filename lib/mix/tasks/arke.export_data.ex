@@ -110,7 +110,7 @@ defmodule Mix.Tasks.Arke.ExportData do
   defp export_data(opts,persistence)  do
     start_manager!(Application.get_env(:arke, :persistence)[String.to_atom(persistence)][:init])
     project = String.to_atom(opts[:project]) || :arke_system
-    split_file =  opts[:split_file] || false
+    split_file =  opts[:splitfile] || false
     export_data = Arke.Utils.Export.get_db_structure(project, opts)
     if split_file do
       write_to_file(project,:arke,%{arke: export_data.arke})
