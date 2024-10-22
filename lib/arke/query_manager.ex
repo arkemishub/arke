@@ -293,7 +293,7 @@ defmodule Arke.QueryManager do
          %{valid: [unit], errors: _errors} <- Validator.validate(unit, :update, project),
          # todo better valid / error handling
 
-         {:ok, unit} <- run_persistence_hook(arke, unit, :update, :before),
+         {:ok, unit} <- run_persistence_hook(arke, unit, :update, :before, current_unit),
          {:ok, unit} <- run_group_and_link_hooks(arke, unit, :update, :before),
          {:ok, unit} <- persistence_fn.(project, unit, []),
          {:ok, unit} <- run_persistence_hook(arke, unit, :update, :after, current_unit),
@@ -979,8 +979,8 @@ defmodule Arke.QueryManager do
   defp run_persistence_hook(arke, unit, :create, :after),
     do: ArkeManager.call_func(arke, :on_create, [arke, unit])
 
-  defp run_persistence_hook(arke, unit, :update, :before),
-    do: ArkeManager.call_func(arke, :before_update, [arke, unit])
+  defp run_persistence_hook(arke, unit, :update, :before, current_unit),
+    do: ArkeManager.call_func(arke, :before_update, [arke, current_unit, unit])
 
   defp run_persistence_hook(arke, unit, :update, :after, current_unit),
     do: ArkeManager.call_func(arke, :on_update, [arke, current_unit, unit])
