@@ -303,7 +303,7 @@ defmodule Arke.Validator do
     value = get_default_value(parameter, value)
     value = parse_value(parameter, value)
     value = check_whitespace(parameter, value)
-    value = check_lowercase(parameter,value)
+    value = check_lowercase(parameter, value)
 
     errors =
       []
@@ -319,7 +319,7 @@ defmodule Arke.Validator do
 
   defp parse_value(%{arke_id: :integer, data: %{multiple: false} = data} = _, value)
        when not is_integer(value) and not is_nil(value) do
-    case Integer.parse(value) do
+    case to_string(value) |> Integer.parse() do
       :error -> value
       {v, _e} -> v
     end
@@ -327,7 +327,7 @@ defmodule Arke.Validator do
 
   defp parse_value(%{arke_id: :float, data: %{multiple: false} = data} = _, value)
        when not is_number(value) and not is_nil(value) do
-    case Float.parse(value) do
+    case to_string(value) |> Float.parse() do
       :error -> value
       {v, _e} -> v
     end

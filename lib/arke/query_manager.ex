@@ -292,7 +292,6 @@ defmodule Arke.QueryManager do
          {:ok, unit} <- update_at_on_update(unit),
          %{valid: [unit], errors: _errors} <- Validator.validate(unit, :update, project),
          # todo better valid / error handling
-
          {:ok, unit} <- run_persistence_hook(arke, unit, :update, :before, current_unit),
          {:ok, unit} <- run_group_and_link_hooks(arke, unit, :update, :before),
          {:ok, unit} <- persistence_fn.(project, unit, []),
@@ -315,8 +314,6 @@ defmodule Arke.QueryManager do
   def update_bulk(project, arke, unit_list, data) do
     persistence_fn = @persistence[:arke_postgres][:update]
 
-    %{valid: valid, errors: errors} = prepare_update_bulk_units(arke, unit_list, data)
-
     with %{valid: valid, errors: errors} <- prepare_update_bulk_units(arke, unit_list, data),
          %{valid: valid, errors: errors} <- Validator.validate(valid, :update, project),
          %{valid: valid, errors: errors} <- process_bulk(valid, errors, arke, :update, :before),
@@ -338,17 +335,27 @@ defmodule Arke.QueryManager do
     end
   end
 
-  defp prepare_update_bulk_units(arke, unit_list, data),
-    do:
-      Enum.reduce(unit_list, %{valid: [], errors: []}, fn unit, acc ->
-        item = Enum.find(data, fn d -> Map.get(d, "id") == to_string(unit.id) end)
-        updated_at = DatetimeHandler.now(:datetime)
+  defp prepare_update_bulk_units(arke, unit_list, data) do
+    data_map =
+      data
+      |> Enum.map(fn d -> {Map.get(d, "id"), d} end)
+      |> Map.new()
 
-        case Unit.update(unit, data_as_klist(item) ++ [updated_at: updated_at]) do
-          %Unit{} = unit -> Map.put(acc, :valid, [unit | acc.valid])
-          {:error, error} -> Map.put(acc, :errors, [error | acc.errors])
-        end
-      end)
+    updated_at = DatetimeHandler.now(:datetime)
+
+    Enum.reduce(unit_list, %{valid: [], errors: []}, fn unit, acc ->
+      case data_map[to_string(unit.id)] do
+        nil ->
+          acc
+
+        item ->
+          case Unit.update(unit, data_as_klist(item) ++ [updated_at: updated_at]) do
+            %Unit{} = unit -> Map.put(acc, :valid, [unit | acc.valid])
+            {:error, error} -> Map.put(acc, :errors, [error | acc.errors])
+          end
+      end
+    end)
+  end
 
   defp update_at_on_update(unit) do
     updated_at = DatetimeHandler.now(:datetime)
@@ -918,10 +925,12 @@ defmodule Arke.QueryManager do
   defp normalize_value(value), do: to_string(value)
 
   defp process_bulk(valid, errors, arke, :update, :after, current_units, data) do
+    data_by_id = Map.new(data, fn d -> {Map.get(d, "id"), d} end)
+
     case run_bulk_persistence_hook(valid, errors, arke, :update, :after, current_units) do
       {:ok, valid, errors} ->
         Enum.reduce(valid, %{valid: [], errors: errors}, fn unit, acc ->
-          updated_data = Enum.find(data, fn d -> Map.get(d, "id") == to_string(unit.id) end)
+          updated_data = Map.get(data_by_id, to_string(unit.id))
 
           case run_group_and_link_hooks(arke, unit, :update, :after, updated_data) do
             {:ok, unit} ->
