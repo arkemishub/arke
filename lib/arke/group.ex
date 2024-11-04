@@ -26,8 +26,11 @@ defmodule Arke.System.Group do
 
       #      @before_compile unquote(__MODULE__)
 
-      def group_from_attr(), do: Keyword.get(__MODULE__.__info__(:attributes), :group, []) |> List.first()
-      def is_group?(), do: Keyword.get(__MODULE__.__info__(:attributes), :system_group, []) |> List.first()
+      def group_from_attr(),
+        do: Keyword.get(__MODULE__.__info__(:attributes), :group, []) |> List.first()
+
+      def is_group?(),
+        do: Keyword.get(__MODULE__.__info__(:attributes), :system_group, []) |> List.first()
 
       def on_unit_load(arke, data, _persistence_fn), do: {:ok, data}
       def before_unit_load(_arke, data, _persistence_fn), do: {:ok, data}
@@ -41,6 +44,13 @@ defmodule Arke.System.Group do
       def on_unit_delete(_arke, unit), do: {:ok, unit}
       def before_unit_delete(_arke, unit), do: {:ok, unit}
 
+      defp before_unit_bulk_create(arke, valid, errors), do: {:ok, valid, errors}
+      defp on_unit_bulk_create(arke, valid, errors), do: {:ok, valid, errors}
+      defp before_unit_bulk_update(arke, valid, errors), do: {:ok, valid, errors}
+      defp on_unit_bulk_update(arke, valid, errors), do: {:ok, valid, errors}
+      defp before_unit_bulk_delete(arke, valid, errors), do: {:ok, valid, errors}
+      defp on_unit_bulk_delete(arke, valid, errors), do: {:ok, valid, errors}
+
       defoverridable on_unit_load: 3,
                      before_unit_load: 3,
                      on_unit_validate: 2,
@@ -51,7 +61,13 @@ defmodule Arke.System.Group do
                      on_unit_update: 2,
                      before_unit_update: 2,
                      on_unit_delete: 2,
-                     before_unit_delete: 2
+                     before_unit_delete: 2,
+                     before_unit_bulk_create: 3,
+                     on_unit_bulk_create: 3,
+                     before_unit_bulk_update: 3,
+                     on_unit_bulk_update: 3,
+                     before_unit_bulk_delete: 3,
+                     on_unit_bulk_delete: 3
     end
   end
 
@@ -96,7 +112,7 @@ defmodule Arke.System.Group do
       unquote(block)
 
       @group %{
-        id: id,
+        id: id
       }
     end
   end
@@ -114,7 +130,7 @@ defmodule Arke.System.Group do
   See example above `arke/2`
 
   """
-  @spec parameter(id :: atom(), type:: atom(), opts :: list()) :: Macro.t()
+  @spec parameter(id :: atom(), type :: atom(), opts :: list()) :: Macro.t()
   defmacro parameter(id, type, opts \\ []) do
     # parameter_dict = Arke.System.BaseParameter.parameter_options(opts, id, type)
     quote bind_quoted: [id: id, type: type, opts: opts] do

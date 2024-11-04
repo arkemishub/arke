@@ -24,7 +24,6 @@ defmodule Arke.LinkManager do
   def add_node(project, %Unit{} = parent, %Unit{} = child, type \\ "link", metadata \\ %{}) do
     arke_link = ArkeManager.get(:arke_link, project)
 
-
     case check_link(project, parent, child, arke_link) do
       {_, nil} ->
         QueryManager.create(project, arke_link,
@@ -41,15 +40,26 @@ defmodule Arke.LinkManager do
 
   def add_node(project, parent, child, type, metadata)
       when is_binary(parent) and is_binary(child) do
-    with %Unit{}=unit_parent <- QueryManager.get_by(id: parent, project: project),
-         %Unit{}=unit_child <- QueryManager.get_by(id: child, project: project) do
+    with %Unit{} = unit_parent <- QueryManager.get_by(id: parent, project: project),
+         %Unit{} = unit_child <- QueryManager.get_by(id: child, project: project) do
       add_node(project, unit_parent, unit_child, type, metadata)
-      else
-      _ ->  Error.create(:link, "parent: `#{parent}` or child: `#{child}` not found")
+    else
+      _ -> Error.create(:link, "parent: `#{parent}` or child: `#{child}` not found")
     end
   end
 
-  def add_node(_project,  _parent, _child, _type, _metadata), do: Error.create(:link, "invalid parameters")
+  def add_node(_project, _parent, _child, _type, _metadata),
+    do: Error.create(:link, "invalid parameters")
+
+  def bulk_add_nodes(project, links) do
+    arke_link = ArkeManager.get(:arke_link, project)
+
+    {existing_links, not_existing_links} = check_links(project, links, arke_link)
+
+    QueryManager.create_bulk(project, arke_link, not_existing_links)
+
+    {:ok, not_existing_links, existing_links}
+  end
 
   def update_node(project, %Unit{} = parent, %Unit{} = child, type, metadata) do
     arke_link = ArkeManager.get(:arke_link, :arke_system)
@@ -91,6 +101,15 @@ defmodule Arke.LinkManager do
   def delete_node(_project, _parent, _child, _type, _metadata),
     do: Error.create(:link, "invalid parameters")
 
+  def bulk_delete_nodes(project, links) do
+    arke_link = ArkeManager.get(:arke_link, :arke_system)
+    {existing_links, not_existing_links} = check_links(project, links, arke_link)
+
+    QueryManager.delete_bulk(project, arke_link, existing_links)
+
+    {:ok, existing_links, []}
+  end
+
   defp check_link(project, parent, child, arke_link) do
     with %Arke.Core.Unit{} = link <-
            Arke.QueryManager.query(project: project, arke: arke_link)
@@ -99,5 +118,28 @@ defmodule Arke.LinkManager do
            |> Arke.QueryManager.one(),
          do: {:ok, link},
          else: (_ -> {:error, nil})
+  end
+
+  @spec check_links(atom(), list({Unit.t(), Unit.t(), String.t(), map()}), Arke.t()) :: Query.t()
+  defp check_links(project, links, arke_link) do
+    existing_links =
+      Arke.QueryManager.query(project: project, arke: arke_link)
+      |> Arke.QueryManager.or_(
+        false,
+        Enum.map(links, fn {parent, child, _type, _metadata} ->
+          Arke.QueryManager.conditions(parent_id: parent.id, child_id: child.id)
+        end)
+      )
+      |> Arke.QueryManager.all()
+
+    not_existing_links =
+      Enum.reject(links, fn {parent, child, _type, _metadata} ->
+        Enum.any?(existing_links, fn link ->
+          to_string(link.data.parent_id) == to_string(parent.id) &&
+            to_string(link.data.child_id) == to_string(child.id)
+        end)
+      end)
+
+    {existing_links, not_existing_links}
   end
 end
