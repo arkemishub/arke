@@ -51,7 +51,7 @@ defmodule Arke.Validator do
     do: validate([unit], persistence_fn, project)
 
   def validate([], _persistence_fn, _project),
-    do: %{valid: [], errors: [{nil, "empty list of units"}]}
+    do: %{valid: [], errors: []}
 
   def validate([%Unit{arke_id: arke_id} | _] = unit_list, persistence_fn, project) do
     %{data: arke_data} = arke = ArkeManager.get(arke_id, project)

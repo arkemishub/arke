@@ -186,7 +186,12 @@ defmodule Arke.QueryManager do
 
   # todo: remove after atoms removal
   defp data_as_klist(data) do
-    Enum.map(data, fn {key, value} -> {String.to_existing_atom(key), value} end)
+    Enum.map(data, fn {key, value} ->
+      case is_atom(key) do
+        true -> {key, value}
+        false -> {String.to_existing_atom(key), value}
+      end
+    end)
   end
 
   defp handle_link_parameters_unit(%{id: :arke_link} = _, unit), do: {:ok, unit}
