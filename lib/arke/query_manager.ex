@@ -144,7 +144,7 @@ defmodule Arke.QueryManager do
     persistence_fn = @persistence[:arke_postgres][:create]
 
     with %Unit{} = unit <- Unit.load(arke, args, :create),
-         %{valid: [unit], errors: _errors} <- Validator.validate(unit, :create, project),
+         {:ok, unit} <- Validator.validate(unit, :create, project),
          {:ok, unit} <- run_persistence_hook(arke, unit, :create, :before),
          {:ok, unit} <- run_group_and_link_hooks(arke, unit, :create, :before),
          {:ok, unit} <- persistence_fn.(project, unit, []),
@@ -295,7 +295,7 @@ defmodule Arke.QueryManager do
 
     with %Unit{} = unit <- Unit.update(current_unit, args),
          {:ok, unit} <- update_at_on_update(unit),
-         %{valid: [unit], errors: _errors} <- Validator.validate(unit, :update, project),
+         {:ok, unit} <- Validator.validate(unit, :update, project),
          # todo better valid / error handling
          {:ok, unit} <- run_persistence_hook(arke, unit, :update, :before, current_unit),
          {:ok, unit} <- run_group_and_link_hooks(arke, unit, :update, :before),

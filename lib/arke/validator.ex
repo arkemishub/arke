@@ -47,13 +47,21 @@ defmodule Arke.Validator do
           func_return()
   def validate(unit, persistence_fn, project \\ :arke_system)
 
-  def validate(%Unit{} = unit, persistence_fn, project),
-    do: validate([unit], persistence_fn, project)
+  def validate(%Unit{} = unit, persistence_fn, project) do
+    case validate([unit], persistence_fn, project) do
+      %{valid: [unit], errors: []} -> {:ok, unit}
+      %{errors: errors} -> Error.create(:parameter_validation, errors)
+    end
+  end
 
   def validate([], _persistence_fn, _project),
     do: %{valid: [], errors: []}
 
-  def validate([%Unit{arke_id: arke_id} | _] = unit_list, persistence_fn, project) do
+  def validate(
+        [%Unit{arke_id: arke_id} | _] = unit_list,
+        persistence_fn,
+        project
+      ) do
     %{data: arke_data} = arke = ArkeManager.get(arke_id, project)
 
     parameter_list =
