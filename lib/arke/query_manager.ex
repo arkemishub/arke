@@ -348,11 +348,14 @@ defmodule Arke.QueryManager do
   defp get_arke(arke, project) when is_atom(arke) do
     case ArkeManager.get(arke, project) do
       nil ->
-        {:error,msg} = Error.create(:query, "arke not found")
-        raise ArkeError, error_message: msg, type: :not_found
-      arke -> arke
+        {:error, msg} = Error.create(:query, "arke not found")
+        raise ArkeError, message: msg, type: :not_found
+
+      arke ->
+        arke
     end
   end
+
   defp get_arke(arke, _), do: arke
 
   defp get_group(group, project) when is_binary(group),
