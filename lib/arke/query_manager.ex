@@ -46,7 +46,6 @@ defmodule Arke.QueryManager do
   alias Arke.Utils.ErrorGenerator, as: Error
   alias Arke.Core.{Arke, Unit, Query, Parameter}
 
-
   @persistence Application.get_env(:arke, :persistence)
   @record_fields [:id, :data, :metadata, :inserted_at, :updated_at]
 
@@ -145,6 +144,7 @@ defmodule Arke.QueryManager do
   @spec create(project :: atom(), arke :: Arke.t(), args :: list()) :: func_return()
   def create(project, arke, args) do
     persistence_fn = @persistence[:arke_postgres][:create]
+
     with %Unit{} = unit <- Unit.load(arke, args, :create),
          {:ok, unit} <- Validator.validate(unit, :create, project),
          {:ok, unit} <- ArkeManager.call_func(arke, :before_create, [arke, unit]),
@@ -165,12 +165,9 @@ defmodule Arke.QueryManager do
          %{data: parameters} = arke,
          %{metadata: %{project: project}} = unit
        ) do
-
-
     {errors, link_units} =
       Enum.filter(ArkeManager.get_parameters(arke), fn p -> p.arke_id == :link end)
       |> Enum.reduce({[], []}, fn p, {errors, link_units} ->
-
         arke = ArkeManager.get(String.to_existing_atom(p.data.arke_or_group_id), project)
 
         case handle_create_on_link_parameters_unit(
@@ -226,7 +223,6 @@ defmodule Arke.QueryManager do
     do: {:ok, parameter, value}
 
   def handle_group_call_func(arke, unit, func) do
-
     GroupManager.get_groups_by_arke(arke)
     |> Enum.reduce_while(unit, fn group, new_unit ->
       with {:ok, new_unit} <- GroupManager.call_func(group, func, [arke, new_unit]),
@@ -260,6 +256,7 @@ defmodule Arke.QueryManager do
   def update(%{arke_id: arke_id, metadata: %{project: project}, data: data} = current_unit, args) do
     persistence_fn = @persistence[:arke_postgres][:update]
     arke = ArkeManager.get(arke_id, project)
+
     with %Unit{} = unit <- Unit.update(current_unit, args),
          {:ok, unit} <- update_at_on_update(unit),
          {:ok, unit} <- Validator.validate(unit, :update, project),
@@ -273,10 +270,12 @@ defmodule Arke.QueryManager do
          do: {:ok, unit},
          else: ({:error, errors} -> {:error, errors})
   end
+
   defp update_at_on_update(unit) do
     updated_at = DatetimeHandler.now(:datetime)
     {:ok, Unit.update(unit, updated_at: updated_at)}
   end
+
   @doc """
   Function to delete a given unit
   ## Parameters
@@ -536,6 +535,7 @@ defmodule Arke.QueryManager do
 
   defp handle_filter(query, :group_id, :eq, value, negate) do
     %{id: id} = group = get_group(value, query.project)
+
     arke_list =
       Enum.map(GroupManager.get_arke_list(group), fn a ->
         Atom.to_string(a.id)
@@ -602,6 +602,9 @@ defmodule Arke.QueryManager do
   """
   @spec limit(query :: Query.t(), limit :: integer()) :: Query.t()
   def limit(query, limit), do: Query.set_limit(query, limit)
+
+  def pagination(query, nil, limit), do: pagination(query, 0, limit)
+  def pagination(query, offset, nil), do: pagination(query, offset, 100)
 
   def pagination(query, offset, limit) do
     tmp_query = %{query | orders: []}
