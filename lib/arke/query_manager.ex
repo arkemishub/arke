@@ -42,7 +42,7 @@ defmodule Arke.QueryManager do
   alias Arke.LinkManager
   alias Arke.QueryManager
   alias Arke.Utils.DatetimeHandler, as: DatetimeHandler
-  alias Arke.Core.{Arke, Unit, Query, Parameter}
+  alias Arke.Core.{Arke, Unit, Query, Parameter, Link}
 
   @persistence Application.get_env(:arke, :persistence)
   @record_fields [:id, :data, :metadata, :inserted_at, :updated_at]
@@ -148,6 +148,7 @@ defmodule Arke.QueryManager do
          {:ok, unit} <- run_persistence_hook(arke, unit, :create, :before),
          {:ok, unit} <- run_group_and_link_hooks(arke, unit, :create, :before),
          {:ok, unit} <- persistence_fn.(project, unit, []),
+         {:ok, unit} <- handle_link_parameters_single(arke, unit, :create, :after),
          {:ok, unit} <- run_persistence_hook(arke, unit, :create, :after),
          {:ok, unit} <- run_group_and_link_hooks(arke, unit, :create, :after) do
       {:ok, unit}
@@ -338,6 +339,34 @@ defmodule Arke.QueryManager do
     else
       {:error, errors} -> {:error, errors}
     end
+  end
+
+  # todo: enhance for different arke types that acts as tables
+  defp prepare_update_bulk_units(%{id: :arke_link} = arke, unit_list, data) do
+    data_map =
+      data
+      |> Enum.map(fn d ->
+        key = {d.parent_id, d.child_id, d.type}
+        {key, d}
+      end)
+      |> Map.new()
+
+    updated_at = DatetimeHandler.now(:datetime)
+
+    Enum.reduce(unit_list, %{valid: [], errors: []}, fn unit, acc ->
+      key = {unit.data.parent_id, unit.data.child_id, unit.data.type}
+
+      case data_map[key] do
+        nil ->
+          acc
+
+        item ->
+          case Unit.update(unit, data_as_klist(item)) do
+            %Unit{} = unit -> Map.put(acc, :valid, [unit | acc.valid])
+            {:error, error} -> Map.put(acc, :errors, [error | acc.errors])
+          end
+      end
+    end)
   end
 
   defp prepare_update_bulk_units(arke, unit_list, data) do
@@ -825,6 +854,83 @@ defmodule Arke.QueryManager do
     {:ok, unit}
   end
 
+  defp handle_link_parameters_v2([], errors, _arke, _old_data), do: {:ok, [], errors}
+
+  defp handle_link_parameters_v2(
+         [%{metadata: %{project: project}} | _] = valid,
+         errors,
+         arke,
+         old_data \\ %{}
+       ) do
+    link_parameters =
+      Enum.filter(ArkeManager.get_parameters(arke), fn p -> p.arke_id == :link end)
+
+    {to_add, to_delete} =
+      Enum.reduce(link_parameters, {[], []}, fn p, {to_add_acc, to_delete_acc} ->
+        Enum.reduce(valid, {to_add_acc, to_delete_acc}, fn unit, {add_acc, del_acc} ->
+          old_value = get_in(old_data, [unit.id, p.id])
+          new_value = get_in(unit.data, [p.id])
+          {new_add, new_del} = build_link_entries(p, unit, old_value, new_value)
+          {add_acc ++ new_add, del_acc ++ new_del}
+        end)
+      end)
+
+    with {:ok, add_count, add_valid, add_errors} <- LinkManager.add_node_bulk(project, to_add),
+         {:ok, del_valid, del_errors} <-
+           LinkManager.delete_node_bulk(project, to_delete) do
+      {:ok, valid ++ add_valid ++ del_valid, errors ++ add_errors ++ del_errors}
+    else
+      {:error, err} -> {:error, err}
+    end
+  end
+
+  defp build_link_entries(%{data: %{multiple: true}} = parameter, unit, old_value, new_value) do
+    Enum.reduce(old_value, {[], []}, fn value, {add_acc, del_acc} ->
+      {[update_link_entry(parameter, unit, value) | add_acc],
+       [update_link_entry(parameter, unit, value) | del_acc]}
+    end)
+  end
+
+  defp build_link_entries(_parameter, _unit, old_value, new_value) when old_value == new_value,
+    do: {[], []}
+
+  defp build_link_entries(parameter, unit, old_value, new_value) when is_nil(new_value) do
+    {[], [update_link_entry(parameter, unit, old_value)]}
+  end
+
+  defp build_link_entries(parameter, unit, old_value, new_value) when is_nil(old_value) do
+    {[update_link_entry(parameter, unit, new_value)], []}
+  end
+
+  defp build_link_entries(parameter, unit, old_value, new_value) do
+    {[update_link_entry(parameter, unit, new_value)],
+     [update_link_entry(parameter, unit, old_value)]}
+  end
+
+  defp update_link_entry(
+         %{data: %{connection_type: type, direction: "child"}} = parameter,
+         unit,
+         new_value
+       ) do
+    Link.new(
+      normalize_value(unit.id),
+      normalize_value(new_value),
+      type
+    )
+  end
+
+  defp update_link_entry(
+         %{data: %{connection_type: type, direction: "parent"}} = parameter,
+         unit,
+         new_value
+       ) do
+    Link.new(
+      normalize_value(new_value),
+      normalize_value(unit.id),
+      type
+    )
+  end
+
   defp handle_link_parameter(_, nil, _, _), do: nil
 
   defp handle_link_parameter(unit, %{data: %{multiple: false}} = parameter, old_value, new_value) do
@@ -952,20 +1058,21 @@ defmodule Arke.QueryManager do
   end
 
   defp process_bulk(valid, errors, arke, persistence_fn, phase) do
-    case run_bulk_persistence_hook(valid, errors, arke, persistence_fn, phase) do
-      {:ok, valid, errors} ->
-        Enum.reduce(valid, %{valid: [], errors: errors}, fn unit, acc ->
-          case run_group_and_link_hooks(arke, unit, persistence_fn, phase) do
-            {:ok, unit} ->
-              %{acc | valid: [unit | acc.valid]}
+    with {:ok, valid, errors} <-
+           run_bulk_persistence_hook(valid, errors, arke, persistence_fn, phase),
+         {:ok, valid, errors} <-
+           handle_bulk_link_parameters(valid, errors, arke, persistence_fn, phase) do
+      Enum.reduce(valid, %{valid: [], errors: errors}, fn unit, acc ->
+        case run_group_and_link_hooks(arke, unit, persistence_fn, phase) do
+          {:ok, unit} ->
+            %{acc | valid: [unit | acc.valid]}
 
-            {:error, e} ->
-              %{acc | errors: [{unit, e} | acc.errors]}
-          end
-        end)
-
-      {:error, errors} ->
-        {:error, errors}
+          {:error, e} ->
+            %{acc | errors: [{unit, e} | acc.errors]}
+        end
+      end)
+    else
+      {:error, errors} -> {:error, errors}
     end
   end
 
@@ -1005,6 +1112,22 @@ defmodule Arke.QueryManager do
   defp run_persistence_hook(arke, unit, :delete, :after),
     do: ArkeManager.call_func(arke, :on_delete, [arke, unit])
 
+  def handle_bulk_link_parameters(valid, errors, arke, :create, :after),
+    do: handle_link_parameters_v2(valid, errors, arke)
+
+  def handle_bulk_link_parameters(valid, errors, _, _, _), do: {:ok, valid, errors}
+
+  def handle_link_parameters_single(arke, unit, :create, :after) do
+    handle_link_parameters_v2([unit], [], arke)
+    |> case do
+      {:ok, [unit], []} -> {:ok, unit}
+      {:ok, _, errors} -> {:error, errors}
+      {:error, errors} -> {:error, errors}
+    end
+  end
+
+  def handle_link_parameters_single(arke, unit, _phase, _action), do: {:ok, unit}
+
   defp run_group_and_link_hooks(arke, unit, :create, :before) do
     with {:ok, unit} <- handle_group_call_func(arke, unit, :before_unit_create),
          {:ok, unit} <- handle_link_parameters_unit(arke, unit),
@@ -1013,7 +1136,6 @@ defmodule Arke.QueryManager do
 
   defp run_group_and_link_hooks(arke, unit, :create, :after) do
     with {:ok, unit} <- handle_group_call_func(arke, unit, :on_unit_create),
-         {:ok, unit} <- handle_link_parameters(unit, %{}),
          do: {:ok, unit}
   end
 
