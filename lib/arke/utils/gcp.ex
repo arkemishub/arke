@@ -13,6 +13,8 @@
 # limitations under the License.
 
 defmodule Arke.Utils.Gcp do
+  use Arke.Utils.FileStorage
+
   alias Arke.Utils.ErrorGenerator, as: Error
   @storage Application.get_env(:arke, :storage)
   @service_account @storage[:gcp][:service_account]

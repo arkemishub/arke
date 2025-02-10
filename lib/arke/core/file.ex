@@ -18,8 +18,10 @@ defmodule Arke.Core.File do
   """
 
   use Arke.System
-  alias Arke.Utils.Gcp
+
   alias Arke.Boundary.ArkeManager
+
+  def file_storage_module(), do: Application.get_env(:arke, :file_storage_module, Arke.Utils.Gcp)
 
   arke id: :arke_file do
   end
@@ -64,7 +66,7 @@ defmodule Arke.Core.File do
   def before_create(_, %{data: %{name: name, path: path, binary_data: binary},runtime_data: runtime_data} = unit) do
     is_public_file = is_public?(runtime_data)
     new_unit =  Map.update(unit,:data, unit.data, fn udata -> Map.put(udata,:public,is_public_file) end)
-    case Gcp.upload_file("#{path}/#{name}", binary,public: is_public_file) do
+    case file_storage_module().upload_file("#{path}/#{name}", binary,public: is_public_file) do
       {:ok, _object} -> {:ok, new_unit}
       {:error, error} -> {:error, error}
     end
@@ -72,7 +74,7 @@ defmodule Arke.Core.File do
 
 
   def before_delete(_, %{data: %{name: name, path: path}} = unit) do
-    case Gcp.delete_file("#{path}/#{name}") do
+    case file_storage_module().delete_file("#{path}/#{name}") do
       {:ok, _e} -> {:ok, unit}
       {:error, error} -> {:error, error}
     end
@@ -81,17 +83,17 @@ defmodule Arke.Core.File do
   def before_update(_, %{binary_data: binary} = unit) when is_nil(binary), do: {:ok, unit}
 
   def before_update(_, %{data: %{name: name, path: path, binary_data: binary}} = unit) do
-    case Gcp.upload_file("#{path}/#{name}", binary) do
+    case file_storage_module().upload_file("#{path}/#{name}", binary) do
       {:ok, _object} -> {:ok, unit}
       {:error, error} -> {:error, error}
     end
   end
 
-  def get_url(%{data: %{public: true}} = unit), do:  Gcp.get_public_url(unit)
+  def get_url(%{data: %{public: true}} = unit), do:  file_storage_module().get_public_url(unit)
   def get_url(unit), do: get_signed_url(unit)
 
   def get_signed_url(%{data: data} = unit) do
-    case Gcp.get_bucket_file_signed_url("#{data.path}/#{data.name}") do
+    case file_storage_module().get_bucket_file_signed_url("#{data.path}/#{data.name}") do
     {:ok, signed_url} -> {:ok,signed_url}
     {:error,msg} -> {:error,msg}
     end
