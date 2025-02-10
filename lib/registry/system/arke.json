@@ -1,998 +1,986 @@
-{"arke": [
-  {
-    "id": "arke",
-    
+{
+  "arke": [
+    {
+      "id": "arke",
       "label": "Arke",
-"parameters": [
-      {
-        "id": "label",
-        "metadata": {
-          "required": true
+      "parameters": [
+        {
+          "id": "label",
+          "metadata": {
+            "required": true
+          }
+        },
+        {
+          "id": "active",
+          "metadata": {
+            "default_boolean": true
+          }
+        },
+        {
+          "id": "type",
+          "metadata": {
+            "required": true,
+            "default_string": "arke"
+          }
+        },
+        {
+          "id": "parameters",
+          "metadata": {
+            "multiple": true,
+            "arke_or_group_id": "parameters",
+            "connection_type": "parameters",
+            "direction": "child",
+            "filter_keys": [
+              "arke_id",
+              "id",
+              "label"
+            ],
+            "depth": 0,
+            "default_link": []
+          }
         }
-      },
-      {
-        "id": "active",
-        "metadata": {
-          "default_boolean": true
+      ]
+    },
+    {
+      "id": "arke_link",
+      "label": "Link",
+      "type": "table",
+      "parameters": [
+        {
+          "id": "parent_id",
+          "metadata": {
+            "is_primary": true,
+            "required": true
+          }
+        },
+        {
+          "id": "child_id",
+          "metadata": {
+            "is_primary": true,
+            "required": true
+          }
+        },
+        {
+          "id": "type",
+          "metadata": {
+            "is_primary": true,
+            "required": true,
+            "persistence": "table_column",
+            "default_string": "link"
+          }
+        },
+        {
+          "id": "metadata",
+          "metadata": {
+            "default_dict": {}
+          }
         }
-      },
-      {
-        "id": "type",
-        "metadata": {
-          "required": true,
-          "default_string": "arke"
-        }
-      },
-      {
-        "id": "parameters",
-        "metadata": {
-          "multiple": true,
-          "arke_or_group_id": "parameters",
-          "connection_type": "parameters",
-          "direction": "child",
-          "filter_keys": [
-            "arke_id",
-            "id",
-            "label"
-          ],
-          "depth": 0,
-          "default_link": []
-        }
-      }
-    ]
-  },
-  {
-    "id": "arke_link",
-    "label": "Link",
-    "type": "table",
-    "parameters": [
-      {
-        "id": "parent_id",
-        "metadata": {
-          "is_primary": true,
-          "required": true,
-          "persistence": "table_column"
-        }
-      },
-      {
-        "id": "child_id",
-        "metadata": {
-          "is_primary": true,
-          "required": true,
-          "persistence": "table_column"
-        }
-      },
-      {
-        "id": "type",
-        "metadata": {
-          "required": true,
-          "persistence": "table_column"
-        }
-      },
-      {
-        "id": "metadata",
-        "metadata": {
-          "is_primary": true,
-          "default_dict": {},
-          "persistence": "table_column"
-        }
-      }
-    ]
-  },
-  {
-    "id": "integer",
-    
+      ]
+    },
+    {
+      "id": "integer",
       "label": "Integer",
-"parameters": [
-      {
-        "id": "label",
-        "metadata": {
-          "required": true
+      "parameters": [
+        {
+          "id": "label",
+          "metadata": {
+            "required": true
+          }
+        },
+        {
+          "id": "format",
+          "metadata": {
+            "default_string": "attribute"
+          }
+        },
+        {
+          "id": "is_primary",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "nullable",
+          "metadata": {
+            "default_boolean": true
+          }
+        },
+        {
+          "id": "required",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "persistence",
+          "metadata": {
+            "default_string": "arke_parameter"
+          }
+        },
+        {
+          "id": "only_run_time",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "helper_text",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "min",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "max",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "values",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "multiple",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "default_integer",
+          "metadata": {
+            "default_integer": null
+          }
         }
-      },
-      {
-        "id": "format",
-        "metadata": {
-          "default_string": "attribute"
-        }
-      },
-      {
-        "id": "is_primary",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "nullable",
-        "metadata": {
-          "default_boolean": true
-        }
-      },
-      {
-        "id": "required",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "persistence",
-        "metadata": {
-          "default_string": "arke_parameter"
-        }
-      },
-      {
-        "id": "only_run_time",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "helper_text",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "min",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "max",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "values",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "multiple",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "default_integer",
-        "metadata": {
-          "default_integer": null
-        }
-      }
-    ]
-  },
-  {
-    "id": "string",
-    
+      ]
+    },
+    {
+      "id": "string",
       "label": "String",
-"parameters": [
-      {
-        "id": "label",
-        "metadata": {
-          "required": true
+      "parameters": [
+        {
+          "id": "label",
+          "metadata": {
+            "required": true
+          }
+        },
+        {
+          "id": "format",
+          "metadata": {
+            "default_string": "attribute"
+          }
+        },
+        {
+          "id": "is_primary",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "nullable",
+          "metadata": {
+            "default_boolean": true
+          }
+        },
+        {
+          "id": "required",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "persistence",
+          "metadata": {
+            "default_string": "arke_parameter"
+          }
+        },
+        {
+          "id": "only_run_time",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "helper_text",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "min_length",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "max_length",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "strip",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "values",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "multiple",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "unique",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "default_string",
+          "metadata": {
+            "default_string": null
+          }
         }
-      },
-      {
-        "id": "format",
-        "metadata": {
-          "default_string": "attribute"
-        }
-      },
-      {
-        "id": "is_primary",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "nullable",
-        "metadata": {
-          "default_boolean": true
-        }
-      },
-      {
-        "id": "required",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "persistence",
-        "metadata": {
-          "default_string": "arke_parameter"
-        }
-      },
-      {
-        "id": "only_run_time",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "helper_text",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "min_length",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "max_length",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "strip",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "values",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "multiple",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "unique",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "default_string",
-        "metadata": {
-          "default_string": null
-        }
-      }
-    ]
-  },
-  {
-    "id": "dict",
-    
+      ]
+    },
+    {
+      "id": "dict",
       "label": "Dict",
-"parameters": [
-      {
-        "id": "label",
-        "metadata": {
-          "required": true
+      "parameters": [
+        {
+          "id": "label",
+          "metadata": {
+            "required": true
+          }
+        },
+        {
+          "id": "format",
+          "metadata": {
+            "default_string": "attribute"
+          }
+        },
+        {
+          "id": "is_primary",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "nullable",
+          "metadata": {
+            "default_boolean": true
+          }
+        },
+        {
+          "id": "required",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "persistence",
+          "metadata": {
+            "default_string": "arke_parameter"
+          }
+        },
+        {
+          "id": "only_run_time",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "helper_text",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "default_dict",
+          "metadata": {
+            "required": false
+          }
         }
-      },
-      {
-        "id": "format",
-        "metadata": {
-          "default_string": "attribute"
-        }
-      },
-      {
-        "id": "is_primary",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "nullable",
-        "metadata": {
-          "default_boolean": true
-        }
-      },
-      {
-        "id": "required",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "persistence",
-        "metadata": {
-          "default_string": "arke_parameter"
-        }
-      },
-      {
-        "id": "only_run_time",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "helper_text",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "default_dict",
-        "metadata": {
-          "required": false
-        }
-      }
-    ]
-  },
-  {
-    "id": "date",
-    
+      ]
+    },
+    {
+      "id": "date",
       "label": "Date",
-"parameters": [
-      {
-        "id": "label",
-        "metadata": {
-          "required": true
+      "parameters": [
+        {
+          "id": "label",
+          "metadata": {
+            "required": true
+          }
+        },
+        {
+          "id": "format",
+          "metadata": {
+            "default_string": "attribute"
+          }
+        },
+        {
+          "id": "is_primary",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "nullable",
+          "metadata": {
+            "default_boolean": true
+          }
+        },
+        {
+          "id": "required",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "persistence",
+          "metadata": {
+            "default_string": "arke_parameter"
+          }
+        },
+        {
+          "id": "only_run_time",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "helper_text",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "default_date",
+          "metadata": {
+            "required": false
+          }
         }
-      },
-      {
-        "id": "format",
-        "metadata": {
-          "default_string": "attribute"
-        }
-      },
-      {
-        "id": "is_primary",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "nullable",
-        "metadata": {
-          "default_boolean": true
-        }
-      },
-      {
-        "id": "required",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "persistence",
-        "metadata": {
-          "default_string": "arke_parameter"
-        }
-      },
-      {
-        "id": "only_run_time",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "helper_text",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "default_date",
-        "metadata": {
-          "required": false
-        }
-      }
-    ]
-  },
-  {
-    "id": "datetime",
-    
+      ]
+    },
+    {
+      "id": "datetime",
       "label": "Datetime",
-"parameters": [
-      {
-        "id": "label",
-        "metadata": {
-          "required": true
+      "parameters": [
+        {
+          "id": "label",
+          "metadata": {
+            "required": true
+          }
+        },
+        {
+          "id": "format",
+          "metadata": {
+            "default_string": "attribute"
+          }
+        },
+        {
+          "id": "is_primary",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "nullable",
+          "metadata": {
+            "default_boolean": true
+          }
+        },
+        {
+          "id": "required",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "persistence",
+          "metadata": {
+            "default_string": "arke_parameter"
+          }
+        },
+        {
+          "id": "only_run_time",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "helper_text",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "default_datetime",
+          "metadata": {
+            "required": false
+          }
         }
-      },
-      {
-        "id": "format",
-        "metadata": {
-          "default_string": "attribute"
-        }
-      },
-      {
-        "id": "is_primary",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "nullable",
-        "metadata": {
-          "default_boolean": true
-        }
-      },
-      {
-        "id": "required",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "persistence",
-        "metadata": {
-          "default_string": "arke_parameter"
-        }
-      },
-      {
-        "id": "only_run_time",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "helper_text",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "default_datetime",
-        "metadata": {
-          "required": false
-        }
-      }
-    ]
-  },
-  {
-    "id": "dynamic",
-    
+      ]
+    },
+    {
+      "id": "dynamic",
       "label": "Dynamic",
-"parameters": [
-      {
-        "id": "label",
-        "metadata": {
-          "required": true
+      "parameters": [
+        {
+          "id": "label",
+          "metadata": {
+            "required": true
+          }
+        },
+        {
+          "id": "format",
+          "metadata": {
+            "default_string": "attribute"
+          }
+        },
+        {
+          "id": "is_primary",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "nullable",
+          "metadata": {
+            "default_boolean": true
+          }
+        },
+        {
+          "id": "required",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "persistence",
+          "metadata": {
+            "default_string": "arke_parameter"
+          }
+        },
+        {
+          "id": "only_run_time",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "helper_text",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "default_dynamic",
+          "metadata": {
+            "required": false
+          }
         }
-      },
-      {
-        "id": "format",
-        "metadata": {
-          "default_string": "attribute"
-        }
-      },
-      {
-        "id": "is_primary",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "nullable",
-        "metadata": {
-          "default_boolean": true
-        }
-      },
-      {
-        "id": "required",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "persistence",
-        "metadata": {
-          "default_string": "arke_parameter"
-        }
-      },
-      {
-        "id": "only_run_time",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "helper_text",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "default_dynamic",
-        "metadata": {
-          "required": false
-        }
-      }
-    ]
-  },
-  {
-    "id": "float",
-
+      ]
+    },
+    {
+      "id": "float",
       "label": "Float",
-"parameters": [
-      {
-        "id": "label",
-        "metadata": {
-          "required": true
+      "parameters": [
+        {
+          "id": "label",
+          "metadata": {
+            "required": true
+          }
+        },
+        {
+          "id": "format",
+          "metadata": {
+            "default_string": "attribute"
+          }
+        },
+        {
+          "id": "is_primary",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "nullable",
+          "metadata": {
+            "default_boolean": true
+          }
+        },
+        {
+          "id": "required",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "persistence",
+          "metadata": {
+            "default_string": "arke_parameter"
+          }
+        },
+        {
+          "id": "only_run_time",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "helper_text",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "min",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "max",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "values",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "multiple",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "default_float",
+          "metadata": {
+            "default_float": null
+          }
         }
-      },
-      {
-        "id": "format",
-        "metadata": {
-          "default_string": "attribute"
-        }
-      },
-      {
-        "id": "is_primary",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "nullable",
-        "metadata": {
-          "default_boolean": true
-        }
-      },
-      {
-        "id": "required",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "persistence",
-        "metadata": {
-          "default_string": "arke_parameter"
-        }
-      },
-      {
-        "id": "only_run_time",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "helper_text",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "min",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "max",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "values",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "multiple",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "default_float",
-        "metadata": {
-          "default_float": null
-        }
-      }
-    ]
-  },
-  {
-    "id": "boolean",
-    
+      ]
+    },
+    {
+      "id": "boolean",
       "label": "Boolean",
-"parameters": [
-      {
-        "id": "label",
-        "metadata": {
-          "required": true
+      "parameters": [
+        {
+          "id": "label",
+          "metadata": {
+            "required": true
+          }
+        },
+        {
+          "id": "format",
+          "metadata": {
+            "default_string": "attribute"
+          }
+        },
+        {
+          "id": "is_primary",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "nullable",
+          "metadata": {
+            "default_boolean": true
+          }
+        },
+        {
+          "id": "required",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "persistence",
+          "metadata": {
+            "default_string": "arke_parameter"
+          }
+        },
+        {
+          "id": "only_run_time",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "helper_text",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "default_boolean",
+          "metadata": {
+            "default_boolean": null
+          }
         }
-      },
-      {
-        "id": "format",
-        "metadata": {
-          "default_string": "attribute"
-        }
-      },
-      {
-        "id": "is_primary",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "nullable",
-        "metadata": {
-          "default_boolean": true
-        }
-      },
-      {
-        "id": "required",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "persistence",
-        "metadata": {
-          "default_string": "arke_parameter"
-        }
-      },
-      {
-        "id": "only_run_time",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "helper_text",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "default_boolean",
-        "metadata": {
-          "default_boolean": null
-        }
-      }
-    ]
-  },
-  {
-    "id": "list",
-    
+      ]
+    },
+    {
+      "id": "list",
       "label": "List",
-"parameters": [
-      {
-        "id": "label",
-        "metadata": {
-          "required": true
+      "parameters": [
+        {
+          "id": "label",
+          "metadata": {
+            "required": true
+          }
+        },
+        {
+          "id": "format",
+          "metadata": {
+            "default_string": "attribute"
+          }
+        },
+        {
+          "id": "is_primary",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "nullable",
+          "metadata": {
+            "default_boolean": true
+          }
+        },
+        {
+          "id": "required",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "persistence",
+          "metadata": {
+            "default_string": "arke_parameter"
+          }
+        },
+        {
+          "id": "only_run_time",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "helper_text",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "default_list",
+          "metadata": {
+            "default_list": null
+          }
         }
-      },
-      {
-        "id": "format",
-        "metadata": {
-          "default_string": "attribute"
-        }
-      },
-      {
-        "id": "is_primary",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "nullable",
-        "metadata": {
-          "default_boolean": true
-        }
-      },
-      {
-        "id": "required",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "persistence",
-        "metadata": {
-          "default_string": "arke_parameter"
-        }
-      },
-      {
-        "id": "only_run_time",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "helper_text",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "default_list",
-        "metadata": {
-          "default_list": null
-        }
-      }
-    ]
-  },
-  {
-    "id": "time",
+      ]
+    },
+    {
+      "id": "time",
       "label": "Time",
       "parameters": [
-      {
-        "id": "label",
-        "metadata": {
-          "required": true
+        {
+          "id": "label",
+          "metadata": {
+            "required": true
+          }
+        },
+        {
+          "id": "format",
+          "metadata": {
+            "default_string": "attribute"
+          }
+        },
+        {
+          "id": "is_primary",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "nullable",
+          "metadata": {
+            "default_boolean": true
+          }
+        },
+        {
+          "id": "required",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "persistence",
+          "metadata": {
+            "default_string": "arke_parameter"
+          }
+        },
+        {
+          "id": "only_run_time",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "helper_text",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "default_time",
+          "metadata": {
+            "default_time": null
+          }
         }
-      },
-      {
-        "id": "format",
-        "metadata": {
-          "default_string": "attribute"
+      ]
+    },
+    {
+      "id": "link",
+      "label": "Link",
+      "parameters": [
+        {
+          "id": "label",
+          "metadata": {
+            "required": true
+          }
+        },
+        {
+          "id": "format",
+          "metadata": {
+            "default_string": "attribute"
+          }
+        },
+        {
+          "id": "is_primary",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "nullable",
+          "metadata": {
+            "default_boolean": true
+          }
+        },
+        {
+          "id": "required",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "persistence",
+          "metadata": {
+            "default_string": "arke_parameter"
+          }
+        },
+        {
+          "id": "only_run_time",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "helper_text",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "default_link",
+          "metadata": {
+            "default_link": null
+          }
+        },
+        {
+          "id": "depth",
+          "metadata": {
+            "default_integer": 0
+          }
+        },
+        {
+          "id": "connection_type",
+          "metadata": {
+            "default_string": "link"
+          }
+        },
+        {
+          "id": "arke_or_group_id",
+          "metadata": {
+            "default_string": "arke"
+          }
+        },
+        {
+          "id": "filter_keys",
+          "metadata": {
+            "multiple": true,
+            "default_string": [
+              "id",
+              "arke_id"
+            ]
+          }
+        },
+        {
+          "id": "multiple",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "direction",
+          "metadata": {
+            "default_string": "child"
+          }
         }
-      },
-      {
-        "id": "is_primary",
-        "metadata": {
-          "default_boolean": false
+      ]
+    },
+    {
+      "id": "binary",
+      "label": "Binary",
+      "parameters": [
+        {
+          "id": "label",
+          "metadata": {
+            "required": true
+          }
+        },
+        {
+          "id": "format",
+          "metadata": {
+            "default_string": "attribute"
+          }
+        },
+        {
+          "id": "is_primary",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "nullable",
+          "metadata": {
+            "default_boolean": true
+          }
+        },
+        {
+          "id": "required",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "persistence",
+          "metadata": {
+            "default_string": "arke_parameter"
+          }
+        },
+        {
+          "id": "only_run_time",
+          "metadata": {
+            "default_boolean": false
+          }
+        },
+        {
+          "id": "helper_text",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "default_binary",
+          "metadata": {
+            "default_binary": null
+          }
         }
-      },
-      {
-        "id": "nullable",
-        "metadata": {
-          "default_boolean": true
-        }
-      },
-      {
-        "id": "required",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "persistence",
-        "metadata": {
-          "default_string": "arke_parameter"
-        }
-      },
-      {
-        "id": "only_run_time",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "helper_text",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "default_time",
-        "metadata": {
-          "default_time": null
-        }
-      }
-    ]
-  },
-  {
-    "id": "link",
-    "label": "Link",
-    "parameters": [
-      {
-        "id": "label",
-        "metadata": {
-          "required": true
-        }
-      },
-      {
-        "id": "format",
-        "metadata": {
-          "default_string": "attribute"
-        }
-      },
-      {
-        "id": "is_primary",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "nullable",
-        "metadata": {
-          "default_boolean": true
-        }
-      },
-      {
-        "id": "required",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "persistence",
-        "metadata": {
-          "default_string": "arke_parameter"
-        }
-      },
-      {
-        "id": "only_run_time",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "helper_text",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "default_link",
-        "metadata": {
-          "default_link": null
-        }
-      },
-      {
-        "id": "depth",
-        "metadata": {
-          "default_integer": 0
-        }
-      },
-      {
-        "id": "connection_type",
-        "metadata": {
-          "default_string": "link"
-        }
-      },
-      {
-        "id": "arke_or_group_id",
-        "metadata": {
-          "default_string": "arke"
-        }
-      },
-      {
-        "id": "filter_keys",
-        "metadata": {
-          "multiple": true,
-          "default_string": [
-            "id",
-            "arke_id"
-          ]
-        }
-      },
-      {
-        "id": "multiple",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-
-      {
-        "id": "direction",
-        "metadata": {
-          "default_string": "child"
-        }
-      }
-    ]
-  },
-  {
-    "id": "binary",
-    "label": "Binary",
-    "parameters": [
-      {
-        "id": "label",
-        "metadata": {
-          "required": true
-        }
-      },
-      {
-        "id": "format",
-        "metadata": {
-          "default_string": "attribute"
-        }
-      },
-      {
-        "id": "is_primary",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "nullable",
-        "metadata": {
-          "default_boolean": true
-        }
-      },
-      {
-        "id": "required",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "persistence",
-        "metadata": {
-          "default_string": "arke_parameter"
-        }
-      },
-      {
-        "id": "only_run_time",
-        "metadata": {
-          "default_boolean": false
-        }
-      },
-      {
-        "id": "helper_text",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "default_binary",
-        "metadata": {
-          "default_binary": null
-        }
-      }
-    ]
-  },
-  {
-    "id": "group",
-    
+      ]
+    },
+    {
+      "id": "group",
       "label": "Group",
-"parameters": [
-      {
-        "id": "label",
-        "metadata": {
-          "required": false
+      "parameters": [
+        {
+          "id": "label",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "description",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "arke_list",
+          "metadata": {
+            "multiple": true,
+            "arke_or_group_id": "arke",
+            "connection_type": "group",
+            "depth": 0,
+            "default_link": []
+          }
         }
-      },
-      {
-        "id": "description",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "arke_list",
-        "metadata": {
-          "multiple": true,
-          "arke_or_group_id": "arke",
-          "connection_type": "group",
-          "depth": 0,
-          "default_link": []
-        }
-      }
-    ]
-  },
-  {
-    "id": "arke_project",
+      ]
+    },
+    {
+      "id": "arke_project",
       "label": "Project",
-"parameters": [
-      {
-        "id": "label",
-        "metadata": {
-          "required": true
+      "parameters": [
+        {
+          "id": "label",
+          "metadata": {
+            "required": true
+          }
+        },
+        {
+          "id": "description",
+          "metadata": {
+            "required": false
+          }
+        },
+        {
+          "id": "persistence",
+          "metadata": {
+            "required": true,
+            "values": null,
+            "default_dict": {}
+          }
+        },
+        {
+          "id": "type",
+          "metadata": {
+            "required": true,
+            "default_string": "postgres_schema"
+          }
         }
-      },
-      {
-        "id": "description",
-        "metadata": {
-          "required": false
-        }
-      },
-      {
-        "id": "persistence",
-        "metadata": {
-          "required": true,
-          "values": null,
-          "default_dict": {}
-        }
-      },
-      {
-        "id": "type",
-        "metadata": {
-          "required": true,
-          "default_string": "postgres_schema"
-        }
-      }
-    ]
-  }
-]}
+      ]
+    }
+  ]
+}

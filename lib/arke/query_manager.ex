@@ -42,6 +42,8 @@ defmodule Arke.QueryManager do
   alias Arke.LinkManager
   alias Arke.QueryManager
   alias Arke.Utils.DatetimeHandler, as: DatetimeHandler
+  alias Arke.Errors.ArkeError
+  alias Arke.Utils.ErrorGenerator, as: Error
   alias Arke.Core.{Arke, Unit, Query, Parameter}
 
   @persistence Application.get_env(:arke, :persistence)
@@ -144,7 +146,7 @@ defmodule Arke.QueryManager do
     persistence_fn = @persistence[:arke_postgres][:create]
 
     with %Unit{} = unit <- Unit.load(arke, args, :create),
-         %{valid: [unit], errors: _errors} <- Validator.validate(unit, :create, project),
+         {:ok, unit} <- Validator.validate(unit, :create, project),
          {:ok, unit} <- run_persistence_hook(arke, unit, :create, :before),
          {:ok, unit} <- run_group_call_func(arke, unit, :create, :before),
          {:ok, unit} <- handle_link_parameters_unit(arke, unit),
@@ -188,7 +190,12 @@ defmodule Arke.QueryManager do
 
   # todo: remove after atoms removal
   defp data_as_klist(data) do
-    Enum.map(data, fn {key, value} -> {String.to_existing_atom(key), value} end)
+    Enum.map(data, fn {key, value} ->
+      case is_atom(key) do
+        true -> {key, value}
+        false -> {String.to_existing_atom(key), value}
+      end
+    end)
   end
 
   defp handle_group_call_func(arke, unit, func) do
@@ -240,7 +247,7 @@ defmodule Arke.QueryManager do
 
     with %Unit{} = unit <- Unit.update(current_unit, args),
          {:ok, unit} <- update_at_on_update(unit),
-         %{valid: [unit], errors: _errors} <- Validator.validate(unit, :update, project),
+         {:ok, unit} <- Validator.validate(unit, :update, project),
          # todo better valid / error handling
          {:ok, unit} <- run_persistence_hook(arke, unit, :update, :before, current_unit),
          {:ok, unit} <- run_group_and_link_hooks(arke, unit, :update, :before),
@@ -314,7 +321,6 @@ defmodule Arke.QueryManager do
     updated_at = DatetimeHandler.now(:datetime)
     {:ok, Unit.update(unit, updated_at: updated_at)}
   end
-
   @doc """
   Function to delete a given unit
   ## Parameters
@@ -400,7 +406,17 @@ defmodule Arke.QueryManager do
   defp get_arke(arke, project) when is_binary(arke),
     do: String.to_existing_atom(arke) |> get_arke(project)
 
-  defp get_arke(arke, project) when is_atom(arke), do: ArkeManager.get(arke, project)
+  defp get_arke(arke, project) when is_atom(arke) do
+    case ArkeManager.get(arke, project) do
+      nil ->
+        {:error, msg} = Error.create(:query, "arke not found")
+        raise ArkeError, message: msg, type: :not_found
+
+      arke ->
+        arke
+    end
+  end
+
   defp get_arke(arke, _), do: arke
 
   defp get_group(group, project) when is_binary(group),
@@ -665,6 +681,9 @@ defmodule Arke.QueryManager do
   """
   @spec limit(query :: Query.t(), limit :: integer()) :: Query.t()
   def limit(query, limit), do: Query.set_limit(query, limit)
+
+  def pagination(query, nil, limit), do: pagination(query, 0, limit)
+  def pagination(query, offset, nil), do: pagination(query, offset, 100)
 
   def pagination(query, offset, limit) do
     tmp_query = %{query | orders: []}
