@@ -366,7 +366,6 @@ defmodule Arke.QueryManager do
     updated_at = DatetimeHandler.now(:datetime)
     {:ok, Unit.update(unit, updated_at: updated_at)}
   end
-
   @doc """
   Function to delete a given unit
   ## Parameters
@@ -717,6 +716,9 @@ defmodule Arke.QueryManager do
   """
   @spec limit(query :: Query.t(), limit :: integer()) :: Query.t()
   def limit(query, limit), do: Query.set_limit(query, limit)
+
+  def pagination(query, nil, limit), do: pagination(query, 0, limit)
+  def pagination(query, offset, nil), do: pagination(query, offset, 100)
 
   def pagination(query, offset, limit) do
     tmp_query = %{query | orders: []}
