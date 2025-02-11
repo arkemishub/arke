@@ -49,13 +49,13 @@ defmodule Arke.Validator do
 
   def validate(%Unit{} = unit, persistence_fn, project) do
     case validate([unit], persistence_fn, project) do
-      %{valid: [unit], errors: []} -> {:ok, unit}
-      %{errors: errors} -> Error.create(:parameter_validation, errors)
+      {:ok, [unit], []} -> {:ok, unit}
+      {:ok, [], errors} -> Error.create(:parameter_validation, errors)
     end
   end
 
   def validate([], _persistence_fn, _project),
-    do: %{valid: [], errors: []}
+    do: {:ok, [], []}
 
   def validate(
         [%Unit{arke_id: arke_id} | _] = unit_list,
@@ -69,23 +69,27 @@ defmodule Arke.Validator do
         persistence == "arke_parameter"
       end)
 
-    check_duplicate_units(unit_list, project, persistence_fn)
-    |> apply_before_validate(project)
-    |> check_bulk_parameters(arke, parameter_list, project)
-    |> check_unique_parameters(arke, parameter_list, project)
+    with {:ok, valid, errors} <- check_duplicate_units(unit_list, project, persistence_fn),
+         {:ok, valid, errors} <- apply_before_validate(valid, errors, project),
+         {:ok, valid, errors} <-
+           check_bulk_parameters(valid, errors, arke, parameter_list, project),
+         {:ok, valid, errors} <-
+           check_unique_parameters(valid, errors, arke, parameter_list, project) do
+      {:ok, valid, errors}
+    end
   end
 
-  defp apply_before_validate(%{valid: valid, errors: errors}, project),
-    do:
-      Enum.reduce(valid, %{valid: [], errors: errors}, fn u, acc ->
-        case before_validate(u, project) do
-          {unit, []} ->
-            Map.put(acc, :valid, [unit | acc.valid])
+  defp apply_before_validate(valid, errors, project) do
+    Enum.reduce_while(valid, {:ok, [], errors}, fn u, {:ok, acc_valid, acc_errors} ->
+      case before_validate(u, project) do
+        {unit, []} ->
+          {:cont, {:ok, [unit | acc_valid], acc_errors}}
 
-          {unit, unit_errors} ->
-            Map.put(errors, :errors, errors ++ {unit, unit_errors})
-        end
-      end)
+        {unit, unit_errors} ->
+          {:cont, {:ok, acc_valid, [{unit, unit_errors} | acc_errors]}}
+      end
+    end)
+  end
 
   defp before_validate(%{arke_id: arke_id} = unit, project) do
     arke = ArkeManager.get(arke_id, project)
@@ -100,7 +104,6 @@ defmodule Arke.Validator do
       Enum.filter(unit_list, fn u -> not is_nil(u.id) end) |> Enum.map(&to_string(&1.id))
 
     duplicates = QueryManager.filter_by(%{:id__in => ids_to_check, :project => project})
-    # todo: merge with system duplicates
 
     valid =
       Enum.reduce(unit_list, [], fn item, acc ->
@@ -110,48 +113,51 @@ defmodule Arke.Validator do
         end
       end)
 
-    %{
-      valid: valid,
-      errors: Enum.map(duplicates, fn d -> {d, "value not allowed for #{d.id}"} end)
-    }
+    errors = Enum.map(duplicates, fn d -> {d, "value not allowed for #{d.id}"} end)
+
+    {:ok, valid, errors}
   end
 
   defp check_duplicate_units(unit_list, _project, _persistence_fn),
-    # todo: manage update
-    do: %{valid: unit_list, errors: []}
+    do: {:ok, unit_list, []}
 
   defp get_result({_unit, errors} = _res) when is_list(errors) and length(errors) > 0,
     do: Error.create(:parameter_validation, errors)
 
   defp get_result({unit, _errors} = _res), do: {:ok, unit}
 
-  defp check_bulk_parameters(%{valid: valid, errors: errors}, arke, parameter_list, project) do
-    Enum.reduce(valid, %{valid: [], errors: errors}, fn unit, acc ->
-      case Enum.reduce(parameter_list, {unit, []}, fn parameter, {unit, errors} ->
-             {value, err} =
-               validate_parameter(
-                 arke,
-                 parameter,
-                 Unit.get_value(unit.data, parameter.id),
-                 project
-               )
+  defp check_bulk_parameters(valid, errors, arke, parameter_list, project) do
+    result =
+      Enum.reduce(valid, {[], errors}, fn unit, {acc_valid, acc_errors} ->
+        case Enum.reduce(parameter_list, {unit, []}, fn parameter, {unit, errors} ->
+               {value, err} =
+                 validate_parameter(
+                   arke,
+                   parameter,
+                   Unit.get_value(unit.data, parameter.id),
+                   project
+                 )
 
-             {Unit.update(unit, [{parameter.id, value}]), errors ++ err}
-           end) do
-        {unit, []} ->
-          Map.put(acc, :valid, [unit | acc.valid])
+               {Unit.update(unit, [{parameter.id, value}]), errors ++ err}
+             end) do
+          {unit, []} ->
+            {[unit | acc_valid], acc_errors}
 
-        {unit, unit_errors} ->
-          %{
-            acc
-            | errors: [
-                {unit,
-                 Enum.map(unit_errors, fn {parameter_id, error} -> "#{parameter_id} #{error}" end)}
-                | acc.errors
-              ]
-          }
-      end
-    end)
+          {unit, unit_errors} ->
+            {acc_valid,
+             [
+               {unit,
+                Enum.map(unit_errors, fn {parameter_id, error} ->
+                  "#{parameter_id} #{error}"
+                end)}
+               | acc_errors
+             ]}
+        end
+      end)
+
+    case result do
+      {valid, errors} -> {:ok, valid, errors}
+    end
   end
 
   defp create_unique_map(parameter_list, unit_list) do
@@ -166,31 +172,37 @@ defmodule Arke.Validator do
     end)
   end
 
-  defp check_unique_parameters(
-         %{valid: valid, errors: errors} = unit_map,
-         arke,
-         parameter_list,
-         project
-       ) do
+  defp check_unique_parameters(valid, errors, arke, parameter_list, project) do
     unique_map = create_unique_map(parameter_list, valid)
 
-    valid
-    |> validate_unique_input([], errors, unique_map)
-    |> validate_and_filter_unique_units(unique_map, arke, project, parameter_list)
+    with {:ok, valid, errors} <- validate_unique_input(valid, [], errors, unique_map),
+         {:ok, valid, errors} <-
+           validate_and_filter_unique_units(
+             valid,
+             errors,
+             unique_map,
+             arke,
+             project,
+             parameter_list
+           ) do
+      {:ok, valid, errors}
+    end
   end
 
   defp validate_and_filter_unique_units(
-         %{valid: valid, errors: errors},
+         valid,
+         errors,
          unique_map,
-         _arke,
-         _project,
-         _parameter_list
+         arke,
+         project,
+         parameter_list
        )
        when map_size(unique_map) == 0,
-       do: %{valid: valid, errors: errors}
+       do: {:ok, valid, errors}
 
   defp validate_and_filter_unique_units(
-         %{valid: valid, errors: errors},
+         valid,
+         errors,
          unique_map,
          arke,
          project,
@@ -208,7 +220,7 @@ defmodule Arke.Validator do
 
     parameter_already_present = create_unique_map(parameter_list, db_units)
 
-    Enum.reduce(valid, %{valid: [], errors: errors}, fn unit, acc ->
+    Enum.reduce(valid, {:ok, [], errors}, fn unit, {:ok, acc_valid, acc_errors} ->
       {non_unique_parameters, unit_errors} =
         parameter_already_present
         |> Enum.reduce({[], []}, fn {parameter_id, uniques}, {non_unique, errors} ->
@@ -229,19 +241,19 @@ defmodule Arke.Validator do
         end)
 
       if non_unique_parameters == [] do
-        %{acc | valid: [unit | acc.valid]}
+        {:ok, [unit | acc_valid], acc_errors}
       else
-        %{acc | errors: [{unit, unit_errors} | acc.errors]}
+        {:ok, acc_valid, [{unit, unit_errors} | acc_errors]}
       end
     end)
   end
 
   defp validate_unique_input(unit_list, _valid, errors, unique_map)
        when map_size(unique_map) == 0,
-       do: %{valid: unit_list, errors: errors}
+       do: {:ok, unit_list, errors}
 
   defp validate_unique_input([], valid, errors, _unique_map),
-    do: %{valid: valid, errors: errors}
+    do: {:ok, valid, errors}
 
   defp validate_unique_input([unit | tail], valid, errors, unique_map) do
     unit_errors =
@@ -264,7 +276,7 @@ defmodule Arke.Validator do
 
     case unit_errors do
       [] -> validate_unique_input(tail, [unit | valid], errors, unique_map)
-      _ -> validate_unique_input(tail, valid, [{unit, unit_errors} | errors], unique_map)
+      _ -> {:ok, valid, [{unit, unit_errors} | errors]}
     end
   end
 
