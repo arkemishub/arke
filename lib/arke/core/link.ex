@@ -22,6 +22,26 @@ defmodule Arke.Core.Link do
   arke id: :arke_link do
   end
 
+  @enforce_keys [:parent_id, :child_id, :type]
+  defstruct [:parent_id, :child_id, :type, metadata: %{}]
+
+  def new(parent_id, child_id, type, metadata \\ %{}) do
+    __struct__(parent_id: parent_id, child_id: child_id, type: type, metadata: metadata)
+  end
+
+  def load(arke_link, %Arke.Core.Unit{arke_id: :arke_link} = unit) do
+    new(unit.data.parent_id, unit.data.child_id, unit.data.type, unit.metadata)
+  end
+
+  def load(arke_link, opts) do
+    {parent_id, opts} = Map.pop(opts, :parent_id, nil)
+    {child_id, opts} = Map.pop(opts, :child_id, nil)
+    {type, opts} = Map.pop(opts, :type, nil)
+    {metadata, opts} = Map.pop(opts, :metadata, arke_link.metadata)
+
+    new(parent_id, child_id, type, metadata)
+  end
+
   def on_create(
         _,
         %{
