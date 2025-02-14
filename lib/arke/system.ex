@@ -55,7 +55,7 @@ defmodule Arke.System do
       def after_get_struct(arke, struct), do: struct
 
       def import(%{runtime_data: %{conn: %{method: "POST"}=conn}, metadata: %{project: project}} = arke) do
-        member = ArkeAuth.Guardian.Plug.current_resource(conn)
+        member = ArkeAuth.Guardian.get_member(conn)
         mode = Map.get(conn.body_params, "mode", "default")
 
         case Map.get(conn.body_params, "file", nil) do
