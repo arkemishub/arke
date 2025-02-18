@@ -44,12 +44,12 @@ defmodule Arke.System.Group do
       def on_unit_delete(_arke, unit), do: {:ok, unit}
       def before_unit_delete(_arke, unit), do: {:ok, unit}
 
-      defp before_unit_bulk_create(arke, valid, errors), do: {:ok, valid, errors}
-      defp on_unit_bulk_create(arke, valid, errors), do: {:ok, valid, errors}
-      defp before_unit_bulk_update(arke, valid, errors), do: {:ok, valid, errors}
-      defp on_unit_bulk_update(arke, valid, errors), do: {:ok, valid, errors}
-      defp before_unit_bulk_delete(arke, valid, errors), do: {:ok, valid, errors}
-      defp on_unit_bulk_delete(arke, valid, errors), do: {:ok, valid, errors}
+      def before_unit_bulk_create(_arke, valid, errors), do: {:ok, valid, errors}
+      def on_unit_bulk_create(_arke, valid, errors), do: {:ok, valid, errors}
+      def before_unit_bulk_update(_arke, valid, errors), do: {:ok, valid, errors}
+      def on_unit_bulk_update(_arke, valid, errors), do: {:ok, valid, errors}
+      def before_unit_bulk_delete(_arke, valid, errors), do: {:ok, valid, errors}
+      def on_unit_bulk_delete(_arke, valid, errors), do: {:ok, valid, errors}
 
       defoverridable on_unit_load: 3,
                      before_unit_load: 3,

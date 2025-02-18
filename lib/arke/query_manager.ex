@@ -162,7 +162,7 @@ defmodule Arke.QueryManager do
 
   @spec create_bulk(project :: atom(), arke :: Arke.t(), data :: list(Arke.t()), args :: list()) ::
           func_return()
-  def create_bulk(project, arke, data, args) do
+  def create_bulk(project, arke, data, args \\ []) do
     persistence_fn = @persistence[:arke_postgres][:create]
 
     with {:ok, valid, errors} <- prepare_create_bulk_units(arke, data, args),
@@ -281,7 +281,7 @@ defmodule Arke.QueryManager do
          {:ok, valid, errors} <-
            ArkeManager.call_func(arke, :before_bulk_update, [arke, valid, errors]),
          {:ok, valid, errors} <-
-           handle_group_call_func(valid, errors, arke, :before_unit_bulk_create),
+           handle_group_call_func(valid, errors, arke, :before_unit_bulk_update),
          {:ok, updated_count, valid, persistence_errors} <-
            persistence_fn.(project, valid, bulk: true),
          {:ok, valid, errors} <-
