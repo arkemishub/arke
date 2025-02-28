@@ -849,6 +849,9 @@ defmodule Arke.QueryManager do
 
   defp handle_bulk_link_parameters([], errors, _arke, _old_data), do: {:ok, [], errors}
 
+  defp handle_bulk_link_parameters(valid, errors, %Unit{id: :arke_link}, _old_data),
+    do: {:ok, valid, errors}
+
   defp handle_bulk_link_parameters(
          [%{metadata: %{project: project}} | _] = valid,
          errors,
@@ -869,9 +872,10 @@ defmodule Arke.QueryManager do
         end)
       end)
 
-    with {:ok, del_valid, del_errors} <- LinkManager.delete_node_bulk(project, to_delete),
-         {:ok, _add_count, add_valid, add_errors} <- LinkManager.add_node_bulk(project, to_add) do
-      {:ok, valid ++ add_valid, errors ++ add_errors ++ del_errors}
+    with {:ok, del_valid, _del_errors} <- LinkManager.delete_node_bulk(project, to_delete),
+         {:ok, _add_count, _add_valid, []} <- LinkManager.add_node_bulk(project, to_add) do
+      # todo: better error handling
+      {:ok, valid, errors}
     else
       {:error, err} -> {:error, err}
     end

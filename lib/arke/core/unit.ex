@@ -169,8 +169,17 @@ defmodule Arke.Core.Unit do
 
   defp handle_default_value(_), do: nil
 
-  defp get_link(%{depth: depth, link_metadata: link_metadata,starting_unit: starting_unit, link_type: link_type} = args),
-    do: {%{depth: depth, metadata: link_metadata,starting_unit: starting_unit, type: link_type}, args}
+  defp get_link(
+         %{
+           depth: depth,
+           link_metadata: link_metadata,
+           starting_unit: starting_unit,
+           link_type: link_type
+         } = args
+       ),
+       do:
+         {%{depth: depth, metadata: link_metadata, starting_unit: starting_unit, type: link_type},
+          args}
 
   defp get_link(args), do: {nil, args}
 
@@ -289,11 +298,11 @@ defmodule Arke.Core.Unit do
   defp update_encoded_unit_data(%{data: %{only_runtime: true}}, data, _), do: data
 
   defp update_encoded_unit_data(%{id: id}, data, value),
-       do:
-         Map.put_new(data, Atom.to_string(id), %{
-           :value => value,
-           :datetime => Arke.DatetimeHandler.now(:datetime)
-         })
+    do:
+      Map.put_new(data, Atom.to_string(id), %{
+        :value => value,
+        :datetime => Arke.DatetimeHandler.now(:datetime)
+      })
 
   defp update_encoded_unit_data(_, data, _), do: data
 
@@ -372,7 +381,6 @@ defmodule Arke.Core.Unit do
 
   defp parse_value(value, %{arke_id: :atom}) when is_binary(value),
     do: String.to_existing_atom(value)
-
 
   defp parse_value(value, %{arke_id: :date}) do
     with {:ok, date} <- DatetimeHandler.parse_date(value),

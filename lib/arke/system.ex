@@ -114,8 +114,14 @@ defmodule Arke.System do
           end)
 
         existing_units = get_existing_units_for_import(project, arke, header, correct_units)
-        units_args = Enum.filter(correct_units, fn u -> check_existing_units_for_import(project, arke, header, u, existing_units) == false end)
-        {existing_units,units_args,error_units} = handle_insert(project,existing_units,units_args,error_units)
+
+        units_args =
+          Enum.filter(correct_units, fn u ->
+            check_existing_units_for_import(project, arke, header, u, existing_units) == false
+          end)
+
+        {existing_units, units_args, error_units} =
+          handle_insert(project, arke, existing_units, units_args, error_units)
 
         count_inserted = length(units_args)
         count_existing = length(existing_units)
@@ -133,14 +139,27 @@ defmodule Arke.System do
         {:ok, res, 201}
       end
 
-      defp handle_insert(project,existing_units,units_args,error_units) when length(units_args) > 0 do
-        {existing_units,units_args,error_units} = before_unit_import(project,existing_units,units_args,error_units)
-        Enum.map(Stream.chunk_every(units_args, 5000) |> Enum.to_list(), fn chunk ->
-          ArkePostgres.Repo.insert_all("arke_unit", chunk, prefix: Atom.to_string(project))
-        end)
-        on_unit_import(project,existing_units,units_args,error_units)
+      defp handle_insert(project, arke, existing_units, units_args, error_units)
+           when length(units_args) > 0 do
+        {existing_units, units_args, error_units} =
+          before_unit_import(project, existing_units, units_args, error_units)
+
+        units_args_maps =
+          Enum.map(units_args, fn unit_arg ->
+            unit_arg
+            |> Keyword.get(:data, %{})
+            |> Enum.reduce(%{}, fn {key, %{value: value}}, acc ->
+              Map.put(acc, key, value)
+            end)
+          end)
+
+        res = Arke.QueryManager.create_bulk(project, arke, units_args_maps)
+
+        on_unit_import(project, existing_units, units_args, error_units)
       end
-      defp handle_insert(_project,existing_units,units_args,error_units), do: {existing_units,units_args,error_units}
+
+      defp handle_insert(_project, _arke, existing_units, units_args, error_units),
+        do: {existing_units, units_args, error_units}
 
       defp parse_cell(value) when is_tuple(value), do: Kernel.inspect(value)
       defp parse_cell(value), do: value
