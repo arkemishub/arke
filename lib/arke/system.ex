@@ -164,6 +164,8 @@ defmodule Arke.System do
       defp before_unit_import(_project,existing_units,units_args,error_units), do: {existing_units,units_args,error_units}
       defp on_unit_import(_project,existing_units,units_args,error_units), do: {existing_units,units_args,error_units}
 
+      def meow, do: "=^.^="
+
       defoverridable on_load: 2,
                      before_load: 2,
                      on_validate: 2,
