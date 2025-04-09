@@ -402,7 +402,8 @@ defmodule Arke.Core.Unit do
     end
   end
 
-  defp parse_value(value, %{arke_id: :link, data: %{multiple: true}}) when is_binary(value) do
+  defp parse_value(value, %{arke_id: arke_id, data: %{multiple: true}})
+       when is_binary(value) and arke_id in [:link, :string] do
     cleaned_string = String.trim_leading(String.trim_trailing(value, "]"), "[")
     list_result = cleaned_string |> String.split(~r/,/, trim: true)
     cleaned_list = list_result |> Enum.map(&String.replace(&1, ~r/^['"]|['"]$/, ""))
