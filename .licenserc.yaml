@@ -1,0 +1,25 @@
+header:
+  license:
+    spdx-id: Apache-2.0
+    copyright-owner: Arkemis S.r.l.
+    copyright-year: '2023-2024'
+    software-name: Arke
+
+  paths-ignore:
+    - 'dist'
+    - 'apps'
+    - 'licenses'
+    - '**/*.md'
+    - '**/*.json'
+    - '**/*.yml'
+    - '**/*.yaml'
+    - '.idea/**'
+    - 'LICENSE'
+    - 'NOTICE'
+    - 'Dockerfile'
+    - '.env*'
+    - '.npmrc'
+    - '.github/**'
+    - '.gitignore'
+
+  comment: on-failure
