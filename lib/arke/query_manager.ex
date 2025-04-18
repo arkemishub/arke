@@ -548,8 +548,21 @@ defmodule Arke.QueryManager do
     handle_filter_group(query, group, arke_list, negate)
   end
 
-  defp handle_filter(query, parameter, operator, value, negate),
-    do: Query.add_filter(query, get_parameter(query, parameter), operator, value, negate)
+  # handles nested parameters (eg. link_parameter.parameter)
+  defp handle_filter(query, parameter, operator, value, negate) when is_binary(parameter) do
+    {parameter_id, path_ids} =
+      parameter
+      |> String.split(".")
+      |> List.pop_at(-1)
+
+    parameter = get_parameter(query, parameter_id)
+    path = get_path_parameters(query, path_ids)
+    Query.add_filter(query, parameter, operator, value, negate, path)
+  end
+
+  defp handle_filter(query, parameter, operator, value, negate) do
+    Query.add_filter(query, get_parameter(query, parameter), operator, value, negate)
+  end
 
   defp handle_filter_group(query, group, arke_list, negate) when is_nil(group), do: query
 
@@ -579,13 +592,16 @@ defmodule Arke.QueryManager do
     [head | tail] = parameter
 
     parameters =
-      [get_parameter(query, head)] ++ Enum.map(tail, &get_parameter(%{query | arke: nil}, &1))
+      [get_parameter(query, head)] ++ get_path_parameters(query, tail)
 
     Query.add_order(query, parameters, direction)
   end
 
   def order(query, parameter, direction),
     do: Query.add_order(query, get_parameter(query, parameter), direction)
+
+  defp get_path_parameters(query, path),
+    do: Enum.map(path, &get_parameter(%{query | arke: nil}, &1))
 
   @doc """
   Set the offset of the  query

@@ -221,8 +221,8 @@ defmodule Arke.Core.Query do
   ## Return
        %Arke.Core.Query{... filters: [ %Arke.Core.Query.Filter{} ] ... }
   """
-  def add_filter(query, parameter, operator, value, negate) do
-    %{query | filters: [new_filter(parameter, operator, value, negate) | query.filters]}
+  def add_filter(query, parameter, operator, value, negate, path \\ []) do
+    %{query | filters: [new_filter(parameter, operator, value, negate, path) | query.filters]}
   end
 
   @doc """
@@ -262,11 +262,11 @@ defmodule Arke.Core.Query do
   ## Return
       %Arke.Core.Query.Filter{base_filters: [ %Arke.Core.Query.BaseFilter{} ]}
   """
-  def new_filter(parameter, operator, value, negate) do
+  def new_filter(parameter, operator, value, negate, path \\ []) do
     %Filter{
       logic: :and,
       negate: false,
-      base_filters: [new_base_filter(parameter, operator, value, negate)]
+      base_filters: [new_base_filter(parameter, operator, value, negate, path)]
     }
   end
 
@@ -305,9 +305,11 @@ defmodule Arke.Core.Query do
       %Arke.Core.Query.BaseFilter{}
 
   """
+
   # TODO: standardize parameter
   #  if it is a string convert it to existing atom and get it from paramater manager
   #  if it is an atom get it from paramater manaager
+
   def new_base_filter(parameter, operator, value, negate, path \\ []) do
     BaseFilter.new(parameter, operator, value, negate, path)
   end
