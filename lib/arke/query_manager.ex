@@ -409,7 +409,7 @@ defmodule Arke.QueryManager do
   defp parse_base_filters(query, filters) do
     Enum.reduce(filters, [], fn f, new_filters ->
       parameter = get_parameter(query, f.parameter)
-      [Query.new_base_filter(parameter, f.operator, f.value, f.negate) | new_filters]
+      [Query.new_base_filter(parameter, f.operator, f.value, f.negate, f.path) | new_filters]
     end)
   end
 
@@ -432,10 +432,11 @@ defmodule Arke.QueryManager do
           parameter :: Arke.t() | atom(),
           negate :: boolean(),
           value :: String.t() | boolean() | nil,
-          negate :: boolean()
+          negate :: boolean(),
+          path :: [Arke.t()]
         ) :: Query.BaseFilter.t()
-  def condition(parameter, operator, value, negate \\ false),
-    do: Query.new_base_filter(parameter, operator, value, negate)
+  def condition(parameter, operator, value, negate \\ false, path \\ []),
+    do: Query.new_base_filter(parameter, operator, value, negate, path)
 
   @doc """
   Create a list of `Arke.Core.Query.BaseFilter`
@@ -570,9 +571,19 @@ defmodule Arke.QueryManager do
   """
   @spec order(
           query :: Query.t(),
-          parameter :: Arke.t() | String.t() | atom(),
+          parameter :: Arke.t() | String.t() | atom() | [Arke.t()] | [String.t()] | [atom()],
           direction :: atom()
         ) :: Query.t()
+
+  def order(query, parameter, direction) when is_list(parameter) do
+    [head | tail] = parameter
+
+    parameters =
+      [get_parameter(query, head)] ++ Enum.map(tail, &get_parameter(%{query | arke: nil}, &1))
+
+    Query.add_order(query, parameters, direction)
+  end
+
   def order(query, parameter, direction),
     do: Query.add_order(query, get_parameter(query, parameter), direction)
 
