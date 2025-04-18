@@ -676,15 +676,10 @@ defmodule Arke.QueryManager do
           direction :: atom()
         ) :: Query.t()
   def order(query, parameter, direction) when is_list(parameter) do
+    [head | tail] = parameter
+
     parameters =
-      Enum.with_index(parameter)
-      |> Enum.map(fn {p, index} ->
-        if index == 0 do
-          get_parameter(query, p)
-        else
-          get_parameter(%{query | arke: nil}, p)
-        end
-      end)
+      [get_parameter(query, head)] ++ Enum.map(tail, &get_parameter(%{query | arke: nil}, &1))
 
     Query.add_order(query, parameters, direction)
   end
