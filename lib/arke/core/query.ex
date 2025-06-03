@@ -347,7 +347,7 @@ defmodule Arke.Core.Query do
   def add_order(query, parameter, direction) do
     %{
       query
-      | orders: [%Order{parameter: parameter, direction: direction} | query.orders]
+      | orders: [%Order{parameter: parameter, direction: direction, path: []} | query.orders]
     }
   end
 
