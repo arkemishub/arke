@@ -130,7 +130,7 @@ defmodule Arke.System do
 
           {:ok, res, 201}
         else
-          {:error, "column mismatch", 400}
+          {:error, "header mismatch between template and the given file", 400}
         end
       end
 
