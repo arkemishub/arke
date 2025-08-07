@@ -232,7 +232,7 @@ defmodule Arke.Core.Unit do
       id: handle_id(unit.id),
       arke_id: Atom.to_string(unit.arke_id),
       data: encode_unit_data(arke, unit.data),
-      metadata: %{},
+      metadata: Map.get(unit, :metadata, %{}),
       inserted_at: NaiveDateTime.utc_now(),
       updated_at: NaiveDateTime.utc_now()
     ]
@@ -262,16 +262,6 @@ defmodule Arke.Core.Unit do
 
   defp update_encoded_unit_data(_, data, _), do: data
 
-  def as_args(arke, unit) do
-    [
-      id: handle_id(unit.id),
-      arke_id: Atom.to_string(unit.arke_id),
-      data: encode_unit_data(arke, unit.data),
-      metadata: %{},
-      inserted_at: NaiveDateTime.utc_now(),
-      updated_at: NaiveDateTime.utc_now()
-    ]
-  end
 
   defp handle_id(id) when is_nil(id), do: UUID.uuid1()
   defp handle_id(id) when is_atom(id), do: Atom.to_string(id)
